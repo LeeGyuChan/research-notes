@@ -159,56 +159,22 @@ const DOC_TYPE = {
 // ── 프로젝트 & 파일 데이터 ──────────────────────────────────────
 const projects = [
 
-  // ╔══════════════════════════════════════════════════════════════╗
-  // ║  프로젝트 1  —  대원공업㈜                                    ║
-  // ╚══════════════════════════════════════════════════════════════╝
+  // ── 자동 분체 도장라인 멀티모달 AI 불량예방 시스템 ──
   {
     id: "daewon",
     icon: "🏭",
     iconBg: "#E6F1FB",
     label: "수요기관 · 대원공업㈜",
     title: "자동 분체 도장라인 멀티모달 AI 불량예방 시스템",
-    color: "blue",          // 프로젝트 테마 (badge 색상)
+    color: "blue",
     files: [
-    {
-          "title": "AI 불량예방 시스템 보고서 v4",
-          "desc": "멀티모달 AI 불량예방 시스템 설계·성과 종합 보고서",
-          "file": "daewon/AI_불량예방_시스템_보고서_v4.html",
-          "type": "report",
-          "date": "2025-07",
-          "tags": ["멀티모달", "불량예방"]
-        },
-        {
-          "title": "비전 전처리 설계 연구노트 — Case A",
-          "desc": "고정 ROI 기반 Optical Flow → CNN → GRU 파이프라인",
-          "file": "daewon/비전_전처리_연구노트_CaseA_v1.html",
-          "type": "note",
-          "date": "2025-06",
-          "tags": ["Optical Flow", "GRU", "Edge AI"]
-        },
-        {
-          "title": "비전 전처리 설계 연구노트 — Case B",
-          "desc": "YOLO 검출 기반 동적 ROI, ID별 독립 시퀀스 버퍼",
-          "file": "daewon/비전_전처리_연구노트_CaseB_v1.html",
-          "type": "note",
-          "date": "2025-07",
-          "tags": ["YOLO", "ByteTrack", "Optical Flow", "GRU"]
-        },
-        {
-          "title": "발표자료 — AI 솔루션 개발 실증저변확대형 (주식회사 뎁스)",
-          "desc": "실증저변확대형 사업 최종 발표 슬라이드 Rev1.0",
-          "file": "daewon/09_발표자료_AI솔루션_개발_실증저변확대형_주식회사_뎁스_Rev1_0.pdf",
-          "type": "etc",
-          "date": "2025-07",
-          "tags": ["발표자료", "실증저변확대형"]
-        },
-      // ← 새 파일은 여기에 객체 하나 추가
+      { "title": "AI 불량예방 시스템 보고서 v4", "desc": "불량예방", "file": "daewon/AI_불량예방_시스템_보고서_v4.html", "type": "report", "date": "2026-03", "tags": ["\ubd88\ub7c9\uc608\ubc29"] },
+      { "title": "비전 전처리 연구노트 CaseA v1", "desc": "", "file": "daewon/비전_전처리_연구노트_CaseA_v1.html", "type": "note", "date": "2026-03", "tags": [] },
+      { "title": "비전 전처리 연구노트 CaseB v1", "desc": "", "file": "daewon/비전_전처리_연구노트_CaseB_v1.html", "type": "note", "date": "2026-03", "tags": [] },
     ],
   },
 
-  // ╔══════════════════════════════════════════════════════════════╗
-  // ║  프로젝트 2  —  중소 제조현장 사고 탐지                       ║
-  // ╚══════════════════════════════════════════════════════════════╝
+  // ── 사고 실시간 탐지 시스템 ──
   {
     id: "safety",
     icon: "⚠️",
@@ -217,29 +183,10 @@ const projects = [
     title: "사고 실시간 탐지 시스템",
     color: "amber",
     files: [
-      // ← 파일 추가 시 여기에
+      { "title": "Safety system report", "desc": "", "file": "safety/Safety system report.html", "type": "report", "date": "2026-03", "tags": [] },
     ],
   },
 
-  // ── 새 프로젝트 추가 템플릿 (주석 해제 후 수정) ──────────────────
-  // {
-  //   id: "project-id",          // 영문, 하이픈만 사용
-  //   icon: "🔧",
-  //   iconBg: "#E1F5EE",
-  //   label: "수요기관 · 회사명",
-  //   title: "프로젝트 이름",
-  //   color: "teal",             // blue | teal | amber | purple | green | gray | coral
-  //   files: [
-  //     {
-  //       title: "문서 제목",
-  //       desc: "한 줄 설명",
-  //       file: "폴더명/파일명.html",
-  //       type: "note",          // report | note | spec | data | etc
-  //       date: "2025-08",
-  //       tags: ["태그1", "태그2"],
-  //     },
-  //   ],
-  // },
 ];
 
 
