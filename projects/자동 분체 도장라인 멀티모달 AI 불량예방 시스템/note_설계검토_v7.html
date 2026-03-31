@@ -1,0 +1,2506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 모델 개발 검토 보고서 — 스마트 도장라인 실시간 불량 예방 시스템</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --bg2: #ffffff;
+    --bg3: #eeecea;
+    --text: #1a1a18;
+    --text2: #5a5955;
+    --text3: #9c9a92;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --teal: #0F6E56;
+    --teal-bg: #E1F5EE;
+    --amber: #854F0B;
+    --amber-bg: #FAEEDA;
+    --amber-mid: #EF9F27;
+    --coral: #993C1D;
+    --coral-bg: #FAECE7;
+    --green: #3B6D11;
+    --green-bg: #EAF3DE;
+    --purple: #534AB7;
+    --purple-bg: #EEEDFE;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --gray: #5F5E5A;
+    --gray-bg: #F1EFE8;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18;
+      --bg2: #242422;
+      --bg3: #2e2e2b;
+      --text: #e8e6de;
+      --text2: #a8a69e;
+      --text3: #6e6c65;
+      --border: rgba(255,255,255,0.09);
+      --border2: rgba(255,255,255,0.16);
+      --blue: #85B7EB;
+      --blue-bg: #042C53;
+      --teal: #5DCAA5;
+      --teal-bg: #04342C;
+      --amber: #FAC775;
+      --amber-bg: #412402;
+      --amber-mid: #EF9F27;
+      --coral: #F0997B;
+      --coral-bg: #4A1B0C;
+      --green: #97C459;
+      --green-bg: #173404;
+      --purple: #AFA9EC;
+      --purple-bg: #26215C;
+      --red: #F09595;
+      --red-bg: #501313;
+      --gray: #B4B2A9;
+      --gray-bg: #2C2C2A;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  /* ── LAYOUT ── */
+  .layout { display: flex; min-height: 100vh; }
+  nav {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 0.5px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 24px 0 40px;
+  }
+  nav .logo {
+    padding: 0 20px 20px;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 16px;
+  }
+  nav .logo .tag {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  nav .logo .title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  nav ul { list-style: none; padding: 0 8px; }
+  nav ul li a {
+    display: block;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text2);
+    text-decoration: none;
+    transition: background .15s, color .15s;
+  }
+  nav ul li a:hover { background: var(--bg3); color: var(--text); }
+  nav ul li a.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  nav ul li .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    text-transform: uppercase;
+    padding: 12px 12px 4px;
+  }
+  main { flex: 1; max-width: 860px; padding: 48px 40px 80px; }
+  /* ── HEADER ── */
+  .doc-header {
+    margin-bottom: 40px;
+    padding-bottom: 32px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .doc-header .eyebrow {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .doc-header h1 { font-size: 26px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
+  .doc-header .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 20px; }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .meta-item {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .meta-item .label { font-size: 11px; color: var(--text3); margin-bottom: 3px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .meta-item .value { font-size: 13px; font-weight: 500; color: var(--text); }
+  /* ── SECTION ── */
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section h2 {
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  section h2 .num {
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--blue-bg);
+    color: var(--blue);
+    border-radius: 20px;
+    padding: 2px 9px;
+  }
+  section h3 { font-size: 16px; font-weight: 500; margin: 24px 0 10px; color: var(--text); }
+  p { color: var(--text2); margin-bottom: 12px; }
+  /* ── CARDS ── */
+  .card {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card-grid .card { margin-bottom: 0; }
+  .card .card-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .card .card-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .card .card-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  /* ── INFO BOX ── */
+  .info-box {
+    background: var(--blue-bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .info-box .info-title { font-size: 13px; font-weight: 500; color: var(--blue); margin-bottom: 6px; }
+  .info-box .info-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  /* ── CALLOUT ── */
+  .callout {
+    border-left: 3px solid var(--amber-mid);
+    background: var(--amber-bg);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .callout p { margin: 0; font-size: 13px; color: var(--text2); }
+  .callout strong { color: var(--text); }
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 20px;
+    padding: 2px 9px;
+  }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-teal { background: var(--teal-bg); color: var(--teal); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-gray { background: var(--gray-bg); color: var(--gray); }
+  .badge-coral { background: var(--coral-bg); color: var(--coral); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); }
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; margin-bottom: 16px; border: 0.5px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--bg3); }
+  th { padding: 10px 14px; text-align: left; font-weight: 500; color: var(--text2); font-size: 12px; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+  /* ── PHASE TIMELINE ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; margin-bottom: 16px; }
+  .tl-item { display: flex; gap: 16px; align-items: flex-start; }
+  .tl-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .tl-line { width: 1px; flex: 1; background: var(--border2); min-height: 28px; }
+  .tl-content { padding: 0 0 24px; flex: 1; }
+  .tl-date { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 2px; letter-spacing: 0.04em; }
+  .tl-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .tl-desc { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  /* ── CLASS CARDS ── */
+  .class-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .class-card { border-radius: var(--radius); padding: 18px; border: 0.5px solid var(--border); text-align: center; }
+  .class-card .class-num { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+  .class-card .class-name { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+  .class-card .class-desc { font-size: 12px; line-height: 1.5; }
+  .class-card .class-action { font-size: 11px; font-weight: 500; margin-top: 10px; padding: 4px 10px; border-radius: 20px; display: inline-block; }
+  /* ── KPI GRID ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .kpi .kpi-val { font-size: 24px; font-weight: 500; margin-bottom: 4px; }
+  .kpi .kpi-label { font-size: 12px; color: var(--text3); }
+  /* ── RISK TABLE ── */
+  .risk-row td:first-child { font-weight: 500; color: var(--text); width: 30%; }
+  /* ── PIPELINE VISUAL ── */
+  .pipeline { display: flex; align-items: stretch; gap: 0; margin: 16px 0; overflow-x: auto; }
+  .pipe-step {
+    flex: 1;
+    min-width: 120px;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 12px;
+    text-align: center;
+    position: relative;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .pipe-step .ps-label { font-weight: 500; font-size: 13px; color: var(--text); margin-bottom: 4px; }
+  .pipe-step::after {
+    content: '→';
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    font-size: 14px;
+    z-index: 1;
+  }
+  .pipe-step:last-child::after { display: none; }
+  .pipe-sep { width: 28px; flex-shrink: 0; }
+  /* ── ARCH DIAGRAM ── */
+  .arch-box {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .arch-box .arch-title { font-size: 13px; font-weight: 500; color: var(--text3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 12px; }
+  .arch-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+  .arch-node {
+    flex: 1;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    border: 0.5px solid var(--border);
+    background: var(--bg3);
+  }
+  .arch-node strong { display: block; font-size: 13px; margin-bottom: 3px; font-weight: 500; }
+  .arch-arrow { width: 28px; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 14px; flex-shrink: 0; }
+  .arch-merge { text-align: center; padding: 10px; font-size: 12px; color: var(--text3); font-weight: 500; }
+  .fusion-box { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
+  .fusion-box strong { color: var(--purple); }
+  /* ── PROGRESS ── */
+  .progress-bar { background: var(--bg3); border-radius: 4px; height: 6px; margin-top: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+  /* ── TOGGLE TABS ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--bg3); border-radius: var(--radius-sm); padding: 4px; }
+  .tab-btn {
+    flex: 1;
+    padding: 7px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    font-family: inherit;
+  }
+  .tab-btn.active { background: var(--bg2); color: var(--text); box-shadow: 0 0.5px 2px rgba(0,0,0,0.1); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  /* ── REF LIST ── */
+  .ref-list { list-style: none; counter-reset: ref; }
+  .ref-list li { counter-increment: ref; display: flex; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .ref-list li::before { content: '[' counter(ref) ']'; flex-shrink: 0; font-weight: 500; color: var(--text3); width: 28px; }
+  .ref-list li:last-child { border-bottom: none; }
+  /* ── STICKY HEADER ── */
+  .sticky-header {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+    padding: 12px 0 10px;
+    margin-bottom: 8px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sticky-header h2 { border: none; margin: 0; padding: 0; font-size: 18px; }
+  /* ── STATUS BADGE ── */
+  .status { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+  .status-done { background: var(--green-bg); color: var(--green); }
+  .status-going { background: var(--blue-bg); color: var(--blue); }
+  .status-plan { background: var(--gray-bg); color: var(--gray); }
+  /* ── RESPONSIVE ── */
+  @media (max-width: 720px) {
+    nav { display: none; }
+    main { padding: 24px 20px 60px; }
+    .class-cards { grid-template-columns: 1fr; }
+    .pipeline { flex-direction: column; }
+    .pipe-step::after { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ── 사이드 내비 ── -->
+<nav>
+  <div class="logo">
+    <div class="tag">기술연구소</div>
+    <div class="title">AI 개발검토보고서<br>Rev 7.0</div>
+  </div>
+  <ul>
+    <li><div class="section-label">개요</div></li>
+    <li><a href="#overview" onclick="setActive(this)">과제 개요</a></li>
+    <li><a href="#problem" onclick="setActive(this)">현장 문제 재정의</a></li>
+    <li><a href="#roi-analysis" onclick="setActive(this)">ROI 설계 방식 비교 분석</a></li>
+    <li><div class="section-label">기술 설계</div></li>
+    <li><a href="#sensor" onclick="setActive(this)">센서 구성</a></li>
+    <li><a href="#arch" onclick="setActive(this)">모델 아키텍처 (Case A/B)</a></li>
+    <li><a href="#compare" onclick="setActive(this)">아키텍처 비교</a></li>
+    <li><a href="#learning" onclick="setActive(this)">학습 전략</a></li>
+    <li><div class="section-label">운영 · 성과</div></li>
+    <li><a href="#infra" onclick="setActive(this)">Edge-Server-HMI 아키텍처</a></li>
+    <li><a href="#output" onclick="setActive(this)">출력 클래스 정의</a></li>
+    <li><a href="#schedule" onclick="setActive(this)">추진 계획</a></li>
+    <li><a href="#risk" onclick="setActive(this)">리스크 & 대응</a></li>
+    <li><a href="#kpi" onclick="setActive(this)">기대 성과</a></li>
+    <li><a href="#ref" onclick="setActive(this)">참고 문헌</a></li>
+  </ul>
+</nav>
+
+<!-- ── 메인 ── -->
+<main>
+
+<!-- 문서 헤더 -->
+<div class="doc-header">
+  <div class="eyebrow">AI 모델 개발 검토 보고서</div>
+  <h1>스마트 도장라인 실시간 불량 예방 시스템</h1>
+  <p class="subtitle">자동 분체 도장 품질 향상을 위한 멀티모달 기반 AI 구축</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">주관 기관</div><div class="value">주식회사 뎁스</div></div>
+    <div class="meta-item"><div class="label">수요 기관</div><div class="value">대원공업(주)</div></div>
+    <div class="meta-item"><div class="label">작성 부서</div><div class="value">기술연구소</div></div>
+    <div class="meta-item"><div class="label">사업 기간</div><div class="value">2025.12 ~ 2026.10</div></div>
+    <div class="meta-item"><div class="label">총 사업비</div><div class="value">429,000천원</div></div>
+    <div class="meta-item"><div class="label">문서 버전</div><div class="value">Rev. 7.0 · ROI 설계 방식 비교 분석 추가</div></div>
+  </div>
+</div>
+
+<!-- 1. 과제 개요 -->
+<section id="overview">
+  <h2><span class="num">1</span> 검토 배경 및 목적</h2>
+  <p>기존 사업계획서의 형식적 기재 수준을 넘어, 실제 현장 물리 현상 재분석을 바탕으로 구현 가능한 기술 구성을 확정하는 것을 목적으로 한다.</p>
+  <div class="info-box">
+    <div class="info-title">과제 현황 요약</div>
+    <div class="info-body">
+      사업명: AI 솔루션 개발·실증 지원사업 (저변확대형)<br>
+      총 사업비: 429,000천원 (국비 200,000 / 지방비 100,000 / 민간부담 129,000)<br>
+      사업 기간: 2025.12.01 ~ 2026.11.30 (12개월) — 현재 4개월차 진행 중<br>
+      실증 완료 목표: 2026년 10월 | 지원기관: 정보통신산업진흥원
+    </div>
+  </div>
+</section>
+
+<!-- 2. 현장 문제 재정의 -->
+<section id="problem">
+  <h2><span class="num">2</span> 현장 문제 재정의</h2>
+  <p>컨베이어 이송 중 피도장 제품의 무게가 가벼울 경우 후크가 들리면서 톱니바퀴가 회전 유도장치에 제대로 맞물리지 못한다. 이로 인해 제품이 회전하지 않거나 불규칙하게 회전하여 도장 분포가 불균일해지고 품질 불량으로 이어진다.</p>
+  <div class="callout">
+    <p><strong>현 상황:</strong> 제품 경량화 추세에 따라 발생 빈도가 꾸준히 증가. 발생 위치가 육안으로 식별 불가능하여 자동 라인 3기가 전량 수동 작업으로 전환된 상태. 생산성 저하 · 인건비 부담 · 품질 균일성 문제가 지속 발생.</p>
+  </div>
+  <h3>핵심 감지 대상</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-blue">비전카메라</span></div>
+      <div class="card-title">톱니바퀴 회전 감지</div>
+      <div class="card-body">회전 여부 및 회전 패턴 정상성을 Optical Flow로 감지</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-teal">압력/깊이 센서</span></div>
+      <div class="card-title">후크 이탈 감지</div>
+      <div class="card-body">후크의 가이드 이탈(들림) 여부를 로드셀 압력 신호로 감지</div>
+    </div>
+  </div>
+</section>
+
+<!-- 2-1. ROI 설계 방식 비교 분석 (신규 섹션) -->
+<section id="roi-analysis">
+  <h2><span class="num" style="background:var(--amber-bg);color:var(--amber);">NEW</span> ROI 설계 방식 비교 분석 — 고정 ROI vs 동적 ROI</h2>
+  <p>현재 설계(고정 ROI + Optical Flow + GRU)를 기반으로, 카메라는 고정이지만 <strong>톱니바퀴가 컨베이어를 따라 계속 전진하는 환경</strong>에서 "고정 ROI로 충분한가"를 재검토하고, YOLO 검출 기반 동적 ROI 방식과 구조적으로 비교 분석한다.</p>
+
+  <div class="callout">
+    <p><strong>문제 제기:</strong> 현재 설계는 톱니바퀴가 회전 유도장치에 진입하는 특정 지점을 고정 ROI로 감시한다. 그러나 실제 현장에서는 <strong>컨베이어 전진 이동</strong>에 의해 객체 위치가 프레임 내에서 지속적으로 변화한다. 이 경우 고정 ROI 방식은 구조적 취약점을 가질 수 있으며, 검출/추적 기반 동적 ROI가 더 안정적일 가능성이 있다.</p>
+  </div>
+
+  <!-- ── 탭: 두 방식 전환 ── -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-roi-fixed')">현재 설계 — 고정 ROI</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-roi-dynamic')">제안 방향 — 동적 ROI</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-roi-compare')">비교 및 적용 판단</button>
+  </div>
+
+  <!-- ── 탭 1: 고정 ROI ── -->
+  <div id="tab-roi-fixed" class="tab-panel active">
+    <h3>현재 설계 구조 — 고정 ROI + Optical Flow + GRU</h3>
+    <p>현재 보고서는 아래 두 가지 가정을 전제로 고정 ROI 방식을 선택하였다.</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-label"><span class="badge badge-blue">전제 ①</span></div>
+        <div class="card-title">문제 발생 지점 특정</div>
+        <div class="card-body">불량은 주로 <strong>회전 유도장치 진입 지점</strong>에서 발생한다. 해당 구간만 집중 감시하면 충분하다는 설계 원칙.</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-teal">전제 ②</span></div>
+        <div class="card-title">판정 목적: 패턴 분석</div>
+        <div class="card-body">"객체가 어디 있는가"보다 <strong>"픽셀 벡터가 정상적으로 흐르는가"</strong>가 핵심. 탐지보다 패턴 판정이 주 목적.</div>
+      </div>
+    </div>
+
+    <!-- SVG: 고정 ROI 방식 흐름 -->
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 180" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr-roi1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 A. 현재 설계 — 고정 ROI 방식 파이프라인</text>
+
+        <!-- 카메라 -->
+        <rect x="20" y="36" width="90" height="48" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="65" y="57" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">카메라</text>
+        <text x="65" y="72" text-anchor="middle" font-size="10" fill="#5F5E5A">고정 설치</text>
+        <line x1="110" y1="60" x2="138" y2="60" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi1)"/>
+
+        <!-- 고정 ROI -->
+        <rect x="140" y="30" width="120" height="60" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="200" y="52" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">고정 ROI</text>
+        <text x="200" y="67" text-anchor="middle" font-size="10" fill="#185FA5">사람이 사전 지정</text>
+        <text x="200" y="80" text-anchor="middle" font-size="10" fill="#185FA5">진입 지점 고정 감시</text>
+        <line x1="260" y1="60" x2="288" y2="60" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi1)"/>
+
+        <!-- Optical Flow -->
+        <rect x="290" y="30" width="120" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="350" y="52" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">Optical Flow</text>
+        <text x="350" y="67" text-anchor="middle" font-size="10" fill="#0F6E56">Farneback</text>
+        <text x="350" y="80" text-anchor="middle" font-size="10" fill="#0F6E56">H×W×2 속도 맵</text>
+        <line x1="410" y1="60" x2="438" y2="60" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi1)"/>
+
+        <!-- GRU -->
+        <rect x="440" y="30" width="100" height="60" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="490" y="52" text-anchor="middle" font-size="12" font-weight="500" fill="#633806">GRU</text>
+        <text x="490" y="67" text-anchor="middle" font-size="10" fill="#854F0B">10~20프레임</text>
+        <text x="490" y="80" text-anchor="middle" font-size="10" fill="#854F0B">시계열 분류</text>
+        <line x1="540" y1="60" x2="568" y2="60" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi1)"/>
+
+        <!-- 출력 -->
+        <rect x="570" y="36" width="90" height="48" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="615" y="57" text-anchor="middle" font-size="12" font-weight="500" fill="#791F1F">판정 출력</text>
+        <text x="615" y="72" text-anchor="middle" font-size="10" fill="#A32D2D">Class 0/1/2</text>
+
+        <!-- 문제 상황 시각화: 컨베이어 이동 -->
+        <text x="340" y="120" text-anchor="middle" font-size="11" fill="#854F0B" font-weight="500">⚠ 컨베이어 전진 시 발생하는 구조적 취약점</text>
+        <!-- 컨베이어 레일 표현 -->
+        <line x1="40" y1="155" x2="640" y2="155" stroke="#B4B2A9" stroke-width="2"/>
+        <!-- 고정 ROI 박스 표시 -->
+        <rect x="270" y="133" width="80" height="30" rx="4" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="310" y="145" text-anchor="middle" font-size="9" fill="#185FA5">고정 ROI</text>
+        <!-- 톱니바퀴 이동 경로 (3개 위치) -->
+        <circle cx="120" cy="148" r="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="1"/>
+        <text x="120" y="152" text-anchor="middle" font-size="8" fill="#888780">⚙</text>
+        <circle cx="270" cy="148" r="10" fill="#FAEEDA" stroke="#854F0B" stroke-width="1.5"/>
+        <text x="270" y="152" text-anchor="middle" font-size="8" fill="#854F0B">⚙</text>
+        <circle cx="420" cy="148" r="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="1"/>
+        <text x="420" y="152" text-anchor="middle" font-size="8" fill="#888780">⚙</text>
+        <!-- 화살표: 이동 방향 -->
+        <line x1="135" y1="148" x2="255" y2="148" stroke="#854F0B" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr-roi1)"/>
+        <line x1="285" y1="148" x2="405" y2="148" stroke="#888780" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr-roi1)"/>
+        <text x="195" y="140" text-anchor="middle" font-size="9" fill="#854F0B">진입</text>
+        <text x="345" y="140" text-anchor="middle" font-size="9" fill="#888780">이탈</text>
+      </svg>
+    </div>
+
+    <h3>고정 ROI의 구조적 취약점 3가지</h3>
+    <div class="card-grid">
+      <div class="card" style="border-left: 3px solid var(--coral);">
+        <div class="card-label"><span class="badge badge-coral">취약점 ①</span></div>
+        <div class="card-title">관찰 시간 부족</div>
+        <div class="card-body">고정 ROI를 통과하는 시간이 짧으면 GRU에 필요한 <strong>10~20프레임 시계열</strong>을 안정적으로 확보하기 어렵다. 공정 속도가 빠를수록 이 문제가 심화된다.</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--coral);">
+        <div class="card-label"><span class="badge badge-coral">취약점 ②</span></div>
+        <div class="card-title">Optical Flow 오염</div>
+        <div class="card-body">톱니가 ROI 경계에 걸쳐 있을 때 픽셀 흐름에 <strong>회전 성분 + 평행이동 성분 + 잘림</strong>이 섞인다. GRU가 "회전 이상"이 아닌 "컨베이어 이동"을 학습할 위험.</div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--coral);">
+        <div class="card-label"><span class="badge badge-coral">취약점 ③</span></div>
+        <div class="card-title">위치 편차에 취약</div>
+        <div class="card-body">제품 크기 차이, 컨베이어 좌우 흔들림, 카메라 설치 오차가 누적되면 <strong>톱니가 고정 ROI를 벗어나는 경우</strong>가 발생한다. 이 경우 파이프라인 자체가 무효화된다.</div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">현재 설계가 유효한 조건</div>
+      <div class="info-body">
+        ① 진입 지점의 위치 편차가 매우 작고 일정할 때<br>
+        ② 공정 속도가 충분히 느려 ROI 내 체류 시간 동안 20프레임 이상 수집 가능할 때<br>
+        ③ 구현 단순성과 연산 경량화가 최우선 과제일 때
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 탭 2: 동적 ROI ── -->
+  <div id="tab-roi-dynamic" class="tab-panel">
+    <h3>제안 방향 — YOLO 검출 기반 동적 ROI</h3>
+    <p>YOLO를 전처리 앞단에 배치하여 매 프레임(또는 N프레임 간격)마다 톱니바퀴 위치를 자동 검출하고, 검출된 bounding box를 ROI로 활용한다. Optical Flow / GRU 판정 로직은 기존과 동일하게 유지된다.</p>
+
+    <div class="callout">
+      <p><strong>핵심 아이디어:</strong> YOLO는 <strong>위치 찾기 담당</strong>, Optical Flow + GRU는 <strong>회전 패턴 판정 담당</strong>. 두 역할을 분리하여 각자의 강점을 살린다. YOLO가 "회전을 판정"하는 것이 아님.</p>
+    </div>
+
+    <!-- SVG: 동적 ROI 전체 파이프라인 -->
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr-roi2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 B. 제안 설계 — YOLO + Tracker 기반 동적 ROI 파이프라인</text>
+
+        <!-- 카메라 -->
+        <rect x="20" y="40" width="80" height="52" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="60" y="62" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">카메라</text>
+        <text x="60" y="77" text-anchor="middle" font-size="10" fill="#5F5E5A">고정 설치</text>
+        <line x1="100" y1="66" x2="128" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi2)"/>
+
+        <!-- YOLO -->
+        <rect x="130" y="32" width="110" height="68" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+        <text x="185" y="55" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">YOLO</text>
+        <text x="185" y="70" text-anchor="middle" font-size="10" fill="#534AB7">객체 검출</text>
+        <text x="185" y="83" text-anchor="middle" font-size="10" fill="#534AB7">bbox (x,y,w,h)</text>
+        <text x="185" y="96" text-anchor="middle" font-size="9" fill="#9c9a92">COCO pretrained + 커스텀 파인튜닝</text>
+        <line x1="240" y1="66" x2="268" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi2)"/>
+
+        <!-- Tracker -->
+        <rect x="270" y="40" width="110" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="325" y="62" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">Tracker</text>
+        <text x="325" y="77" text-anchor="middle" font-size="10" fill="#185FA5">ID 부여 · 동일 객체 유지</text>
+        <line x1="380" y1="66" x2="408" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi2)"/>
+
+        <!-- 동적 ROI 생성 -->
+        <rect x="410" y="32" width="120" height="68" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+        <text x="470" y="52" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">동적 ROI 생성</text>
+        <text x="470" y="67" text-anchor="middle" font-size="10" fill="#0F6E56">bbox + padding</text>
+        <text x="470" y="80" text-anchor="middle" font-size="10" fill="#0F6E56">객체 중심 정렬</text>
+        <text x="470" y="93" text-anchor="middle" font-size="9" fill="#9c9a92">이동 성분 보정 포함</text>
+
+        <!-- 분기: ID별 병렬 처리 -->
+        <line x1="470" y1="100" x2="470" y2="120" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi2)"/>
+        <text x="340" y="138" text-anchor="middle" font-size="11" fill="#534AB7" font-weight="500">ID별 병렬 파이프라인 (N개 톱니 동시 처리)</text>
+
+        <!-- 병렬 박스들 -->
+        <!-- ID 1 -->
+        <rect x="30" y="148" width="180" height="120" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="120" y="168" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">ID-101 (톱니 A)</text>
+        <rect x="44" y="177" width="152" height="30" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="120" y="196" text-anchor="middle" font-size="10" fill="#0F6E56">Optical Flow (Farneback)</text>
+        <rect x="44" y="214" width="152" height="30" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="120" y="229" text-anchor="middle" font-size="10" fill="#854F0B">GRU — 시계열 버퍼 20프레임</text>
+        <rect x="44" y="250" width="152" height="12" rx="4" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="120" y="260" text-anchor="middle" font-size="9" fill="#A32D2D">판정: 정상 / 의심 / 이탈</text>
+
+        <!-- ID 2 -->
+        <rect x="250" y="148" width="180" height="120" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="340" y="168" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">ID-102 (톱니 B)</text>
+        <rect x="264" y="177" width="152" height="30" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="340" y="196" text-anchor="middle" font-size="10" fill="#0F6E56">Optical Flow (Farneback)</text>
+        <rect x="264" y="214" width="152" height="30" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="340" y="229" text-anchor="middle" font-size="10" fill="#854F0B">GRU — 시계열 버퍼 20프레임</text>
+        <rect x="264" y="250" width="152" height="12" rx="4" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="340" y="260" text-anchor="middle" font-size="9" fill="#A32D2D">판정: 정상 / 의심 / 이탈</text>
+
+        <!-- ID N -->
+        <rect x="470" y="148" width="180" height="120" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="6 3"/>
+        <text x="560" y="168" text-anchor="middle" font-size="11" font-weight="500" fill="#B4B2A9">ID-10N (톱니 N)</text>
+        <text x="560" y="210" text-anchor="middle" font-size="20" fill="#B4B2A9">…</text>
+        <text x="560" y="240" text-anchor="middle" font-size="10" fill="#B4B2A9">N개 동시 병렬 가능</text>
+
+        <!-- 분기 화살표 -->
+        <path d="M470 120 L120 148" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi2)"/>
+        <path d="M470 120 L340 148" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr-roi2)"/>
+        <path d="M470 120 L560 148" fill="none" stroke="#B4B2A9" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-roi2)"/>
+
+        <!-- 하단 재검출 로직 -->
+        <rect x="30" y="288" width="620" height="40" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5" stroke-dasharray="5 3"/>
+        <text x="340" y="305" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">재검출 로직: YOLO 미검출 시 → KLT Tracker 유지 → N프레임 이상 미검출 → YOLO 재검출</text>
+        <text x="340" y="320" text-anchor="middle" font-size="10" fill="#854F0B">매 프레임 YOLO 추론 부하 절감: 최초 1회 검출 후 Tracker로 추적, 이탈 시 재검출</text>
+      </svg>
+    </div>
+
+    <h3>동적 ROI 설계의 핵심 기술 과제</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot" style="background: var(--purple)"></div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-content">
+          <div class="tl-date"><span class="badge badge-purple">기술 과제 ①</span></div>
+          <div class="tl-title">이동 성분 분리 — 전진 vs 회전</div>
+          <div class="tl-desc">컨베이어 전진 속도에 의한 글로벌 평행이동 벡터를 Optical Flow에서 제거하고, 톱니 로컬 좌표계 기준의 회전 벡터만 GRU에 입력해야 한다. 이를 위해 bbox 중심점 기준 affine alignment 또는 배경 흐름 추정 후 차감 방법을 검토.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot" style="background: var(--blue)"></div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-content">
+          <div class="tl-date"><span class="badge badge-blue">기술 과제 ②</span></div>
+          <div class="tl-title">ID 일관성 유지 — 멀티 객체 추적</div>
+          <div class="tl-desc">프레임 간 동일 톱니에 동일 ID가 부여되지 않으면 GRU의 20프레임 시계열이 서로 다른 객체 데이터로 오염된다. ByteTrack 또는 DeepSORT 기반 추적기로 ID 연속성을 보장해야 한다.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot" style="background: var(--teal)"></div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-content">
+          <div class="tl-date"><span class="badge badge-teal">기술 과제 ③</span></div>
+          <div class="tl-title">YOLO 커스텀 데이터셋 — 학습 데이터 필요</div>
+          <div class="tl-desc">톱니바퀴·후크·유도장치는 COCO의 일반 객체 클래스와 다르다. COCO pretrained 가중치를 초기값으로 활용하되, 현장 이미지 기반 커스텀 라벨링(gear / hook / guide)과 파인튜닝이 필수다. COCO 사전학습 자체는 기초 시각 특징 학습에 여전히 유효하다.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot" style="background: var(--amber-mid)"></div>
+        </div>
+        <div class="tl-content">
+          <div class="tl-date"><span class="badge badge-amber">기술 과제 ④</span></div>
+          <div class="tl-title">bbox 겹침 처리 — NMS 임계값 튜닝</div>
+          <div class="tl-desc">인접한 여러 톱니가 화면에서 겹쳐 보일 때 bbox가 붙거나 일부가 가려져 ROI가 오염될 수 있다. NMS(Non-Maximum Suppression) 임계값 튜닝과 ROI padding 크기 최적화가 필요하다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">YOLO 모델 설계 방향</div>
+      <div class="info-body">
+        <strong>커스텀 클래스 정의:</strong> gear (톱니바퀴) / hook (후크) / guide (회전 유도장치)<br>
+        <strong>학습 전략:</strong> COCO pretrained YOLOv8 weights → 현장 이미지 라벨링 → fine-tuning<br>
+        <strong>운영 전략:</strong> 최초 1회 YOLO 검출 → 이후 Tracker(KLT/ByteTrack)로 추적 → 미검출 N프레임 시 재검출 (연산 부하 분산)
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 탭 3: 비교 및 판단 ── -->
+  <div id="tab-roi-compare" class="tab-panel">
+    <h3>두 방식 정량 비교</h3>
+
+    <!-- SVG: 레이더 차트식 비교 -->
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr-cmp" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="340" y="20" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 C. 고정 ROI vs 동적 ROI — 항목별 역량 비교</text>
+
+        <!-- 6개 항목 막대 비교 -->
+        <!-- 항목별 y 위치 -->
+        <!-- 항목 1: 위치 추적 안정성 -->
+        <text x="180" y="55" text-anchor="end" font-size="12" fill="#5F5E5A">위치 추적 안정성</text>
+        <!-- 고정 ROI -->
+        <rect x="190" y="42" width="80" height="16" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="275" y="54" font-size="10" fill="#185FA5">  낮음</text>
+        <!-- 동적 ROI -->
+        <rect x="360" y="42" width="180" height="16" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="545" y="54" font-size="10" fill="#0F6E56">  높음</text>
+
+        <!-- 항목 2: 다중 객체 처리 -->
+        <text x="180" y="85" text-anchor="end" font-size="12" fill="#5F5E5A">다중 객체 처리</text>
+        <rect x="190" y="72" width="30" height="16" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="225" y="84" font-size="10" fill="#185FA5">  불가</text>
+        <rect x="360" y="72" width="200" height="16" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="565" y="84" font-size="10" fill="#0F6E56">  ID별 병렬 가능</text>
+
+        <!-- 항목 3: 시계열 확보 안정성 -->
+        <text x="180" y="115" text-anchor="end" font-size="12" fill="#5F5E5A">시계열 확보 안정성</text>
+        <rect x="190" y="102" width="70" height="16" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="265" y="114" font-size="10" fill="#185FA5">  통과시간 종속</text>
+        <rect x="360" y="102" width="160" height="16" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="525" y="114" font-size="10" fill="#0F6E56">  시야 내 지속 확보</text>
+
+        <!-- 항목 4: Flow 오염 방지 -->
+        <text x="180" y="145" text-anchor="end" font-size="12" fill="#5F5E5A">Flow 오염 방지</text>
+        <rect x="190" y="132" width="50" height="16" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="245" y="144" font-size="10" fill="#185FA5">  이동 섞임</text>
+        <rect x="360" y="132" width="145" height="16" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="510" y="144" font-size="10" fill="#0F6E56">  중심 정렬로 보정</text>
+
+        <!-- 항목 5: 구현 복잡도 (낮을수록 좋음 — 반전) -->
+        <text x="180" y="175" text-anchor="end" font-size="12" fill="#5F5E5A">구현 복잡도 (↓ 낮을수록 유리)</text>
+        <rect x="190" y="162" width="200" height="16" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="395" y="174" font-size="10" fill="#0F6E56">  낮음 (단순)</text>
+        <rect x="360" y="162" width="100" height="16" rx="4" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="465" y="174" font-size="10" fill="#854F0B">  높음 (추가 설계 필요)</text>
+
+        <!-- 항목 6: 연산 비용 (낮을수록 좋음 — 반전) -->
+        <text x="180" y="205" text-anchor="end" font-size="12" fill="#5F5E5A">연산 비용 (↓ 낮을수록 유리)</text>
+        <rect x="190" y="192" width="180" height="16" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="375" y="204" font-size="10" fill="#0F6E56">  낮음</text>
+        <rect x="360" y="192" width="120" height="16" rx="4" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="485" y="204" font-size="10" fill="#854F0B">  YOLO+Tracker 추가</text>
+
+        <!-- 항목 7: 학습 데이터 요구 (낮을수록 좋음 — 반전) -->
+        <text x="180" y="235" text-anchor="end" font-size="12" fill="#5F5E5A">학습 데이터 요구 (↓ 낮을수록 유리)</text>
+        <rect x="190" y="222" width="200" height="16" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="395" y="234" font-size="10" fill="#0F6E56">  불필요</text>
+        <rect x="360" y="222" width="145" height="16" rx="4" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="510" y="234" font-size="10" fill="#854F0B">  커스텀 라벨링 필수</text>
+
+        <!-- 범례 -->
+        <rect x="190" y="266" width="14" height="14" rx="3" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="210" y="277" font-size="11" fill="#185FA5">고정 ROI (현재 설계)</text>
+        <rect x="360" y="266" width="14" height="14" rx="3" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="380" y="277" font-size="11" fill="#0F6E56">동적 ROI (제안 방향)</text>
+      </svg>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>비교 항목</th>
+            <th>고정 ROI (현재)</th>
+            <th>동적 ROI (YOLO 기반)</th>
+            <th>판정</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ROI 위치</strong></td>
+            <td>진입 지점 고정 감시</td>
+            <td>객체 위치를 따라 이동</td>
+            <td><span class="badge badge-green">동적 유리</span></td>
+          </tr>
+          <tr>
+            <td><strong>ROI 설정 방식</strong></td>
+            <td>사람이 사전 지정</td>
+            <td>YOLO가 자동 생성</td>
+            <td><span class="badge badge-green">동적 유리</span></td>
+          </tr>
+          <tr>
+            <td><strong>관찰 시간</strong></td>
+            <td>진입 구간 통과 시간에 종속</td>
+            <td>시야 내 있는 동안 지속</td>
+            <td><span class="badge badge-green">동적 유리</span></td>
+          </tr>
+          <tr>
+            <td><strong>전진 이동 오염</strong></td>
+            <td>Flow에 이동 성분 혼입</td>
+            <td>객체 중심 정렬로 보정 가능</td>
+            <td><span class="badge badge-green">동적 유리</span></td>
+          </tr>
+          <tr>
+            <td><strong>다중 톱니 처리</strong></td>
+            <td>단일 ROI만 처리 가능</td>
+            <td>ID별 병렬 파이프라인</td>
+            <td><span class="badge badge-green">동적 유리</span></td>
+          </tr>
+          <tr>
+            <td><strong>구현 복잡도</strong></td>
+            <td><span class="badge badge-teal">낮음 (단순)</span></td>
+            <td><span class="badge badge-amber">높음 (YOLO+Tracker 필요)</span></td>
+            <td><span class="badge badge-blue">고정 유리</span></td>
+          </tr>
+          <tr>
+            <td><strong>연산 비용 (Edge)</strong></td>
+            <td><span class="badge badge-teal">낮음</span></td>
+            <td><span class="badge badge-amber">증가 (YOLO 추론 추가)</span></td>
+            <td><span class="badge badge-blue">고정 유리</span></td>
+          </tr>
+          <tr>
+            <td><strong>학습 데이터 요구</strong></td>
+            <td><span class="badge badge-teal">불필요</span></td>
+            <td><span class="badge badge-amber">커스텀 라벨링 필수</span></td>
+            <td><span class="badge badge-blue">고정 유리</span></td>
+          </tr>
+          <tr>
+            <td><strong>YOLO 미검출 리스크</strong></td>
+            <td><span class="badge badge-teal">없음</span></td>
+            <td><span class="badge badge-coral">앞단 실패 시 파이프라인 중단</span></td>
+            <td><span class="badge badge-blue">고정 유리</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>적용 판단 기준</h3>
+    <div class="card-grid">
+      <div class="card" style="border-top: 3px solid var(--blue);">
+        <div class="card-label"><span class="badge badge-blue">고정 ROI 유효 조건</span></div>
+        <div class="card-title">현재 설계 유지</div>
+        <div class="card-body">
+          ① 진입 지점 위치 편차가 매우 작고 일정<br>
+          ② 공정 속도가 느려 ROI 통과 중 20프레임 이상 수집 가능<br>
+          ③ 구현 단순성·연산 경량화 최우선<br>
+          ④ 카메라 1대당 감시 대상 톱니가 1개
+        </div>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--green);">
+        <div class="card-label"><span class="badge badge-green">동적 ROI 전환 권고 조건</span></div>
+        <div class="card-title">YOLO 기반 설계 전환</div>
+        <div class="card-body">
+          ① 컨베이어 전진 속도로 진입 지점 통과 시간이 짧을 때<br>
+          ② 제품 크기 차이·컨베이어 흔들림으로 위치 편차가 클 때<br>
+          ③ 한 화면에 여러 톱니를 독립적으로 감시해야 할 때<br>
+          ④ GRU 안정 시계열 확보가 현재 구조에서 어려울 때
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><strong>현재 프로젝트 권고:</strong> 현장 실측을 통해 <strong>ROI 통과 시간</strong>과 <strong>위치 편차 범위</strong>를 먼저 측정한다. 통과 시간이 GRU 시계열(10~20프레임) 확보에 부족하거나, 위치 편차가 ROI 크기의 30% 이상이라면 동적 ROI로의 전환을 적극 검토한다. 두 방식의 Optical Flow / GRU 판정 로직은 공유 가능하므로, 전처리 앞단만 교체하는 방식으로 점진적 전환이 가능하다.</p>
+    </div>
+  </div>
+
+</section>
+
+<!-- 3. 센서 구성 -->
+<section id="sensor">
+  <h2><span class="num">3</span> 센서 구성 확정</h2>
+  <p>레이저 변위센서는 현장 물리 현상 재분석 결과 제외 결정. 최종 센서 구성은 비전카메라와 압력/깊이 센서 두 종류로 확정.</p>
+  <div class="card">
+    <div class="card-label"><span class="badge badge-blue">비전카메라 (Air Purge)</span></div>
+    <div class="card-title">5MP급 고해상도</div>
+    <div class="card-body">
+      공정 속도가 느리므로 FPS를 낮추는 대신 해상도를 높여 기어 톱니의 미세한 진입 각도와 이탈 형상을 선명하게 포착.<br><br>
+      <strong>Air Purge 하우징 필수 장착</strong> — 분체 도장 환경의 분진 오염을 방지하여 카메라 신뢰성 유지.<br><br>
+      ROI는 톱니바퀴가 회전 유도장치에 진입하는 지점으로 한정하여 배경 노이즈를 최소화.
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label"><span class="badge badge-teal">압력/깊이 센서 (로드셀)</span></div>
+    <div class="card-title">접촉력 시계열 수집</div>
+    <div class="card-body">
+      후크가 지지 가이드(Support Guide)에 가하는 접촉력을 시계열로 수집.<br><br>
+      비전의 보조 신호로 활용하며, 카메라 오염 시에도 단독으로 Class 2(이탈 확정) 판정이 가능하도록 <strong>폴백 로직</strong> 구현.<br><br>
+      정상 상태: 일정한 압력 파형 유지 / 후크 들림 시: 압력 감소 또는 충돌·스파이크 패턴 발생
+    </div>
+  </div>
+</section>
+
+<!-- 4. 모델 아키텍처 -->
+<section id="arch">
+  <h2><span class="num">4</span> 모델 아키텍처 설계</h2>
+  <p>비전 파이프라인과 압력 센서 파이프라인이 각각 독립적으로 특징을 추출한 뒤 융합 모듈에서 결합하는 <strong>멀티모달 구조</strong>로 설계. 비전 파이프라인은 ROI 설계 방식에 따라 두 가지 케이스로 분기된다.</p>
+
+  <div class="info-box">
+    <div class="info-title">비전 파이프라인 케이스 분기</div>
+    <div class="info-body">
+      <strong>Case A — 고정 ROI:</strong> 사전 지정된 진입 지점 ROI → Optical Flow → CNN → GRU. 현재 채택된 기본 설계.<br>
+      <strong>Case B — YOLO 동적 ROI:</strong> YOLO 검출 → Tracker → 동적 ROI → Optical Flow → CNN → GRU. ROI 이탈 리스크가 클 때 전환 검토.<br>
+      <strong>공통:</strong> 압력 센서 파이프라인(1D CNN)과 멀티모달 융합 구조는 두 케이스 모두 동일하게 적용.
+    </div>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-vision')">Case A — 고정 ROI 비전</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-vision-yolo')">Case B — YOLO 동적 ROI 비전</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-arch-compare')">아키텍처 케이스 비교</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-pressure')">압력 센서 파이프라인</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-fusion')">멀티모달 융합</button>
+  </div>
+
+  <!-- Case A: 고정 ROI 비전 파이프라인 -->
+  <div id="tab-vision" class="tab-panel active">
+    <div class="callout" style="border-left-color:var(--blue);background:var(--blue-bg);">
+      <p><strong>Case A — 현재 채택 설계:</strong> 사람이 사전 지정한 고정 ROI 기반. YOLO 없이 전처리 → CNN → GRU 직행. 구현 단순, 연산 비용 최소. 진입 지점 편차가 작고 통과 시간이 충분할 때 최적.</p>
+    </div>
+
+    <!-- 그림 1: 비전 파이프라인 SVG -->
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <!-- 라벨: 그림 1 -->
+        <text x="340" y="20" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1. 비전 모델 파이프라인 — 백본 / 넥 / 헤드 구조</text>
+
+        <!-- 입력: 카메라 프레임 -->
+        <rect x="20" y="40" width="100" height="52" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="70" y="62" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">카메라</text>
+        <text x="70" y="78" text-anchor="middle" font-size="11" fill="#5F5E5A">프레임 입력</text>
+
+        <!-- 화살표 -->
+        <line x1="120" y1="66" x2="148" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+        <!-- 전처리 -->
+        <rect x="150" y="40" width="120" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="210" y="60" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">전처리</text>
+        <text x="210" y="75" text-anchor="middle" font-size="10" fill="#185FA5">ROI 크롭 + Optical Flow</text>
+        <text x="210" y="87" text-anchor="middle" font-size="10" fill="#185FA5">H×W×2채널 속도 맵</text>
+
+        <!-- 화살표 -->
+        <line x1="270" y1="66" x2="298" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+        <!-- 백본 CNN -->
+        <rect x="300" y="40" width="120" height="52" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="360" y="60" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">백본 (CNN)</text>
+        <text x="360" y="75" text-anchor="middle" font-size="10" fill="#0F6E56">귀납적 편향</text>
+        <text x="360" y="87" text-anchor="middle" font-size="10" fill="#0F6E56">공간 패턴 추출</text>
+
+        <!-- 화살표 -->
+        <line x1="420" y1="66" x2="448" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+        <!-- 넥 GRU -->
+        <rect x="450" y="40" width="110" height="52" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="505" y="60" text-anchor="middle" font-size="12" font-weight="500" fill="#633806">넥 (GRU)</text>
+        <text x="505" y="75" text-anchor="middle" font-size="10" fill="#854F0B">10~20 프레임</text>
+        <text x="505" y="87" text-anchor="middle" font-size="10" fill="#854F0B">단기 시계열</text>
+
+        <!-- 화살표 아래로 꺾임 -->
+        <path d="M560 66 L600 66 L600 130" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+        <!-- 헤드 -->
+        <rect x="530" y="132" width="120" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+        <text x="590" y="154" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">헤드</text>
+        <text x="590" y="169" text-anchor="middle" font-size="10" fill="#534AB7">최종 분류</text>
+        <text x="590" y="181" text-anchor="middle" font-size="10" fill="#534AB7">Feature A 출력</text>
+
+        <!-- 화살표 출력 -->
+        <line x1="530" y1="158" x2="502" y2="158" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+        <rect x="390" y="133" width="110" height="52" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="445" y="155" text-anchor="middle" font-size="12" font-weight="500" fill="#791F1F">Class 출력</text>
+        <text x="445" y="170" text-anchor="middle" font-size="10" fill="#A32D2D">0: 정상</text>
+        <text x="445" y="182" text-anchor="middle" font-size="10" fill="#A32D2D">1: 의심 / 2: 이탈</text>
+
+        <!-- Optical Flow 설명 박스 -->
+        <rect x="20" y="130" width="320" height="90" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+        <text x="30" y="150" font-size="11" font-weight="500" fill="#444441">Optical Flow 핵심 원리</text>
+        <text x="30" y="167" font-size="10" fill="#5F5E5A">정상 회전: 벡터가 일정 방향·크기 유지 →</text>
+        <text x="230" y="167" font-size="10" fill="#0F6E56" font-weight="500">Class 0</text>
+        <text x="30" y="183" font-size="10" fill="#5F5E5A">회전 불량: 벡터 흐트러짐 또는 크기 0 수렴 →</text>
+        <text x="253" y="183" font-size="10" fill="#854F0B" font-weight="500">Class 1</text>
+        <text x="30" y="199" font-size="10" fill="#5F5E5A">회전 소실: 벡터 완전 소멸 →</text>
+        <text x="183" y="199" font-size="10" fill="#A32D2D" font-weight="500">Class 2 (이탈 확정)</text>
+
+        <!-- 근거 텍스트 -->
+        <text x="340" y="248" text-anchor="middle" font-size="10" fill="#9c9a92">근거: Chen et al. (2025) — Farneback Optical Flow 기반 <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8ce1cddcccbca2b9">[email&#160;protected]</a> 97.8%</text>
+      </svg>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">비전 파이프라인 — 백본 / 넥 / 헤드</div>
+      <div class="arch-row">
+        <div class="arch-node" style="background: var(--blue-bg); border-color: var(--blue);">
+          <strong style="color:var(--blue)">전처리</strong>
+          ROI 크롭 + Farneback Dense Optical Flow (H×W×2채널 속도 맵)
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--teal-bg); border-color: var(--teal);">
+          <strong style="color:var(--teal)">백본 (CNN)</strong>
+          귀납적 편향으로 소규모 데이터에서 안정적 학습
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--amber-bg); border-color: var(--amber);">
+          <strong style="color:var(--amber)">넥 (GRU)</strong>
+          10~20 프레임 단기 시계열, LSTM 대비 25% 적은 파라미터
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--purple-bg); border-color: var(--purple);">
+          <strong style="color:var(--purple)">헤드</strong>
+          Feature A 출력 (최종 분류)
+        </div>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>Optical Flow 핵심 아이디어:</strong> "회전 중인가"라는 질문을 "픽셀 벡터가 일관되게 흐르는가"로 치환하여 톱니 구조의 반복성 문제를 구조적으로 회피. 정상 회전 시 벡터가 일정 방향·크기 유지, 회전 불량 시 벡터가 흐트러지거나 0에 수렴.</p>
+    </div>
+    <p style="font-size:13px;color:var(--text3);">근거: Chen et al. (2025), Frontiers in Mechanical Engineering — Farneback Optical Flow 기반 모듈 @97.8% 달성</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       Case B: YOLO 동적 ROI 비전 파이프라인
+  ═══════════════════════════════════════════════════════ -->
+  <div id="tab-vision-yolo" class="tab-panel">
+    <div class="callout" style="border-left-color:var(--purple);background:var(--purple-bg);">
+      <p><strong>Case B — 전환 검토 설계:</strong> YOLO로 매 프레임 톱니 위치를 자동 검출하고 동적 ROI를 생성. Optical Flow / CNN / GRU 판정 로직은 Case A와 동일. 커스텀 학습 데이터와 Tracker 설계가 추가로 필요.</p>
+    </div>
+
+    <!-- SVG: Case B 전체 아키텍처 — 상세 레이어 뷰 -->
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arrB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="360" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1-B. Case B 비전 파이프라인 — YOLO 검출 + Tracker + 동적 ROI + CNN + GRU</text>
+
+        <!-- ── 레이어 1: 입력 ── -->
+        <text x="30" y="46" font-size="10" fill="#9c9a92" font-weight="500" letter-spacing="0.06em">LAYER 1 · 입력</text>
+        <rect x="30" y="54" width="100" height="56" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="80" y="77" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">카메라</text>
+        <text x="80" y="92" text-anchor="middle" font-size="10" fill="#5F5E5A">5MP · 고해상도</text>
+        <text x="80" y="104" text-anchor="middle" font-size="10" fill="#5F5E5A">고정 설치</text>
+        <line x1="130" y1="82" x2="158" y2="82" stroke="#888780" stroke-width="1" marker-end="url(#arrB)"/>
+
+        <!-- ── 레이어 2: YOLO 검출 ── -->
+        <text x="160" y="46" font-size="10" fill="#534AB7" font-weight="500" letter-spacing="0.06em">LAYER 2 · 검출 (신규)</text>
+        <rect x="160" y="54" width="130" height="90" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+        <text x="225" y="76" text-anchor="middle" font-size="13" font-weight="500" fill="#3C3489">YOLO v8</text>
+        <text x="225" y="92" text-anchor="middle" font-size="10" fill="#534AB7">커스텀 파인튜닝</text>
+        <text x="225" y="105" text-anchor="middle" font-size="10" fill="#534AB7">클래스: gear / hook</text>
+        <text x="225" y="118" text-anchor="middle" font-size="10" fill="#534AB7">출력: bbox (x,y,w,h)</text>
+        <text x="225" y="131" text-anchor="middle" font-size="9" fill="#9c9a92">COCO pretrain → 현장 fine-tune</text>
+        <line x1="290" y1="99" x2="318" y2="99" stroke="#534AB7" stroke-width="1.2" marker-end="url(#arrB)"/>
+
+        <!-- ── 레이어 3: Tracker ── -->
+        <text x="320" y="46" font-size="10" fill="#185FA5" font-weight="500" letter-spacing="0.06em">LAYER 3 · 추적 (신규)</text>
+        <rect x="320" y="54" width="130" height="90" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+        <text x="385" y="75" text-anchor="middle" font-size="13" font-weight="500" fill="#0C447C">Tracker</text>
+        <text x="385" y="91" text-anchor="middle" font-size="10" fill="#185FA5">ByteTrack / KLT</text>
+        <text x="385" y="104" text-anchor="middle" font-size="10" fill="#185FA5">ID 부여 · 연속성 유지</text>
+        <text x="385" y="117" text-anchor="middle" font-size="10" fill="#185FA5">미검출 시 재검출 트리거</text>
+        <text x="385" y="131" text-anchor="middle" font-size="9" fill="#9c9a92">ID-101, ID-102 … ID-N</text>
+        <line x1="450" y1="99" x2="478" y2="99" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arrB)"/>
+
+        <!-- ── 레이어 4: 동적 ROI ── -->
+        <text x="480" y="46" font-size="10" fill="#0F6E56" font-weight="500" letter-spacing="0.06em">LAYER 4 · ROI 생성 (신규)</text>
+        <rect x="480" y="54" width="130" height="90" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+        <text x="545" y="75" text-anchor="middle" font-size="13" font-weight="500" fill="#085041">동적 ROI</text>
+        <text x="545" y="91" text-anchor="middle" font-size="10" fill="#0F6E56">bbox + padding 20~50px</text>
+        <text x="545" y="104" text-anchor="middle" font-size="10" fill="#0F6E56">객체 중심 정렬</text>
+        <text x="545" y="117" text-anchor="middle" font-size="10" fill="#0F6E56">전진 이동 성분 보정</text>
+        <text x="545" y="131" text-anchor="middle" font-size="9" fill="#9c9a92">ID별 독립 ROI 크롭</text>
+
+        <!-- 레이어 4 → 아래 분기 -->
+        <line x1="545" y1="144" x2="545" y2="172" stroke="#888780" stroke-width="1" marker-end="url(#arrB)"/>
+
+        <!-- ── ID별 병렬 처리 레이블 ── -->
+        <rect x="30" y="174" width="660" height="20" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+        <text x="360" y="188" text-anchor="middle" font-size="11" fill="#3C3489" font-weight="500">ID별 병렬 처리 — 각 톱니마다 독립적인 Optical Flow · CNN · GRU 파이프라인 실행</text>
+
+        <!-- ── ID-A 파이프라인 ── -->
+        <!-- Optical Flow A -->
+        <rect x="30" y="204" width="130" height="64" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="95" y="223" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">Optical Flow</text>
+        <text x="95" y="237" text-anchor="middle" font-size="10" fill="#185FA5">Farneback Dense</text>
+        <text x="95" y="250" text-anchor="middle" font-size="10" fill="#185FA5">H×W×2 속도 맵</text>
+        <text x="95" y="261" text-anchor="middle" font-size="9" fill="#9c9a92">로컬 ROI 기준</text>
+        <line x1="160" y1="236" x2="178" y2="236" stroke="#888780" stroke-width="1" marker-end="url(#arrB)"/>
+
+        <!-- CNN A -->
+        <rect x="180" y="204" width="110" height="64" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="235" y="223" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">백본 (CNN)</text>
+        <text x="235" y="237" text-anchor="middle" font-size="10" fill="#0F6E56">공간 패턴 추출</text>
+        <text x="235" y="250" text-anchor="middle" font-size="10" fill="#0F6E56">귀납적 편향</text>
+        <text x="235" y="261" text-anchor="middle" font-size="9" fill="#9c9a92">Case A와 동일 구조</text>
+        <line x1="290" y1="236" x2="308" y2="236" stroke="#888780" stroke-width="1" marker-end="url(#arrB)"/>
+
+        <!-- GRU A -->
+        <rect x="310" y="204" width="110" height="64" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="365" y="223" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">넥 (GRU)</text>
+        <text x="365" y="237" text-anchor="middle" font-size="10" fill="#854F0B">시퀀스 버퍼</text>
+        <text x="365" y="250" text-anchor="middle" font-size="10" fill="#854F0B">10~20 프레임</text>
+        <text x="365" y="261" text-anchor="middle" font-size="9" fill="#9c9a92">ID별 독립 버퍼 유지</text>
+        <line x1="420" y1="236" x2="438" y2="236" stroke="#888780" stroke-width="1" marker-end="url(#arrB)"/>
+
+        <!-- 헤드 A -->
+        <rect x="440" y="204" width="110" height="64" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+        <text x="495" y="223" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">헤드</text>
+        <text x="495" y="237" text-anchor="middle" font-size="10" fill="#534AB7">ID별 분류 출력</text>
+        <text x="495" y="250" text-anchor="middle" font-size="10" fill="#534AB7">Feature A-n</text>
+        <text x="495" y="261" text-anchor="middle" font-size="9" fill="#9c9a92">각 톱니 독립 판정</text>
+
+        <!-- ID 레이블 -->
+        <text x="30" y="200" font-size="10" fill="#534AB7" font-weight="500">▶ ID-101</text>
+
+        <!-- ── ID-B 점선 (N개) ── -->
+        <rect x="30" y="286" width="660" height="48" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="6 3"/>
+        <text x="360" y="306" text-anchor="middle" font-size="11" fill="#B4B2A9" font-weight="500">▶ ID-102, ID-103 … ID-N</text>
+        <text x="360" y="322" text-anchor="middle" font-size="10" fill="#B4B2A9">동일한 Optical Flow → CNN → GRU → 헤드 파이프라인 병렬 실행</text>
+
+        <!-- ── 출력 집계 ── -->
+        <rect x="30" y="352" width="660" height="40" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="360" y="370" text-anchor="middle" font-size="12" font-weight="500" fill="#791F1F">ID별 판정 집계 → 멀티모달 융합 모듈로 전달 (Feature A 대체)</text>
+        <text x="360" y="385" text-anchor="middle" font-size="10" fill="#A32D2D">각 ID: Class 0 (정상) / Class 1 (의심) / Class 2 (이탈 확정) — 하나라도 Class 2 → 즉시 경보</text>
+
+        <!-- 분기 화살표: Layer 4 → 병렬 -->
+        <path d="M545 172 L545 193 L95 193 L95 202" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arrB)"/>
+        <path d="M545 193 L235 193 L235 202" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arrB)"/>
+        <path d="M545 193 L365 193 L365 202" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arrB)"/>
+
+        <!-- 파이프라인 → 출력 -->
+        <line x1="495" y1="268" x2="495" y2="290" stroke="#888780" stroke-width="1" marker-end="url(#arrB)"/>
+        <path d="M495 334 L495 350" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arrB)"/>
+      </svg>
+    </div>
+
+    <!-- arch-box: Case B 레이어 요약 -->
+    <div class="arch-box">
+      <div class="arch-title">Case B 비전 파이프라인 — 4개 레이어 구조</div>
+      <div class="arch-row">
+        <div class="arch-node" style="background:var(--purple-bg);border-color:var(--purple);">
+          <strong style="color:var(--purple)">L2. YOLO 검출 (신규)</strong>
+          YOLOv8 커스텀 파인튜닝 — gear / hook / guide 클래스.<br>
+          COCO pretrained 가중치 → 현장 이미지 fine-tuning.<br>
+          출력: bbox (x, y, w, h) + confidence
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background:var(--blue-bg);border-color:var(--blue);">
+          <strong style="color:var(--blue)">L3. Tracker (신규)</strong>
+          ByteTrack 또는 KLT 기반 ID 추적.<br>
+          프레임 간 동일 객체 → 동일 ID 보장.<br>
+          미검출 N프레임 → YOLO 재검출 트리거
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background:var(--teal-bg);border-color:var(--teal);">
+          <strong style="color:var(--teal)">L4. 동적 ROI (신규)</strong>
+          bbox + padding → 로컬 ROI 크롭.<br>
+          객체 중심 정렬 (전진 이동 성분 보정).<br>
+          ID별 독립 ROI — 다중 톱니 병렬 처리
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background:var(--amber-bg);border-color:var(--amber);">
+          <strong style="color:var(--amber)">L5~7. Flow → CNN → GRU (공유)</strong>
+          Case A와 동일한 Optical Flow + CNN + GRU.<br>
+          단, ID별 독립 시퀀스 버퍼 유지.<br>
+          각 ID 개별 Class 0/1/2 판정 후 집계
+        </div>
+      </div>
+    </div>
+
+    <h3>Case B 신규 추가 컴포넌트 상세</h3>
+
+    <!-- YOLO 상세 -->
+    <div class="card" style="border-left:3px solid var(--purple);">
+      <div class="card-label"><span class="badge badge-purple">L2 · YOLO 검출 모듈</span></div>
+      <div class="card-title">YOLOv8 커스텀 파인튜닝</div>
+      <div class="card-body">
+        <strong>역할:</strong> 매 프레임(또는 K프레임 간격)에서 톱니바퀴·후크 위치를 자동 검출해 bounding box 제공.<br><br>
+        <strong>학습 전략:</strong><br>
+        ① COCO pretrained YOLOv8 가중치로 초기화 (기초 시각 특징 — 엣지·윤곽·패턴 활용)<br>
+        ② 현장 촬영 이미지에 gear / hook / guide 클래스 직접 라벨링<br>
+        ③ 파인튜닝으로 산업 부품 특화 도메인 적응<br><br>
+        <strong>운영 전략 (연산 최적화):</strong><br>
+        최초 1회 YOLO 검출 → 이후 Tracker(KLT)로 추적 → 미검출 N프레임 시 재검출.<br>
+        매 프레임 YOLO 추론 대신 Tracker를 앞세워 Edge(Jetson Orin Nano) 연산 부하 분산.
+      </div>
+    </div>
+
+    <!-- Tracker 상세 -->
+    <div class="card" style="border-left:3px solid var(--blue);">
+      <div class="card-label"><span class="badge badge-blue">L3 · Tracker 모듈</span></div>
+      <div class="card-title">ByteTrack / KLT — 멀티 객체 ID 추적</div>
+      <div class="card-body">
+        <strong>역할:</strong> 프레임 간 동일 톱니에 동일 ID를 부여하여 GRU 시계열 버퍼의 데이터 혼입을 방지.<br><br>
+        <strong>핵심 문제:</strong> YOLO는 프레임마다 독립적으로 박스를 출력하므로, 다음 프레임의 박스가 이전 프레임의 어느 객체인지를 별도로 매핑해야 한다. 이 매핑이 끊기면 ID-101의 20프레임 버퍼에 ID-102의 데이터가 섞여 GRU 판정이 오염된다.<br><br>
+        <strong>ByteTrack 선택 이유:</strong> 검출 신뢰도가 낮은 박스도 추적에 활용하여 산업 현장의 분진·부분 가림 환경에서 ID 연속성 향상. SORT/DeepSORT 대비 ReID 네트워크 없이 경량 동작.
+      </div>
+    </div>
+
+    <!-- 동적 ROI 상세 -->
+    <div class="card" style="border-left:3px solid var(--teal);">
+      <div class="card-label"><span class="badge badge-teal">L4 · 동적 ROI 생성 모듈</span></div>
+      <div class="card-title">bbox 기반 로컬 ROI — 이동 성분 분리</div>
+      <div class="card-body">
+        <strong>역할:</strong> Tracker가 제공한 ID별 bbox를 기반으로 Optical Flow 연산에 사용할 로컬 ROI를 생성.<br><br>
+        <strong>Padding:</strong> bbox 그대로 쓰면 Optical Flow가 주변 맥락 정보를 놓칠 수 있음. 20~50px 패딩을 추가하여 회전 경계면 픽셀 벡터까지 포함.<br><br>
+        <strong>이동 성분 보정 (핵심):</strong> 컨베이어 전진에 의한 글로벌 평행이동 벡터를 추정하고, 로컬 ROI 내 Optical Flow에서 해당 성분을 차감. 이후 GRU에는 순수 회전 성분만 입력됨.
+        <br><br>보정 방법 후보: bbox 중심 좌표 프레임 간 차이로 평행이동 추정 → ROI Flow에서 차감 (간단), 또는 배경 영역 Flow 평균으로 글로벌 이동 추정 후 보정 (정밀).
+      </div>
+    </div>
+
+    <!-- 시퀀스 버퍼 상세 -->
+    <div class="card" style="border-left:3px solid var(--amber);">
+      <div class="card-label"><span class="badge badge-amber">L6 · ID별 시퀀스 버퍼</span></div>
+      <div class="card-title">GRU 입력 — ID별 독립 슬라이딩 윈도우</div>
+      <div class="card-body">
+        <strong>Case A와의 차이:</strong> Case A는 고정 ROI에 대한 단일 시퀀스 버퍼를 운영하지만, Case B에서는 화면에 탐지된 <strong>톱니 N개마다 독립적인 20프레임 슬라이딩 윈도우</strong>를 유지한다.<br><br>
+        <strong>버퍼 오염 방지:</strong> ID 재할당이 발생하면 해당 ID의 버퍼를 즉시 초기화(flush)하여 이전 객체 데이터 혼입 방지.<br><br>
+        <strong>메모리:</strong> 최대 동시 추적 톱니 수 × 20프레임 × Flow 맵 크기(H×W×2). Edge 메모리(8GB) 내에서 관리 가능한 N 설정 필요.
+      </div>
+    </div>
+
+    <div class="callout" style="border-left-color:var(--purple);background:var(--purple-bg);">
+      <p><strong>Case B 구현 전제조건 체크리스트:</strong><br>
+      ① 현장 이미지 기반 gear / hook / guide 라벨 데이터셋 구축 (최소 수백 장 이상)<br>
+      ② YOLO 파인튜닝 및 현장 정확도 검증 (분진 환경, 조명 변화 대응)<br>
+      ③ ByteTrack ID 연속성 현장 테스트 (컨베이어 속도별 ID 유지율 측정)<br>
+      ④ 이동 성분 보정 알고리즘 검증 (보정 전후 GRU 분류 성능 비교)<br>
+      ⑤ Edge(Jetson Orin Nano 8G) TensorRT FP16 변환 후 레이턴시 실측 (0.5초 인터락 기준 충족 여부)</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       아키텍처 케이스 비교 탭
+  ═══════════════════════════════════════════════════════ -->
+  <div id="tab-arch-compare" class="tab-panel">
+    <h3>Case A vs Case B — 아키텍처 레이어 구성 비교</h3>
+
+    <!-- SVG: 두 케이스 레이어 나란히 비교 -->
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arrCMP2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="360" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1-C. Case A vs Case B — 레이어 구성 비교</text>
+
+        <!-- ── Case A 컬럼 ── -->
+        <text x="175" y="38" text-anchor="middle" font-size="12" fill="#185FA5" font-weight="500">Case A — 고정 ROI (현재)</text>
+
+        <!-- A: 카메라 -->
+        <rect x="40" y="48" width="270" height="36" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="175" y="65" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">L1. 카메라 프레임 입력</text>
+        <text x="175" y="78" text-anchor="middle" font-size="9" fill="#5F5E5A">5MP · 고정 설치</text>
+        <line x1="175" y1="84" x2="175" y2="98" stroke="#888780" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- A: 고정 ROI (강조) -->
+        <rect x="40" y="100" width="270" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="175" y="116" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">L2. 고정 ROI 크롭</text>
+        <text x="175" y="129" text-anchor="middle" font-size="9" fill="#185FA5">사람이 사전 지정 · 진입 지점 고정</text>
+        <line x1="175" y1="136" x2="175" y2="150" stroke="#888780" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- A: Optical Flow -->
+        <rect x="40" y="152" width="270" height="36" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="175" y="168" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">L3. Optical Flow (Farneback)</text>
+        <text x="175" y="181" text-anchor="middle" font-size="9" fill="#0F6E56">H×W×2 속도 맵 생성</text>
+        <line x1="175" y1="188" x2="175" y2="202" stroke="#888780" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- A: CNN -->
+        <rect x="40" y="204" width="270" height="36" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="175" y="220" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">L4. 백본 CNN</text>
+        <text x="175" y="233" text-anchor="middle" font-size="9" fill="#0F6E56">공간 패턴 추출 · 귀납적 편향</text>
+        <line x1="175" y1="240" x2="175" y2="254" stroke="#888780" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- A: GRU -->
+        <rect x="40" y="256" width="270" height="36" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="175" y="272" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">L5. 넥 GRU (10~20프레임)</text>
+        <text x="175" y="285" text-anchor="middle" font-size="9" fill="#854F0B">단일 시퀀스 버퍼</text>
+        <line x1="175" y1="292" x2="175" y2="306" stroke="#888780" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- A: 출력 -->
+        <rect x="40" y="308" width="270" height="36" rx="6" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="175" y="324" text-anchor="middle" font-size="11" font-weight="500" fill="#791F1F">L6. 헤드 — Feature A 출력</text>
+        <text x="175" y="337" text-anchor="middle" font-size="9" fill="#A32D2D">Class 0/1/2 → 멀티모달 융합</text>
+
+        <!-- ── 중앙 구분선 ── -->
+        <line x1="360" y1="30" x2="360" y2="360" stroke="#B4B2A9" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="360" y="370" text-anchor="middle" font-size="10" fill="#9c9a92">─── vs ───</text>
+
+        <!-- ── Case B 컬럼 ── -->
+        <text x="545" y="38" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="500">Case B — 동적 ROI (YOLO)</text>
+
+        <!-- B: 카메라 -->
+        <rect x="410" y="48" width="270" height="36" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="545" y="65" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">L1. 카메라 프레임 입력</text>
+        <text x="545" y="78" text-anchor="middle" font-size="9" fill="#5F5E5A">5MP · 고정 설치 (동일)</text>
+        <line x1="545" y1="84" x2="545" y2="98" stroke="#534AB7" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- B: YOLO (신규) -->
+        <rect x="410" y="100" width="270" height="36" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+        <text x="545" y="115" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">L2. YOLO 검출 ★신규</text>
+        <text x="545" y="129" text-anchor="middle" font-size="9" fill="#534AB7">YOLOv8 커스텀 · gear/hook/guide bbox</text>
+        <line x1="545" y1="136" x2="545" y2="150" stroke="#534AB7" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- B: Tracker (신규) -->
+        <rect x="410" y="152" width="270" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="2"/>
+        <text x="545" y="167" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">L3. Tracker (ByteTrack) ★신규</text>
+        <text x="545" y="181" text-anchor="middle" font-size="9" fill="#185FA5">ID 부여 · 멀티 객체 연속성 보장</text>
+        <line x1="545" y1="188" x2="545" y2="202" stroke="#185FA5" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- B: 동적 ROI (신규) -->
+        <rect x="410" y="204" width="270" height="36" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="2"/>
+        <text x="545" y="219" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">L4. 동적 ROI 생성 ★신규</text>
+        <text x="545" y="233" text-anchor="middle" font-size="9" fill="#0F6E56">bbox + padding · 이동 성분 보정 · ID별 크롭</text>
+        <line x1="545" y1="240" x2="545" y2="254" stroke="#0F6E56" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- B: Optical Flow (공유) -->
+        <rect x="410" y="256" width="270" height="18" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="545" y="269" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">L5. Optical Flow — Case A와 동일</text>
+        <line x1="545" y1="274" x2="545" y2="282" stroke="#888780" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- B: CNN (공유) -->
+        <rect x="410" y="284" width="270" height="18" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="545" y="297" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">L6. 백본 CNN — Case A와 동일</text>
+        <line x1="545" y1="302" x2="545" y2="310" stroke="#888780" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- B: GRU (ID별 버퍼) -->
+        <rect x="410" y="312" width="270" height="18" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="545" y="325" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">L7. GRU — ID별 독립 시퀀스 버퍼 ★변경</text>
+        <line x1="545" y1="330" x2="545" y2="338" stroke="#888780" stroke-width="1" marker-end="url(#arrCMP2)"/>
+
+        <!-- B: 출력 -->
+        <rect x="410" y="340" width="270" height="18" rx="6" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="545" y="353" text-anchor="middle" font-size="10" font-weight="500" fill="#791F1F">L8. ID별 판정 집계 → Feature A 대체</text>
+      </svg>
+    </div>
+
+    <h3>항목별 정량 비교</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>구분</th>
+            <th>Case A (고정 ROI)</th>
+            <th>Case B (YOLO 동적 ROI)</th>
+            <th>비고</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>비전 레이어 수</strong></td>
+            <td>4 레이어 (카메라→ROI→Flow→CNN→GRU)</td>
+            <td>8 레이어 (+YOLO, +Tracker, +동적ROI, +ID집계)</td>
+            <td>Case B에 4개 신규</td>
+          </tr>
+          <tr>
+            <td><strong>ROI 설정</strong></td>
+            <td>사람이 1회 사전 지정</td>
+            <td>YOLO + Tracker가 매 프레임 자동 생성</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><strong>동시 감시 톱니</strong></td>
+            <td><span class="badge badge-amber">1개 (단일 ROI)</span></td>
+            <td><span class="badge badge-green">N개 병렬 처리</span></td>
+            <td>멀티 톱니 현장 유리</td>
+          </tr>
+          <tr>
+            <td><strong>GRU 시퀀스 버퍼</strong></td>
+            <td>단일 버퍼 1개</td>
+            <td>ID별 독립 버퍼 N개</td>
+            <td>메모리 N배 증가</td>
+          </tr>
+          <tr>
+            <td><strong>학습 데이터 요구</strong></td>
+            <td><span class="badge badge-teal">없음</span></td>
+            <td><span class="badge badge-amber">gear/hook 커스텀 라벨 필수</span></td>
+            <td>데이터 수집 선행 필요</td>
+          </tr>
+          <tr>
+            <td><strong>Edge 추론 지연</strong></td>
+            <td><span class="badge badge-teal">낮음</span> (Flow+CNN+GRU만)</td>
+            <td><span class="badge badge-amber">증가</span> (YOLO+Tracker 추가)</td>
+            <td>TensorRT FP16 최적화 필수</td>
+          </tr>
+          <tr>
+            <td><strong>앞단 실패 리스크</strong></td>
+            <td><span class="badge badge-teal">없음</span></td>
+            <td><span class="badge badge-coral">YOLO 미검출 시 파이프라인 중단</span></td>
+            <td>재검출 로직으로 완화</td>
+          </tr>
+          <tr>
+            <td><strong>컨베이어 이동 대응</strong></td>
+            <td><span class="badge badge-red">취약</span> (고정 ROI 이탈 가능)</td>
+            <td><span class="badge badge-green">강함</span> (객체 추적으로 대응)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><strong>멀티모달 융합 연동</strong></td>
+            <td>Feature A (단일)</td>
+            <td>Feature A (N개 집계 후 단일 대체)</td>
+            <td>융합 모듈 구조 동일</td>
+          </tr>
+          <tr>
+            <td><strong>구현 복잡도</strong></td>
+            <td><span class="badge badge-teal">낮음</span></td>
+            <td><span class="badge badge-amber">높음</span></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>전환 판단 흐름도</h3>
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arrDEC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="360" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1-D. Case A → Case B 전환 판단 흐름도</text>
+
+        <!-- 시작 -->
+        <rect x="280" y="28" width="160" height="36" rx="18" fill="#185FA5" stroke="#185FA5"/>
+        <text x="360" y="50" text-anchor="middle" font-size="12" font-weight="500" fill="#ffffff">현장 실측 시작</text>
+        <line x1="360" y1="64" x2="360" y2="82" stroke="#888780" stroke-width="1" marker-end="url(#arrDEC)"/>
+
+        <!-- 질문 1 -->
+        <polygon points="360,84 480,110 360,136 240,110" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/>
+        <text x="360" y="106" text-anchor="middle" font-size="11" fill="#633806" font-weight="500">ROI 통과 시간</text>
+        <text x="360" y="120" text-anchor="middle" font-size="10" fill="#854F0B">10~20프레임 확보 가능?</text>
+
+        <!-- YES → Case A -->
+        <line x1="360" y1="136" x2="360" y2="154" stroke="#0F6E56" stroke-width="1.2" marker-end="url(#arrDEC)"/>
+        <text x="368" y="148" font-size="10" fill="#0F6E56">YES</text>
+
+        <!-- 질문 2 -->
+        <polygon points="360,156 480,182 360,208 240,182" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/>
+        <text x="360" y="178" text-anchor="middle" font-size="11" fill="#633806" font-weight="500">위치 편차</text>
+        <text x="360" y="192" text-anchor="middle" font-size="10" fill="#854F0B">ROI 크기의 30% 이내?</text>
+
+        <!-- YES → Case A 확정 -->
+        <line x1="240" y1="182" x2="148" y2="182" stroke="#0F6E56" stroke-width="1.2" marker-end="url(#arrDEC)"/>
+        <text x="192" y="178" text-anchor="middle" font-size="10" fill="#0F6E56">YES</text>
+        <rect x="30" y="162" width="116" height="40" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+        <text x="88" y="180" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">Case A 유지</text>
+        <text x="88" y="195" text-anchor="middle" font-size="9" fill="#0F6E56">고정 ROI 설계 유효</text>
+
+        <!-- NO (질문 1) → 오른쪽 -->
+        <line x1="480" y1="110" x2="572" y2="110" stroke="#A32D2D" stroke-width="1.2" marker-end="url(#arrDEC)"/>
+        <text x="524" y="106" text-anchor="middle" font-size="10" fill="#A32D2D">NO</text>
+        <rect x="574" y="90" width="120" height="40" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1.5"/>
+        <text x="634" y="108" text-anchor="middle" font-size="11" font-weight="500" fill="#791F1F">Case B 검토</text>
+        <text x="634" y="123" text-anchor="middle" font-size="9" fill="#A32D2D">YOLO 동적 ROI</text>
+
+        <!-- NO (질문 2) → 오른쪽 -->
+        <line x1="480" y1="182" x2="572" y2="182" stroke="#A32D2D" stroke-width="1.2" marker-end="url(#arrDEC)"/>
+        <text x="524" y="178" text-anchor="middle" font-size="10" fill="#A32D2D">NO</text>
+        <rect x="574" y="162" width="120" height="40" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1.5"/>
+        <text x="634" y="180" text-anchor="middle" font-size="11" font-weight="500" fill="#791F1F">Case B 검토</text>
+        <text x="634" y="195" text-anchor="middle" font-size="9" fill="#A32D2D">YOLO 동적 ROI</text>
+
+        <!-- 화살표 연결 -->
+        <line x1="634" y1="130" x2="634" y2="160" stroke="#A32D2D" stroke-width="1" stroke-dasharray="4 2"/>
+
+        <!-- 하단 설명 -->
+        <text x="360" y="246" text-anchor="middle" font-size="10" fill="#9c9a92">* 현장 실측 항목: ① 컨베이어 속도 기준 ROI 내 체류 프레임 수 ② 제품 크기·위치 편차 범위 측정</text>
+      </svg>
+    </div>
+
+    <div class="callout">
+      <p><strong>두 케이스의 점진적 전환 전략:</strong> Optical Flow → CNN → GRU 로직은 두 케이스가 완전히 공유한다. 따라서 Case A로 개발을 시작한 뒤, 현장 실측 결과에 따라 <strong>전처리 앞단(ROI 생성 모듈)만 교체</strong>하는 방식으로 Case B로 전환 가능하다. 전체 아키텍처를 다시 설계할 필요 없이 YOLO + Tracker 레이어만 앞에 추가하면 된다.</p>
+    </div>
+  </div>
+
+  <!-- 압력 파이프라인 -->
+  <div id="tab-pressure" class="tab-panel">
+
+    <!-- 그림 2: 압력 센서 파이프라인 SVG -->
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="340" y="20" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 2. 압력 센서 파이프라인 — 1D CNN 구조</text>
+
+        <!-- 입력: 로드셀 -->
+        <rect x="20" y="40" width="90" height="52" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="65" y="62" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">로드셀</text>
+        <text x="65" y="78" text-anchor="middle" font-size="11" fill="#5F5E5A">압력 신호</text>
+
+        <line x1="110" y1="66" x2="138" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+        <!-- 전처리 -->
+        <rect x="140" y="30" width="130" height="72" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="205" y="50" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">전처리</text>
+        <text x="205" y="66" text-anchor="middle" font-size="10" fill="#185FA5">슬라이딩 윈도우 0.5~1초</text>
+        <text x="205" y="79" text-anchor="middle" font-size="10" fill="#185FA5">z-score 정규화</text>
+        <text x="205" y="92" text-anchor="middle" font-size="10" fill="#185FA5">3채널: 원신호·미분·이동평균</text>
+
+        <line x1="270" y1="66" x2="298" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+        <!-- 병렬 1D CNN 박스 (두 개 병렬) -->
+        <!-- 상단: 짧은 필터 -->
+        <rect x="300" y="30" width="130" height="40" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="365" y="46" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">짧은 필터 (3~5 step)</text>
+        <text x="365" y="62" text-anchor="middle" font-size="10" fill="#0F6E56">순간 스파이크 감지</text>
+
+        <!-- 하단: 긴 필터 -->
+        <rect x="300" y="80" width="130" height="40" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="365" y="96" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">긴 필터 (15~30 step)</text>
+        <text x="365" y="112" text-anchor="middle" font-size="10" fill="#0F6E56">완만한 감소 추세 감지</text>
+
+        <!-- 병렬 선 분기 -->
+        <path d="M298 66 L300 50" fill="none" stroke="#888780" stroke-width="1"/>
+        <path d="M298 66 L300 100" fill="none" stroke="#888780" stroke-width="1"/>
+
+        <!-- 병렬 -> concat -->
+        <line x1="430" y1="50" x2="462" y2="75" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+        <line x1="430" y1="100" x2="462" y2="78" stroke="#888780" stroke-width="1"/>
+
+        <!-- Concat -->
+        <rect x="464" y="54" width="10" height="44" rx="3" fill="#888780"/>
+        <text x="469" y="105" text-anchor="middle" font-size="9" fill="#5F5E5A">합산</text>
+
+        <line x1="474" y1="76" x2="502" y2="76" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+        <!-- Global Avg Pooling -->
+        <rect x="504" y="52" width="120" height="48" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="564" y="71" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">Global Avg Pooling</text>
+        <text x="564" y="85" text-anchor="middle" font-size="10" fill="#854F0B">가변 길이 시계열</text>
+        <text x="564" y="97" text-anchor="middle" font-size="10" fill="#854F0B">→ 고정 크기 Feature B</text>
+
+        <!-- 출력 화살표 -->
+        <line x1="564" y1="100" x2="564" y2="128" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+        <rect x="504" y="130" width="120" height="36" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+        <text x="564" y="150" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">Feature B 출력</text>
+        <text x="564" y="163" text-anchor="middle" font-size="10" fill="#534AB7">융합 모듈로 전달</text>
+
+        <!-- 이상 패턴 설명 박스 -->
+        <rect x="20" y="140" width="340" height="110" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+        <text x="30" y="160" font-size="11" font-weight="500" fill="#444441">압력 신호 이상 패턴</text>
+        <!-- 정상 파형 (사인 곡선 시뮬레이션) -->
+        <text x="30" y="178" font-size="10" fill="#0F6E56" font-weight="500">정상</text>
+        <polyline points="65,185 75,175 85,185 95,175 105,185 115,175 125,185 135,175 145,185" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+        <text x="150" y="182" font-size="10" fill="#5F5E5A">일정한 압력 파형 유지</text>
+        <!-- 스파이크 패턴 -->
+        <text x="30" y="210" font-size="10" fill="#854F0B" font-weight="500">들림</text>
+        <polyline points="65,217 75,207 82,217 88,195 94,217 104,207 114,217 124,207 134,217" fill="none" stroke="#854F0B" stroke-width="1.5"/>
+        <text x="150" y="214" font-size="10" fill="#5F5E5A">충돌·스파이크 발생</text>
+        <!-- 소실 패턴 -->
+        <text x="30" y="242" font-size="10" fill="#A32D2D" font-weight="500">이탈</text>
+        <polyline points="65,240 75,238 85,242 95,240 105,237 115,235 125,232 135,230 145,229" fill="none" stroke="#A32D2D" stroke-width="1.5"/>
+        <text x="150" y="238" font-size="10" fill="#5F5E5A">압력 점진 감소 후 소실</text>
+      </svg>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">압력 센서 파이프라인 — 1D CNN</div>
+      <div class="arch-row">
+        <div class="arch-node" style="background: var(--blue-bg); border-color: var(--blue);">
+          <strong style="color:var(--blue)">전처리</strong>
+          슬라이딩 윈도우 (0.5~1초) + z-score 정규화 + 3채널 구성
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--teal-bg); border-color: var(--teal);">
+          <strong style="color:var(--teal)">병렬 1D CNN</strong>
+          짧은 필터(3~5): 순간 스파이크 / 긴 필터(15~30): 완만한 감소 추세
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--purple-bg); border-color: var(--purple);">
+          <strong style="color:var(--purple)">Global Avg Pooling</strong>
+          가변 길이 시계열 → 고정 크기 Feature B
+        </div>
+      </div>
+    </div>
+    <p style="font-size:13px;">3채널 구성: <span class="badge badge-blue">원신호</span> <span class="badge badge-teal">변화율(1차 미분)</span> <span class="badge badge-amber">이동평균</span> — 스파이크와 완만한 변화를 동시에 표현</p>
+  </div>
+
+  <!-- 융합 -->
+  <div id="tab-fusion" class="tab-panel">
+
+    <!-- 그림 3: 멀티모달 융합 SVG -->
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="340" y="20" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 3. 멀티모달 융합 구조 — Weighted Fusion → Cross-modal Attention</text>
+
+        <!-- Feature A -->
+        <rect x="40" y="40" width="140" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="110" y="62" text-anchor="middle" font-size="13" font-weight="500" fill="#0C447C">Feature A</text>
+        <text x="110" y="78" text-anchor="middle" font-size="10" fill="#185FA5">비전 파이프라인 출력</text>
+        <text x="110" y="90" text-anchor="middle" font-size="10" fill="#185FA5">신뢰도: Flow 벡터 일관성</text>
+
+        <!-- Feature B -->
+        <rect x="500" y="40" width="140" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="570" y="62" text-anchor="middle" font-size="13" font-weight="500" fill="#085041">Feature B</text>
+        <text x="570" y="78" text-anchor="middle" font-size="10" fill="#0F6E56">압력 파이프라인 출력</text>
+        <text x="570" y="90" text-anchor="middle" font-size="10" fill="#0F6E56">신뢰도: SNR(신호잡음비)</text>
+
+        <!-- 신뢰도 가중치 계산 화살표 -->
+        <path d="M180 68 L245 68 L245 140 L250 140" fill="none" stroke="#185FA5" stroke-width="1" marker-end="url(#arr3)"/>
+        <path d="M500 68 L435 68 L435 140 L430 140" fill="none" stroke="#0F6E56" stroke-width="1" marker-end="url(#arr3)"/>
+
+        <!-- 신뢰도 가중치 박스 -->
+        <rect x="255" y="122" width="170" height="36" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="340" y="137" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">신뢰도 기반 동적 가중치</text>
+        <text x="340" y="151" text-anchor="middle" font-size="10" fill="#5F5E5A">w_A + w_B = 1 (실시간 조절)</text>
+
+        <!-- 가중치 -> 1단계 -->
+        <line x1="340" y1="158" x2="340" y2="180" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+        <!-- 1단계: Weighted Feature Fusion -->
+        <rect x="140" y="182" width="200" height="58" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+        <text x="240" y="200" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">1단계: Weighted Fusion</text>
+        <text x="240" y="215" text-anchor="middle" font-size="10" fill="#534AB7">F = w_A × A + w_B × B</text>
+        <text x="240" y="228" text-anchor="middle" font-size="10" fill="#534AB7">초기 운영 / 구조 단순</text>
+
+        <!-- 1단계 -> 2단계 화살표 -->
+        <line x1="340" y1="182" x2="430" y2="182" stroke="#888780" stroke-width="1" stroke-dasharray="5 3"/>
+        <text x="385" y="176" text-anchor="middle" font-size="9" fill="#9c9a92">데이터 충분 후</text>
+
+        <!-- 2단계: Cross-modal Attention -->
+        <rect x="340" y="182" width="200" height="58" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+        <text x="440" y="200" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">2단계: Cross-modal Attention</text>
+        <text x="440" y="215" text-anchor="middle" font-size="10" fill="#534AB7">A = Query / B = Key, Value</text>
+        <text x="440" y="228" text-anchor="middle" font-size="10" fill="#534AB7">수백~수천 건으로 학습 가능</text>
+
+        <!-- 출력 -->
+        <line x1="240" y1="240" x2="240" y2="262" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+        <line x1="440" y1="240" x2="440" y2="262" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+        <rect x="170" y="264" width="340" height="28" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="340" y="276" text-anchor="middle" font-size="11" font-weight="500" fill="#791F1F">최종 출력 — Class 0 / 1 / 2 분류</text>
+        <text x="340" y="288" text-anchor="middle" font-size="9" fill="#A32D2D">카메라 오염 시 w_A→0, 압력 단독 폴백 자동 전환</text>
+      </svg>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">멀티모달 융합 구조 — 단계별 운영</div>
+      <div class="arch-row">
+        <div class="arch-node" style="background: var(--blue-bg); border-color: var(--blue);">
+          <strong style="color:var(--blue)">Feature A</strong>
+          비전 파이프라인 출력<br>신뢰도: Optical Flow 벡터 일관성
+        </div>
+        <div class="arch-arrow" style="font-size:20px">⊕</div>
+        <div class="arch-node" style="background: var(--teal-bg); border-color: var(--teal);">
+          <strong style="color:var(--teal)">Feature B</strong>
+          압력 파이프라인 출력<br>신뢰도: SNR(신호 잡음비)
+        </div>
+      </div>
+      <div class="arch-merge">↓ 신뢰도 기반 동적 가중치 조절</div>
+      <div class="arch-row">
+        <div class="arch-node fusion-box">
+          <strong>1단계: Weighted Feature Fusion (초기)</strong>
+          F = w_A × A + w_B × B (w_A + w_B = 1, 동적 조절).<br>카메라 오염 시 w_A → 0, 압력 단독 폴백 자동 전환
+        </div>
+        <div class="arch-arrow" style="color:var(--text3)">→</div>
+        <div class="arch-node fusion-box">
+          <strong>2단계: Cross-modal Attention (데이터 충분 후)</strong>
+          비전 A = Query, 압력 B = Key/Value.<br>"지금 이 비전 패턴과 가장 관련 있는 압력 상태는 언제인가" 모델이 스스로 학습
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 아키텍처 비교 -->
+<section id="compare">
+  <h2><span class="num">5</span> 아키텍처 선택 비교 및 근거</h2>
+  <p>데이터 효율, 추론 속도, 입력 데이터 궁합, 구현 복잡도 4개 기준으로 주요 아키텍처를 평가하였다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>아키텍처</th>
+          <th>데이터 효율</th>
+          <th>추론 속도</th>
+          <th>입력 궁합</th>
+          <th>구현 복잡도</th>
+          <th>채택 여부</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>CNN (백본)</strong></td>
+          <td><span class="badge badge-green">높음</span></td>
+          <td><span class="badge badge-green">빠름</span></td>
+          <td><span class="badge badge-green">매우 적합</span></td>
+          <td><span class="badge badge-green">낮음</span></td>
+          <td><span class="badge badge-blue">채택</span></td>
+        </tr>
+        <tr>
+          <td><strong>GRU (넥)</strong></td>
+          <td><span class="badge badge-green">높음</span></td>
+          <td><span class="badge badge-green">빠름</span></td>
+          <td><span class="badge badge-green">적합</span></td>
+          <td><span class="badge badge-green">낮음</span></td>
+          <td><span class="badge badge-blue">채택</span></td>
+        </tr>
+        <tr>
+          <td>RNN</td>
+          <td><span class="badge badge-red">낮음</span></td>
+          <td><span class="badge badge-green">빠름</span></td>
+          <td><span class="badge badge-gray">적합</span></td>
+          <td><span class="badge badge-green">낮음</span></td>
+          <td><span class="badge badge-gray">미채택</span></td>
+        </tr>
+        <tr>
+          <td>LSTM</td>
+          <td><span class="badge badge-amber">중간</span></td>
+          <td><span class="badge badge-amber">중간</span></td>
+          <td><span class="badge badge-gray">적합</span></td>
+          <td><span class="badge badge-amber">중간</span></td>
+          <td><span class="badge badge-gray">미채택</span></td>
+        </tr>
+        <tr>
+          <td>ViT</td>
+          <td><span class="badge badge-red">낮음</span></td>
+          <td><span class="badge badge-amber">중간</span></td>
+          <td><span class="badge badge-gray">적합</span></td>
+          <td><span class="badge badge-red">높음</span></td>
+          <td><span class="badge badge-amber">2단계 검토</span></td>
+        </tr>
+        <tr>
+          <td>Video Swin</td>
+          <td><span class="badge badge-red">매우 낮음</span></td>
+          <td><span class="badge badge-red">느림</span></td>
+          <td><span class="badge badge-green">매우 적합</span></td>
+          <td><span class="badge badge-red">매우 높음</span></td>
+          <td><span class="badge badge-purple">3단계 목표</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- 그림 4: CNN vs ViT 성능 비교 차트 -->
+  <div style="margin-bottom:16px;">
+    <svg width="100%" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arr4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 4. CNN vs ViT — 사전학습 데이터 크기별 성능 비교 (Dosovitskiy et al., ICLR 2021, Fig.4 재현)</text>
+
+      <!-- 축 -->
+      <line x1="80" y1="40" x2="80" y2="220" stroke="#B4B2A9" stroke-width="1" marker-end="url(#arr4)"/>
+      <line x1="80" y1="220" x2="620" y2="220" stroke="#B4B2A9" stroke-width="1" marker-end="url(#arr4)"/>
+
+      <!-- 축 라벨 -->
+      <text x="340" y="248" text-anchor="middle" font-size="11" fill="#5F5E5A">사전학습 데이터셋 크기</text>
+      <text x="35" y="135" text-anchor="middle" font-size="11" fill="#5F5E5A" transform="rotate(-90,35,135)">모델 성능</text>
+
+      <!-- X축 눈금 -->
+      <text x="130" y="234" text-anchor="middle" font-size="10" fill="#888780">1K</text>
+      <text x="220" y="234" text-anchor="middle" font-size="10" fill="#888780">10K</text>
+      <text x="320" y="234" text-anchor="middle" font-size="10" fill="#888780">1M</text>
+      <text x="430" y="234" text-anchor="middle" font-size="10" fill="#888780">10M</text>
+      <text x="540" y="234" text-anchor="middle" font-size="10" fill="#888780">100M~300M</text>
+
+      <!-- 교차점 세로선 -->
+      <line x1="430" y1="50" x2="430" y2="225" stroke="#EF9F27" stroke-width="1" stroke-dasharray="5 3"/>
+      <text x="432" y="60" font-size="10" fill="#854F0B">교차점 (~10M장)</text>
+
+      <!-- 현재 프로젝트 위치 -->
+      <line x1="160" y1="50" x2="160" y2="225" stroke="#A32D2D" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="162" y="60" font-size="10" fill="#A32D2D">현재 프로젝트</text>
+      <text x="162" y="72" font-size="10" fill="#A32D2D">(수백~수천건)</text>
+
+      <!-- CNN 곡선: 소규모에서 높은 성능, 완만한 상승 -->
+      <path d="M80,200 C130,140 180,110 250,95 C320,82 370,76 430,72 C490,68 540,66 600,64"
+            fill="none" stroke="#0F6E56" stroke-width="2.5" stroke-linecap="round"/>
+
+      <!-- ViT 곡선: 소규모에서 낮은 성능, 가파른 상승 -->
+      <path d="M80,215 C130,210 180,200 250,185 C320,165 370,140 430,110 C490,80 540,68 600,58"
+            fill="none" stroke="#185FA5" stroke-width="2.5" stroke-linecap="round"/>
+
+      <!-- CNN 라벨 -->
+      <rect x="555" y="56" width="58" height="20" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="584" y="70" text-anchor="middle" font-size="11" font-weight="500" fill="#0F6E56">CNN</text>
+
+      <!-- ViT 라벨 -->
+      <rect x="555" y="40" width="58" height="20" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="584" y="54" text-anchor="middle" font-size="11" font-weight="500" fill="#185FA5">ViT</text>
+
+      <!-- CNN > ViT 영역 표시 -->
+      <rect x="82" y="42" width="346" height="176" rx="0" fill="#E1F5EE" fill-opacity="0.15"/>
+      <text x="200" y="170" text-anchor="middle" font-size="10" fill="#0F6E56">CNN 우위 구간</text>
+
+      <!-- ViT > CNN 영역 표시 -->
+      <rect x="430" y="42" width="188" height="176" rx="0" fill="#E6F1FB" fill-opacity="0.2"/>
+      <text x="520" y="170" text-anchor="middle" font-size="10" fill="#185FA5">ViT 우위 구간</text>
+    </svg>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">CNN vs ViT 교차점 — 원저 논문 근거</div>
+    <div class="info-body">Dosovitskiy et al. (2021), ICLR 2021 — ResNet(CNN)은 소규모에서 ViT보다 높은 성능, ViT는 14M~300M 규모에서 역전됨. "합성곱의 귀납적 편향은 소규모에서 유용하지만 대규모 학습이 이를 압도한다." 본 프로젝트 초기 이상 데이터(수백~수천 건)는 교차점(약 10M장)에 크게 못 미침.</div>
+  </div>
+</section>
+
+<!-- 6. 학습 전략 -->
+<section id="learning">
+  <h2><span class="num">6</span> 학습 전략 — 반지도학습 구조</h2>
+  <p>이상 클래스 데이터의 초기 부족 문제를 해결하기 위해, 정상 데이터를 먼저 대량 활용하는 반지도학습 구조를 채택.</p>
+  <!-- 그림 5: 단계별 학습 전략 로드맵 SVG -->
+  <div style="margin-bottom:16px;">
+    <svg width="100%" viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arr5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 5. 단계별 학습 전략 로드맵 — 비지도 이상 탐지 → 반지도 분류 → Transformer 고도화</text>
+
+      <!-- 1단계 박스 -->
+      <rect x="30" y="36" width="180" height="130" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <rect x="30" y="36" width="180" height="28" rx="10" fill="#185FA5"/>
+      <rect x="30" y="52" width="180" height="12" rx="0" fill="#185FA5"/>
+      <text x="120" y="55" text-anchor="middle" font-size="12" font-weight="500" fill="#ffffff">1단계 — 비지도</text>
+      <text x="120" y="85" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">CNN 오토인코더</text>
+      <text x="120" y="101" text-anchor="middle" font-size="10" fill="#185FA5">정상 Optical Flow 복원 학습</text>
+      <text x="120" y="116" text-anchor="middle" font-size="10" fill="#185FA5">라벨 없이 즉시 적용 가능</text>
+      <text x="120" y="131" text-anchor="middle" font-size="10" fill="#185FA5">손실함수: MSE</text>
+      <rect x="52" y="146" width="116" height="14" rx="4" fill="#B5D4F4"/>
+      <text x="110" y="157" text-anchor="middle" font-size="10" fill="#042C53">착수~개발 초기</text>
+
+      <!-- 화살표 1→2 -->
+      <line x1="210" y1="101" x2="248" y2="101" stroke="#888780" stroke-width="1.5" marker-end="url(#arr5)"/>
+      <text x="229" y="95" text-anchor="middle" font-size="9" fill="#5F5E5A">가중치 전이</text>
+
+      <!-- 2단계 박스 -->
+      <rect x="250" y="36" width="180" height="130" rx="10" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <rect x="250" y="36" width="180" height="28" rx="10" fill="#854F0B"/>
+      <rect x="250" y="52" width="180" height="12" rx="0" fill="#854F0B"/>
+      <text x="340" y="55" text-anchor="middle" font-size="12" font-weight="500" fill="#ffffff">2단계 — 반지도</text>
+      <text x="340" y="85" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">점진적 라벨 누적</text>
+      <text x="340" y="101" text-anchor="middle" font-size="10" fill="#854F0B">이상 이벤트 발생 시 라벨 부여</text>
+      <text x="340" y="116" text-anchor="middle" font-size="10" fill="#854F0B">Focal Loss (클래스 불균형 대응)</text>
+      <text x="340" y="131" text-anchor="middle" font-size="10" fill="#854F0B">Class 0 / 1 / 2 분류 모델</text>
+      <rect x="272" y="146" width="136" height="14" rx="4" fill="#FAC775"/>
+      <text x="340" y="157" text-anchor="middle" font-size="10" fill="#412402">개발~실증</text>
+
+      <!-- 화살표 2→3 -->
+      <line x1="430" y1="101" x2="468" y2="101" stroke="#888780" stroke-width="1.5" marker-end="url(#arr5)"/>
+      <text x="449" y="95" text-anchor="middle" font-size="9" fill="#5F5E5A">1만건 이상</text>
+
+      <!-- 3단계 박스 -->
+      <rect x="470" y="36" width="180" height="130" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <rect x="470" y="36" width="180" height="28" rx="10" fill="#534AB7"/>
+      <rect x="470" y="52" width="180" height="12" rx="0" fill="#534AB7"/>
+      <text x="560" y="55" text-anchor="middle" font-size="12" font-weight="500" fill="#ffffff">3단계 — Transformer</text>
+      <text x="560" y="85" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">고도화</text>
+      <text x="560" y="101" text-anchor="middle" font-size="10" fill="#534AB7">Video Swin Transformer</text>
+      <text x="560" y="116" text-anchor="middle" font-size="10" fill="#534AB7">Cross-modal Attention 파인튜닝</text>
+      <text x="560" y="131" text-anchor="middle" font-size="10" fill="#534AB7">2단계 가중치 → 초기값 활용</text>
+      <rect x="492" y="146" width="136" height="14" rx="4" fill="#CECBF6"/>
+      <text x="560" y="157" text-anchor="middle" font-size="10" fill="#26215C">데이터 1만건 이상</text>
+
+      <!-- 아키텍처 불변 메모 -->
+      <text x="340" y="196" text-anchor="middle" font-size="10" fill="#9c9a92">* 학습 방식이 달라져도 CNN / GRU / Transformer 아키텍처 자체는 유지. 헤드 구조와 손실 함수만 변경.</text>
+    </svg>
+  </div>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" style="background: var(--blue)"></div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-blue">1단계</span> 착수~개발 초기</div>
+        <div class="tl-title">비지도 이상 탐지</div>
+        <div class="tl-desc">CNN 오토인코더로 정상 Optical Flow 맵 복원을 학습. 운영 중 복원 오류가 임계값 초과 시 이상 판정. 라벨 없이 즉시 현장 적용 가능. 손실 함수: Reconstruction Loss (MSE)</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" style="background: var(--amber-mid)"></div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-amber">2단계</span> 개발~실증</div>
+        <div class="tl-title">점진적 라벨 누적 및 분류 모델</div>
+        <div class="tl-desc">이상 이벤트 발생 시마다 라벨 부여 — 지도학습 데이터 축적. 1단계 오토인코더 인코더 가중치를 초기값으로 전이. Focal Loss 적용으로 클래스 불균형(정상 >> 이상) 대응. Class 0/1/2 분류 모델로 고도화.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" style="background: var(--purple)"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-purple">3단계</span> 데이터 1만 건 이상</div>
+        <div class="tl-title">Transformer 기반 고도화</div>
+        <div class="tl-desc">Video Swin Transformer 또는 Cross-modal Attention 파인튜닝. 2단계 학습 가중치를 초기값으로 활용 — 처음부터 학습 대비 데이터 효율 극대화.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. Edge-Server-HMI 아키텍처 -->
+<section id="infra">
+  <h2><span class="num">7</span> Edge-Server-HMI 아키텍처 설계</h2>
+  <p>추론은 현장 Edge 디바이스에서 전담하여 0.5초 이내 PLC 인터락을 보장하고, 서버는 데이터 적재 및 MLOps 재학습에 집중하며, 운영자는 웹 대시보드를 통해 PC·태블릿으로 실시간 모니터링한다.</p>
+
+  <div class="info-box">
+    <div class="info-title">확정 디바이스 — ASUS IoT PE1100N (Jetson Orin Nano 8G)</div>
+    <div class="info-body">
+      AI 성능: 20 TOPS · GPU: 512 CUDA core (Ampere) · 메모리: 8GB LPDDR5 통합<br>
+      인터페이스: USB 3.0 × 4 / GigE (카메라), RS-232/485 (로드셀), GigE LAN × 2 (PLC·서버), M.2 NVMe SSD<br>
+      소프트웨어: JetPack 6.x (Ubuntu 22.04) · PyTorch → <strong>TensorRT FP16</strong> 변환 필수 (메모리·속도 최적화)
+    </div>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-infra-overview')">전체 구조</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-infra-edge')">Edge 상세</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-infra-flow')">추론 흐름</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-infra-hmi')">HMI 설계</button>
+  </div>
+
+  <!-- 전체 구조 탭 -->
+  <div id="tab-infra-overview" class="tab-panel active">
+    <svg width="100%" viewBox="0 0 680 520" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arri" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- 레이어 1: 현장 센서 -->
+      <rect x="30" y="20" width="620" height="96" rx="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="50" y="44" font-size="11" font-weight="500" fill="#5F5E5A" letter-spacing="0.05em">현장 센서 레이어</text>
+      <rect x="55" y="54" width="150" height="44" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="130" y="73" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">비전카메라 × 3</text>
+      <text x="130" y="89" text-anchor="middle" font-size="10" fill="#0F6E56">5MP · Air Purge · USB3/GigE</text>
+      <rect x="265" y="54" width="150" height="44" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="340" y="73" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">로드셀 × 3</text>
+      <text x="340" y="89" text-anchor="middle" font-size="10" fill="#0F6E56">100~200 Hz · RS-485</text>
+      <rect x="475" y="54" width="150" height="44" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="550" y="73" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">PLC</text>
+      <text x="550" y="89" text-anchor="middle" font-size="10" fill="#5F5E5A">Modbus TCP · DO 신호</text>
+
+      <!-- 화살표: 센서 → Edge -->
+      <line x1="130" y1="116" x2="130" y2="154" stroke="#0F6E56" stroke-width="1.2" marker-end="url(#arri)"/>
+      <line x1="340" y1="116" x2="340" y2="154" stroke="#0F6E56" stroke-width="1.2" marker-end="url(#arri)"/>
+      <path d="M550 116 L550 140 L490 140 L490 154" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arri)"/>
+
+      <!-- 레이어 2: Edge -->
+      <rect x="30" y="154" width="430" height="160" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="50" y="178" font-size="11" font-weight="500" fill="#0C447C" letter-spacing="0.05em">Edge — ASUS IoT PE1100N (Jetson Orin Nano 8G) · 현장 제어반</text>
+      <rect x="50" y="188" width="170" height="52" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="135" y="209" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">전처리 모듈</text>
+      <text x="135" y="226" text-anchor="middle" font-size="10" fill="#534AB7">ROI 크롭 · Optical Flow</text>
+      <text x="135" y="238" text-anchor="middle" font-size="10" fill="#534AB7">z-score 정규화</text>
+      <line x1="220" y1="214" x2="238" y2="214" stroke="#888780" stroke-width="1" marker-end="url(#arri)"/>
+      <rect x="240" y="188" width="185" height="52" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="332" y="209" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">AI 추론 엔진 (TensorRT)</text>
+      <text x="332" y="226" text-anchor="middle" font-size="10" fill="#534AB7">CNN+GRU · 1D CNN</text>
+      <text x="332" y="238" text-anchor="middle" font-size="10" fill="#534AB7">Weighted Fusion</text>
+      <rect x="50" y="260" width="170" height="40" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <text x="135" y="278" text-anchor="middle" font-size="12" font-weight="500" fill="#633806">PLC 인터락 출력</text>
+      <text x="135" y="293" text-anchor="middle" font-size="10" fill="#854F0B">Class 2 → 0.5초 이내 정지</text>
+      <rect x="240" y="260" width="185" height="40" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="332" y="278" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">로컬 버퍼 / 전송</text>
+      <text x="332" y="293" text-anchor="middle" font-size="10" fill="#5F5E5A">NVMe SSD · MQTT/REST</text>
+      <line x1="135" y1="240" x2="135" y2="258" stroke="#888780" stroke-width="1" marker-end="url(#arri)"/>
+      <line x1="332" y1="240" x2="332" y2="258" stroke="#888780" stroke-width="1" marker-end="url(#arri)"/>
+
+      <!-- 서버 레이어 (Edge 오른쪽) -->
+      <rect x="480" y="154" width="170" height="160" rx="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="565" y="178" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A" letter-spacing="0.05em">서버 레이어</text>
+      <rect x="498" y="188" width="134" height="50" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="565" y="208" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">MLOps 서버</text>
+      <text x="565" y="225" text-anchor="middle" font-size="10" fill="#185FA5">모델 재학습 · Edge 배포</text>
+      <rect x="498" y="254" width="134" height="50" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="565" y="274" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">데이터 수집 DB</text>
+      <text x="565" y="291" text-anchor="middle" font-size="10" fill="#185FA5">학습 데이터 적재</text>
+
+      <!-- Edge ↔ Server -->
+      <line x1="460" y1="214" x2="496" y2="214" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arri)"/>
+      <line x1="496" y1="228" x2="460" y2="228" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arri)"/>
+      <text x="478" y="224" text-anchor="middle" font-size="9" fill="#185FA5">LAN</text>
+
+      <!-- 화살표: Edge/Server → HMI -->
+      <line x1="240" y1="370" x2="240" y2="408" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arri)"/>
+      <line x1="565" y1="314" x2="565" y2="380" stroke="#185FA5" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arri)"/>
+      <path d="M565 380 L565 408 L565 408" fill="none" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arri)"/>
+
+      <!-- 레이어 3: HMI -->
+      <rect x="30" y="408" width="620" height="90" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="50" y="430" font-size="11" font-weight="500" fill="#085041" letter-spacing="0.05em">HMI — 웹 대시보드 (PC · 태블릿 · 사내 LAN 접속)</text>
+      <rect x="55" y="438" width="172" height="48" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="141" y="458" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">실시간 모니터링</text>
+      <text x="141" y="474" text-anchor="middle" font-size="10" fill="#0F6E56">3라인 Class 상태 · 신뢰도 %</text>
+      <rect x="254" y="438" width="172" height="48" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="340" y="458" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">이벤트 이력 / 통계</text>
+      <text x="340" y="474" text-anchor="middle" font-size="10" fill="#0F6E56">일별 건수 · 트렌드 차트</text>
+      <rect x="453" y="438" width="172" height="48" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <text x="539" y="458" text-anchor="middle" font-size="12" font-weight="500" fill="#633806">알람 · 알림</text>
+      <text x="539" y="474" text-anchor="middle" font-size="10" fill="#854F0B">경광등 · 문자 · 이메일</text>
+    </svg>
+
+    <div class="callout">
+      <p><strong>설계 원칙:</strong> 추론은 반드시 Edge에서만 수행. 서버 레이턴시에 의존할 경우 0.5초 인터락 보장 불가. 서버는 데이터 적재와 모델 재학습·배포 역할만 담당.</p>
+    </div>
+  </div>
+
+  <!-- Edge 상세 탭 -->
+  <div id="tab-infra-edge" class="tab-panel">
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-label"><span class="badge badge-blue">하드웨어 사양</span></div>
+        <div class="card-title">ASUS IoT PE1100N</div>
+        <div class="card-body">
+          <strong>AI 성능:</strong> 20 TOPS<br>
+          <strong>GPU:</strong> 512 CUDA core (Ampere)<br>
+          <strong>메모리:</strong> 8GB LPDDR5 통합<br>
+          <strong>스토리지:</strong> M.2 NVMe SSD 슬롯<br>
+          <strong>카메라 입력:</strong> USB 3.0 × 4 / GigE<br>
+          <strong>시리얼:</strong> RS-232/485 (로드셀)<br>
+          <strong>네트워크:</strong> GigE LAN × 2
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-purple">소프트웨어 스택</span></div>
+        <div class="card-title">JetPack 6.x 기반</div>
+        <div class="card-body">
+          <strong>OS:</strong> Ubuntu 22.04 (JetPack 6.x)<br>
+          <strong>AI 프레임워크:</strong> PyTorch → TensorRT FP16<br>
+          <strong>영상 처리:</strong> OpenCV (CUDA 가속)<br>
+          <strong>PLC 통신:</strong> Modbus TCP<br>
+          <strong>데이터 전송:</strong> MQTT / REST API<br>
+          <strong>모델 배포:</strong> 서버 OTA 업데이트<br>
+          <strong>모니터링:</strong> GPU 온도 · 사용률 감시
+        </div>
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-title">20 TOPS 충분 여부 — 단계별 평가</div>
+      <div class="info-body">
+        <strong>1~2단계 (CNN 오토인코더 · CNN+GRU):</strong> 카메라 3대 × 5~10 FPS 기준 추론 연산량 약 8~12 TOPS. TensorRT FP16 최적화 적용 시 20 TOPS 범위 내에서 처리 가능. <br><br>
+        <strong>3단계 (Video Swin Transformer) 시 재검토 필요:</strong> 해당 시점에 Orin NX 16G (40 TOPS) 업그레이드 또는 경량 MobileViT 유지 중 선택.
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>TensorRT FP16 변환 의무화:</strong> 8GB 통합 메모리 제약 안에서 카메라 3대 동시 처리를 위해 학습(PyTorch)과 배포(TensorRT FP16) 파이프라인을 처음부터 분리하여 설계. 모델 용량 ~50% 절감, 추론 속도 2~3배 향상 기대.</p>
+    </div>
+    <h3>단계별 하드웨어 로드맵</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>단계</th><th>디바이스</th><th>AI 모델</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-blue">1단계</span></td><td>PE1100N (Orin Nano 8G)</td><td>CNN 오토인코더 — 비지도 이상 탐지</td><td>현재 확정</td></tr>
+          <tr><td><span class="badge badge-amber">2단계</span></td><td>PE1100N 유지</td><td>CNN+GRU · 1D CNN · TensorRT FP16 최적화</td><td>실증 단계</td></tr>
+          <tr><td><span class="badge badge-purple">3단계</span></td><td>Orin NX 16G 업그레이드 검토</td><td>Video Swin Transformer 또는 경량 ViT</td><td>데이터 1만 건 이상 시</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 추론 흐름 탭 -->
+  <div id="tab-infra-flow" class="tab-panel">
+    <!--
+      레이아웃 계획 (viewBox 0 0 680 500)
+      ─────────────────────────────────────────
+      y=20~44   타이밍 바 (6구간, 각 ~103px)
+      y=58~110  Step 행: 프레임수집(x30,w148) → 전처리(x210,w148) → AI추론(x390,w148)
+      y=110~150 분기선 (x=464 수직 내려가기)
+      y=150~168 수평 분기 허브선
+      y=168~216 Class 행: Class0(x30,w148) / Class1(x226,w148) / Class2(x422,w148)
+      y=230~268 PLC 행 (Class2 아래, x422,w148)
+      y=282~320 폴백 안내 박스 (전체 너비)
+      y=334~372 서버 전송 박스 (중앙)
+      최하단: y=372+20=392 → viewBox height=500 (여유)
+    -->
+    <svg width="100%" viewBox="0 0 680 500" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arrf" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- ── 타이밍 바 (y=20~44) ── -->
+      <rect x="30" y="20" width="620" height="24" rx="4" fill="#F1EFE8" stroke="#D3D1C7" stroke-width="0.5"/>
+      <!-- 구간 색상 -->
+      <rect x="30"  y="20" width="103" height="24" rx="4" fill="#E1F5EE" stroke="none"/>
+      <rect x="133" y="20" width="103" height="24" rx="0" fill="#E6F1FB" stroke="none"/>
+      <rect x="236" y="20" width="103" height="24" rx="0" fill="#EEEDFE" stroke="none"/>
+      <rect x="339" y="20" width="103" height="24" rx="0" fill="#FAEEDA" stroke="none"/>
+      <rect x="442" y="20" width="103" height="24" rx="0" fill="#FAEEDA" stroke="none"/>
+      <rect x="545" y="20" width="105" height="24" rx="0" fill="#FCEBEB" stroke="none"/>
+      <!-- 라벨 -->
+      <text x="81"  y="36" text-anchor="middle" font-size="10" fill="#085041">0 ms</text>
+      <text x="184" y="36" text-anchor="middle" font-size="10" fill="#0C447C">~50 ms</text>
+      <text x="287" y="36" text-anchor="middle" font-size="10" fill="#3C3489">~200 ms</text>
+      <text x="390" y="36" text-anchor="middle" font-size="10" fill="#633806">~300 ms</text>
+      <text x="493" y="36" text-anchor="middle" font-size="10" fill="#633806">~400 ms</text>
+      <text x="597" y="36" text-anchor="middle" font-size="10" fill="#791F1F">≤ 500 ms</text>
+
+      <!-- ── Step 행 (y=58~110) ── -->
+      <!-- Step1: 프레임 수집 (x=30, w=148) -->
+      <rect x="30" y="58" width="148" height="52" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="104" y="80" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">프레임 수집</text>
+      <text x="104" y="96" text-anchor="middle" font-size="10" fill="#0F6E56">카메라 · 로드셀 동기화</text>
+      <text x="104" y="108" text-anchor="middle" font-size="10" fill="#0F6E56">≤ 50 ms</text>
+      <!-- 화살표 Step1→2 (x: 178→208) -->
+      <line x1="178" y1="84" x2="206" y2="84" stroke="#888780" stroke-width="1" marker-end="url(#arrf)"/>
+      <!-- Step2: 전처리 (x=208, w=148) -->
+      <rect x="208" y="58" width="148" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="282" y="80" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">전처리</text>
+      <text x="282" y="96" text-anchor="middle" font-size="10" fill="#534AB7">ROI 크롭 · Optical Flow</text>
+      <text x="282" y="108" text-anchor="middle" font-size="10" fill="#534AB7">50 → 200 ms</text>
+      <!-- 화살표 Step2→3 (x: 356→386) -->
+      <line x1="356" y1="84" x2="384" y2="84" stroke="#888780" stroke-width="1" marker-end="url(#arrf)"/>
+      <!-- Step3: AI 추론 (x=386, w=148) -->
+      <rect x="386" y="58" width="148" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="460" y="78" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">AI 추론 (TensorRT)</text>
+      <text x="460" y="94" text-anchor="middle" font-size="10" fill="#534AB7">CNN+GRU · 1D CNN</text>
+      <text x="460" y="108" text-anchor="middle" font-size="10" fill="#534AB7">Weighted Fusion → 판정</text>
+
+      <!-- ── 분기 (y=110~168) ── -->
+      <!-- 수직선: AI추론 중심(x=460) → 분기 허브(y=150) -->
+      <line x1="460" y1="110" x2="460" y2="150" stroke="#888780" stroke-width="1"/>
+      <!-- 수평 허브선: x=104 ~ x=460 -->
+      <line x1="104" y1="150" x2="460" y2="150" stroke="#888780" stroke-width="1"/>
+
+      <!-- Class0 분기: (x=104, y=150) 수직 내려가기 -->
+      <line x1="104" y1="150" x2="104" y2="168" stroke="#0F6E56" stroke-width="1.2" marker-end="url(#arrf)"/>
+      <!-- Class1 분기: (x=300, y=150) -->
+      <line x1="300" y1="150" x2="300" y2="168" stroke="#854F0B" stroke-width="1.2" marker-end="url(#arrf)"/>
+      <!-- Class2 분기: (x=460, y=150) -->
+      <line x1="460" y1="150" x2="460" y2="168" stroke="#A32D2D" stroke-width="1.2" marker-end="url(#arrf)"/>
+
+      <!-- ── Class 행 (y=168~216) ── -->
+      <!-- Class0 (x=30, w=148) -->
+      <rect x="30" y="168" width="148" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="104" y="188" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">Class 0 — 정상</text>
+      <text x="104" y="204" text-anchor="middle" font-size="10" fill="#0F6E56">계속 운행</text>
+      <text x="104" y="214" text-anchor="middle" font-size="10" fill="#0F6E56">로그 기록</text>
+      <!-- Class1 (x=226, w=148) -->
+      <rect x="226" y="168" width="148" height="48" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <text x="300" y="188" text-anchor="middle" font-size="12" font-weight="500" fill="#633806">Class 1 — 의심</text>
+      <text x="300" y="204" text-anchor="middle" font-size="10" fill="#854F0B">HMI 경고 전송</text>
+      <text x="300" y="214" text-anchor="middle" font-size="10" fill="#854F0B">감시 강화</text>
+      <!-- Class2 (x=386, w=148) -->
+      <rect x="386" y="168" width="148" height="48" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+      <text x="460" y="188" text-anchor="middle" font-size="12" font-weight="500" fill="#791F1F">Class 2 — 이탈</text>
+      <text x="460" y="204" text-anchor="middle" font-size="10" fill="#A32D2D">PLC 인터락</text>
+      <text x="460" y="214" text-anchor="middle" font-size="10" fill="#A32D2D">즉시 정지</text>
+
+      <!-- ── PLC 박스 (Class2 바로 아래, y=232~280) ── -->
+      <line x1="460" y1="216" x2="460" y2="230" stroke="#A32D2D" stroke-width="1.2" marker-end="url(#arrf)"/>
+      <rect x="386" y="230" width="148" height="48" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1"/>
+      <text x="460" y="250" text-anchor="middle" font-size="12" font-weight="500" fill="#791F1F">PLC 즉시 정지</text>
+      <text x="460" y="266" text-anchor="middle" font-size="10" fill="#A32D2D">Modbus TCP</text>
+      <text x="460" y="278" text-anchor="middle" font-size="10" fill="#A32D2D">DO 신호 출력</text>
+
+      <!-- ── 폴백 안내 박스 (y=300~336) ── -->
+      <rect x="30" y="300" width="620" height="36" rx="6" fill="#F1EFE8" stroke="#D3D1C7" stroke-width="0.5"/>
+      <text x="340" y="316" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">폴백 로직</text>
+      <text x="340" y="330" text-anchor="middle" font-size="10" fill="#5F5E5A">카메라 오염 시 → 압력 단독 Class 2 판정 가능    ·    로드셀 장애 시 → 비전 단독 N프레임 지속 조건으로 판정</text>
+
+      <!-- ── 서버 전송 박스 (y=354~390) ── -->
+      <!-- 점선: Class0 → 서버 박스 -->
+      <path d="M104 216 L104 342 L240 342" fill="none" stroke="#B4B2A9" stroke-width="0.8" stroke-dasharray="4 3" marker-end="url(#arrf)"/>
+      <!-- 점선: Class1 → 서버 박스 -->
+      <path d="M300 216 L300 342 L240 342" fill="none" stroke="#B4B2A9" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <rect x="240" y="354" width="200" height="36" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="340" y="370" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">추론 로그 · 서버 전송</text>
+      <text x="340" y="382" text-anchor="middle" font-size="10" fill="#5F5E5A">이벤트 ID · 타임스탬프 · 학습 데이터 업로드</text>
+    </svg>
+  </div>
+
+  <!-- HMI 설계 탭 -->
+  <div id="tab-infra-hmi" class="tab-panel">
+    <div class="info-box">
+      <div class="info-title">웹 대시보드 기술 스택</div>
+      <div class="info-body">
+        <strong>백엔드 (Edge):</strong> FastAPI — REST API + WebSocket 실시간 Push<br>
+        <strong>프론트엔드:</strong> React + Chart.js — 사내 LAN 브라우저 접속 (PC · 태블릿)<br>
+        <strong>DB:</strong> TimescaleDB (시계열 데이터 최적화) — 서버에 적재<br>
+        <strong>알람:</strong> Class 2 발생 시 경광등 릴레이 출력 + SMS/이메일 동시 발송
+      </div>
+    </div>
+    <h3>화면 구성</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-label"><span class="badge badge-teal">메인 화면</span></div>
+        <div class="card-title">실시간 라인 상태 카드</div>
+        <div class="card-body">3라인 각각 Class 배지 · 추론 신뢰도 % · 마지막 이상 시각 · 누적 이벤트 수 표시. Class 2 발생 시 카드 배경 강조 전환.</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-blue">메인 화면</span></div>
+        <div class="card-title">실시간 압력 파형 차트</div>
+        <div class="card-body">3라인 시계열 차트를 WebSocket으로 실시간 갱신. 정상 범위 μ ± 2σ 기준선 오버레이 표시.</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-gray">이력 화면</span></div>
+        <div class="card-title">이벤트 이력 · 통계</div>
+        <div class="card-body">일별·주별 이상 발생 건수 추이. Class 1/2 비율 도넛 차트. 라인별 가동률·정지 시간 집계. 이벤트 상세 검색(날짜·라인·클래스).</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-amber">알람 설정</span></div>
+        <div class="card-title">알림 채널 · 임계값 설정</div>
+        <div class="card-body">SMS/이메일 수신자 등록. Class 1 반복 횟수 임계값 설정. 경광등 릴레이 채널 연결 확인. 알람 무음 처리 · 확인 버튼.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 출력 클래스 -->
+<section id="output">
+  <h2><span class="num">8</span> 출력 클래스 정의</h2>
+  <p>Class 2는 비전 또는 압력 센서 단독으로도 판정 가능한 폴백 로직을 적용하여, 단일 센서 장애 상황에서도 안전을 보장한다.</p>
+  <div class="class-cards">
+    <div class="class-card" style="background: var(--teal-bg); border-color: var(--teal);">
+      <div class="class-num" style="color:var(--teal)">Class 0</div>
+      <div class="class-name" style="color:var(--teal)">정상</div>
+      <div class="class-desc" style="color:var(--teal)">Flow 벡터 일정, 압력 정상 유지</div>
+      <div class="class-action" style="background:var(--teal);color:#fff;">계속 운행</div>
+    </div>
+    <div class="class-card" style="background: var(--amber-bg); border-color: var(--amber);">
+      <div class="class-num" style="color:var(--amber)">Class 1</div>
+      <div class="class-name" style="color:var(--amber)">회전 불량 의심</div>
+      <div class="class-desc" style="color:var(--amber)">Flow 불규칙 또는 압력 감소 징조</div>
+      <div class="class-action" style="background:var(--amber);color:#fff;">HMI 경고 / 감시 강화</div>
+    </div>
+    <div class="class-card" style="background: var(--red-bg); border-color: var(--red);">
+      <div class="class-num" style="color:var(--red)">Class 2</div>
+      <div class="class-name" style="color:var(--red)">이탈 확정</div>
+      <div class="class-desc" style="color:var(--red)">Flow 소실 + 압력 소실 또는 스파이크</div>
+      <div class="class-action" style="background:var(--red);color:#fff;">PLC 인터락 / 즉시 정지</div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. 추진 계획 -->
+<section id="schedule">
+  <h2><span class="num">9</span> 개발 단계별 추진 계획</h2>
+  <p>착수(3~5월), 개발(4~7월), 실증(6~10월)을 병행 진행하는 구조로 수립. 현재 사업 4개월차.</p>
+  <!-- 그림 6: 개발 추진 일정 간트 차트 SVG -->
+  <div style="margin-bottom:16px; overflow-x:auto;">
+    <svg width="100%" viewBox="0 0 680 310" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 6. 개발 추진 일정 (2026년 3월 ~ 10월)</text>
+
+      <!-- 월 헤더 배경 -->
+      <rect x="170" y="28" width="490" height="22" rx="0" fill="#F1EFE8"/>
+
+      <!-- 월 구분선 및 라벨 (3월~10월, 8개월, 490px / 8 = 61.25px per month) -->
+      <text x="200" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">3월</text>
+      <text x="262" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">4월</text>
+      <text x="323" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">5월</text>
+      <text x="385" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">6월</text>
+      <text x="446" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">7월</text>
+      <text x="507" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">8월</text>
+      <text x="569" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">9월</text>
+      <text x="630" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">10월</text>
+
+      <!-- 세로 구분선 -->
+      <line x1="170" y1="28" x2="170" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="231" y1="50" x2="231" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="292" y1="50" x2="292" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="354" y1="50" x2="354" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="415" y1="50" x2="415" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="477" y1="50" x2="477" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="538" y1="50" x2="538" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="600" y1="50" x2="600" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="660" y1="50" x2="660" y2="300" stroke="#D3D1C7" stroke-width="0.5"/>
+
+      <!-- 현재 시점 표시 (3월 27일 ≈ 3월 말) -->
+      <line x1="226" y1="28" x2="226" y2="300" stroke="#A32D2D" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="228" y="44" font-size="9" fill="#A32D2D">현재</text>
+
+      <!-- 행 항목 라벨 (왼쪽) -->
+      <text x="10" y="77" font-size="10" fill="#444441" font-weight="500">착수</text>
+      <text x="10" y="100" font-size="9" fill="#5F5E5A">센서 사양 확정</text>
+      <text x="10" y="128" font-size="9" fill="#5F5E5A">라벨링 규칙 수립</text>
+      <text x="10" y="156" font-size="9" fill="#5F5E5A">아키텍처 설계</text>
+
+      <text x="10" y="188" font-size="10" fill="#444441" font-weight="500">개발</text>
+      <text x="10" y="210" font-size="9" fill="#5F5E5A">센서 설치/캘리브</text>
+      <text x="10" y="232" font-size="9" fill="#5F5E5A">Optical Flow 구축</text>
+      <text x="10" y="254" font-size="9" fill="#5F5E5A">모델 1차 개발</text>
+      <text x="10" y="278" font-size="9" fill="#5F5E5A">Fusion/PLC 연동</text>
+
+      <!-- 착수 단계 바 (파란색) 03~04월 -->
+      <!-- 센서 사양 확정: 03~04 -->
+      <rect x="170" y="88" width="122" height="14" rx="4" fill="#185FA5" opacity="0.85"/>
+      <text x="231" y="99" text-anchor="middle" font-size="9" fill="#ffffff">03~04</text>
+
+      <!-- 라벨링 규칙: 03~04 -->
+      <rect x="170" y="116" width="122" height="14" rx="4" fill="#185FA5" opacity="0.85"/>
+      <text x="231" y="127" text-anchor="middle" font-size="9" fill="#ffffff">03~04</text>
+
+      <!-- 아키텍처 설계: 03~05 -->
+      <rect x="170" y="144" width="184" height="14" rx="4" fill="#185FA5" opacity="0.85"/>
+      <text x="262" y="155" text-anchor="middle" font-size="9" fill="#ffffff">03~05</text>
+
+      <!-- 개발 단계 바 (teal) -->
+      <!-- 센서 설치/캘리브: 04~05 -->
+      <rect x="231" y="198" width="122" height="14" rx="4" fill="#0F6E56" opacity="0.85"/>
+      <text x="292" y="209" text-anchor="middle" font-size="9" fill="#ffffff">04~05</text>
+
+      <!-- Optical Flow: 04~06 -->
+      <rect x="231" y="220" width="184" height="14" rx="4" fill="#0F6E56" opacity="0.85"/>
+      <text x="323" y="231" text-anchor="middle" font-size="9" fill="#ffffff">04~06</text>
+
+      <!-- 모델 1차 개발: 04~07 -->
+      <rect x="231" y="242" width="245" height="14" rx="4" fill="#0F6E56" opacity="0.85"/>
+      <text x="354" y="253" text-anchor="middle" font-size="9" fill="#ffffff">04~07</text>
+
+      <!-- Fusion/PLC: 05~07 -->
+      <rect x="292" y="266" width="184" height="14" rx="4" fill="#0F6E56" opacity="0.85"/>
+      <text x="384" y="277" text-anchor="middle" font-size="9" fill="#ffffff">05~07</text>
+
+      <!-- 실증 단계 바 (amber) - 점선으로 예정 표시 -->
+      <text x="10" y="300" font-size="10" fill="#854F0B" font-weight="500">실증</text>
+      <rect x="354" y="290" width="306" height="8" rx="4" fill="#EF9F27" opacity="0.6"/>
+      <text x="507" y="298" text-anchor="middle" font-size="9" fill="#412402">06~10 (예정)</text>
+
+      <!-- 범례 -->
+      <rect x="170" y="288" width="12" height="8" rx="2" fill="#185FA5"/>
+      <text x="185" y="297" font-size="9" fill="#5F5E5A">착수</text>
+      <rect x="220" y="288" width="12" height="8" rx="2" fill="#0F6E56"/>
+      <text x="235" y="297" font-size="9" fill="#5F5E5A">개발</text>
+      <rect x="268" y="288" width="12" height="8" rx="2" fill="#EF9F27" opacity="0.6"/>
+      <text x="283" y="297" font-size="9" fill="#5F5E5A">실증(예정)</text>
+      <rect x="340" y="288" width="12" height="8" rx="2" fill="#A32D2D" opacity="0.5"/>
+      <text x="355" y="297" font-size="9" fill="#A32D2D">현재(3/27)</text>
+    </svg>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>구분</th><th>추진 내용</th><th>일정</th><th>상태</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="badge badge-blue">착수</span></td><td>현장 환경 정밀 측정 및 센서 사양 확정</td><td>26.03 ~ 04</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-blue">착수</span></td><td>데이터 표준 포맷 및 라벨링 규칙 수립</td><td>26.03 ~ 04</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-blue">착수</span></td><td>Edge-Server-HMI 아키텍처 설계 완료</td><td>26.03 ~ 05</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-teal">개발</span></td><td>센서 설치 및 캘리브레이션 (비전 · 로드셀)</td><td>26.04 ~ 05</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-teal">개발</span></td><td>Optical Flow 전처리 파이프라인 구축</td><td>26.04 ~ 06</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-teal">개발</span></td><td>CNN+GRU / 1D CNN 모델 1차 개발</td><td>26.04 ~ 07</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-teal">개발</span></td><td>Weighted Feature Fusion · PLC 인터락 연동</td><td>26.05 ~ 07</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-amber">실증</span></td><td>실증라인 설치 및 정합</td><td>26.06 ~ 08</td><td><span class="status status-plan">예정</span></td></tr>
+        <tr><td><span class="badge badge-amber">실증</span></td><td>이상 이벤트 수집 · 불량 재현 실험</td><td>26.07 ~ 09</td><td><span class="status status-plan">예정</span></td></tr>
+        <tr><td><span class="badge badge-amber">실증</span></td><td>MLOps 재학습 파이프라인 · 모델 고도화</td><td>26.07 ~ 10</td><td><span class="status status-plan">예정</span></td></tr>
+        <tr><td><span class="badge badge-amber">실증</span></td><td>성능 검증 (정확도 95% · 오탐 3% 이하)</td><td>26.09 ~ 10</td><td><span class="status status-plan">예정</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 10. 리스크 -->
+<section id="risk">
+  <h2><span class="num">10</span> 리스크 및 대응 방안</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>리스크</th><th>대응 방안</th></tr>
+      </thead>
+      <tbody class="risk-row">
+        <tr><td>이상 데이터 부족</td><td>불량 재현 실험(더미·실제 제품)으로 인위적 데이터 생성 및 Data Augmentation 병행. 초기에는 CNN 오토인코더 기반 이상 탐지로 라벨 없이 운영</td></tr>
+        <tr><td>카메라 분진 오염</td><td>Air Purge 하우징 필수 적용. 압력 센서 단독 폴백 로직으로 비전 장애 시에도 Class 2 판정 보장</td></tr>
+        <tr><td>Optical Flow 배경 혼입</td><td>ROI를 맞물림 지점으로 최소화. 회전 주기성 FFT 분석을 보조 지표로 병행하여 오탐 방지</td></tr>
+        <tr><td>RPM 기준값 부재</td><td>Optical Flow 기반 속도 추정값으로 대체. 초기 캘리브레이션으로 정상 회전 속도 범위 등록</td></tr>
+        <tr><td>일정 리스크 (10월 마감)</td><td>월별 마일스톤 및 게이트 리뷰 운영. 개발 4~7월 집중, 실증 6~10월 병행으로 일정 압박 완화</td></tr>
+        <tr><td>Edge 메모리 제약 (8GB)</td><td>TensorRT FP16 변환으로 모델 용량 ~50% 절감 필수. 카메라 3대 프레임 버퍼를 파이프라인 방식으로 순차 처리하여 피크 메모리 분산. 3단계 Transformer 고도화 시 Orin NX 16G 업그레이드 재검토</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 11. 기대 성과 -->
+<section id="kpi">
+  <h2><span class="num">11</span> 기대 성과</h2>
+  <p>성과지표는 사업 계획서 상의 2차년도 최종 목표를 반영하였다.</p>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--blue)">95%+</div>
+      <div class="kpi-label">AI 탐지 정확도</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--green)">3%↓</div>
+      <div class="kpi-label">오탐률</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--amber)">0.5초</div>
+      <div class="kpi-label">이상 감지 및 대응</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--teal)">10%+</div>
+      <div class="kpi-label">생산성 향상</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--purple)">30%+</div>
+      <div class="kpi-label">가동률 향상</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--coral)">5만건</div>
+      <div class="kpi-label">데이터 구축량</div>
+    </div>
+  </div>
+  <div class="info-box">
+    <div class="info-title">향후 확장 방향</div>
+    <div class="info-body">가동이 중단된 자동 도장라인 완전 복구 → Transformer 기반 고도화 및 레트로핏 키트 상용화 → 경남·부산권 뿌리기업 500여 개사 대상 확산의 기술적 기반 마련</div>
+  </div>
+</section>
+
+<!-- 12. 참고 문헌 -->
+<section id="ref">
+  <h2><span class="num">12</span> 참고 문헌</h2>
+  <ul class="ref-list">
+    <li>Dosovitskiy, A. et al. (2021). An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale. ICLR 2021. arXiv:2010.11929</li>
+    <li>Cahuantzi, R. et al. (2021). A comparison of LSTM and GRU networks for learning symbolic sequences. arXiv:2107.02248</li>
+    <li>Shafi, H. et al. (2023). CNN or ViT? Revisiting Vision Transformers Through the Lens of Convolution. ResearchGate</li>
+    <li>Chen, X. et al. (2025). Design of a real-time abnormal detection system for rotating machinery based on YOLOv8. Frontiers in Mechanical Engineering. doi:10.3389/fmech.2025.1683572</li>
+    <li>Chung, J. et al. (2014). Empirical Evaluation of Gated Recurrent Neural Networks on Sequence Modeling. arXiv:1412.3555</li>
+    <li>주식회사 뎁스 (2024). AI 솔루션 개발·실증 지원사업 발표자료 — 자동 분체 도장 품질 향상을 위한 멀티모달 기반 스마트 도장라인 실시간 불량 예방 시스템. Rev. 1.0</li>
+  </ul>
+</section>
+
+</main>
+</div>
+
+<script>
+function setActive(el) {
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+}
+function switchTab(btn, panelId) {
+  btn.closest('section').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.closest('section').querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+}
+
+// 클릭 시 해당 섹션으로 부드럽게 스크롤
+document.querySelectorAll('nav a[href^="#"]').forEach(a => {
+  a.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+    }
+  });
+});
+
+// 스크롤 시 활성 내비 자동 업데이트
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a[href^="#"]');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id);
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
