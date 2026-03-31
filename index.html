@@ -214,33 +214,23 @@ const topics = [
 
   // ── computer-vision ──
   {
-    id: "computer-vision",
-    icon: "👁",
-    iconBg: "#E4EFFE",
-    label: "주제 · Computer Vision",
-    title: "Computer Vision",
-    color: "blue",
+    "id": "computer-vision",
+    "icon": "👁",
+    "iconBg": "#E4EFFE",
+    "label": "주제 · computer-vision",
+    "title": "computer-vision",
+    "color": "blue",
     subfolders: [
-      {
-        label: "tracking",
-        files: [
-          {"title": "ByteTrack 리뷰", "desc": "Multi-Object Tracking 알고리즘", "file": "computer-vision/tracking/review_ByteTrack_v1.html", "type": "review", "date": "2025-06", "tags": ["ByteTrack", "MOT"]},
-          {"title": "DeepSORT 리뷰",  "desc": "Deep appearance descriptor 기반 트래킹", "file": "computer-vision/tracking/review_DeepSORT_v1.html", "type": "review", "date": "2025-06", "tags": ["DeepSORT", "Re-ID"]},
-          {"title": "MOT 메트릭 정리", "desc": "MOTA·HOTA·IDF1 비교", "file": "computer-vision/tracking/ref_MOT_metrics_정리.md", "type": "ref", "date": "2025-06", "tags": ["MOT", "메트릭"]},
-        ],
-      },
-      {
-        label: "detection",
-        files: [
-          {"title": "YOLOX 리뷰", "desc": "Anchor-free YOLO 계열 detector", "file": "computer-vision/detection/review_YOLOX_v1.html", "type": "review", "date": "2025-05", "tags": ["YOLO", "anchor-free"]},
-          {"title": "Anchor-free 비교", "desc": "FCOS·CenterNet·YOLOX 비교", "file": "computer-vision/detection/ref_anchor_free_비교.md", "type": "ref", "date": "2025-05", "tags": ["anchor-free"]},
-        ],
-      },
       {
         label: "preprocessing",
         files: [
-          {"title": "비전 전처리 연구노트 — Case A", "desc": "고정 ROI 기반 Optical Flow → CNN → GRU", "file": "computer-vision/preprocessing/note_비전전처리_CaseA_v1.html", "type": "note", "date": "2025-06", "tags": ["Optical Flow", "GRU", "Edge AI"]},
-          {"title": "비전 전처리 연구노트 — Case B", "desc": "YOLO 검출 기반 동적 ROI, ID별 시퀀스 버퍼", "file": "computer-vision/preprocessing/note_비전전처리_CaseB_v1.html", "type": "note", "date": "2025-07", "tags": ["YOLO", "ByteTrack", "GRU"]},
+          { "title": "비전전처리 CaseA v1", "desc": "", "file": "computer-vision/preprocessing/note_비전전처리_CaseA_v1.html", "type": "note", "date": "2026-03", "tags": [] },
+        ],
+      },
+      {
+        label: "tracking",
+        files: [
+          { "title": "ByteTrack v1", "desc": "ByteTrack", "file": "computer-vision/tracking/review_ByteTrack_v1.html", "type": "review", "date": "2026-03", "tags": ["ByteTrack"] },
         ],
       },
     ],
@@ -248,23 +238,17 @@ const topics = [
 
   // ── machine-learning ──
   {
-    id: "machine-learning",
-    icon: "🧠",
-    iconBg: "#DFF5ED",
-    label: "주제 · Machine Learning",
-    title: "Machine Learning",
-    color: "teal",
+    "id": "machine-learning",
+    "icon": "🧠",
+    "iconBg": "#DFF5ED",
+    "label": "주제 · machine-learning",
+    "title": "machine-learning",
+    "color": "teal",
     subfolders: [
       {
         label: "time-series",
         files: [
-          {"title": "Temporal Fusion Transformer 리뷰", "desc": "멀티호라이즌 시계열 예측", "file": "machine-learning/time-series/review_Temporal_Fusion_Transformer_v1.html", "type": "review", "date": "2025-07", "tags": ["TFT", "시계열"]},
-        ],
-      },
-      {
-        label: "optimization",
-        files: [
-          {"title": "LR 스케줄러 비교", "desc": "CosineAnnealing·OneCycleLR·ReduceLROnPlateau", "file": "machine-learning/optimization/ref_learning_rate_스케줄러_비교.md", "type": "ref", "date": "2025-06", "tags": ["LR", "optimizer"]},
+          { "title": "Temporal Fusion Transformer v1", "desc": "Transformer", "file": "machine-learning/time-series/review_Temporal_Fusion_Transformer_v1.html", "type": "review", "date": "2026-03", "tags": ["Transformer"] },
         ],
       },
     ],
@@ -272,31 +256,29 @@ const topics = [
 
 ];
 
-// ── 프로젝트 데이터 ─────────────────────────────────────────────
-// update_archive.py 가 projects 배열 전체를 자동 교체합니다.
+
 const projects = [
 
-  // ── AI 불량예방 시스템 ──
+  // ── 자동 분체 도장라인 멀티모달 AI 불량예방 시스템 ──
   {
-    id: "AI-불량예방-시스템",
-    icon: "🏭",
-    iconBg: "#E4EFFE",
-    label: "수요기관 · 대원공업㈜",
-    title: "자동 분체 도장라인 멀티모달 AI 불량예방 시스템",
-    color: "blue",
+    "id": "자동-분체-도장라인-멀티모달-AI-불량예방-시스템",
+    "icon": "🏭",
+    "iconBg": "#E4EFFE",
+    "label": "수요기관 · 대원공업㈜",
+    "title": "자동 분체 도장라인 멀티모달 AI 불량예방 시스템",
+    "color": "blue",
     subfolders: [
       {
-        label: "AI-불량예방-시스템",
+        label: "",
         files: [
-          {"title": "AI 불량예방 시스템 보고서 v4", "desc": "멀티모달 AI 불량예방 시스템 설계·성과 종합 보고서", "file": "projects/AI-불량예방-시스템/note_설계검토_v4.html", "type": "report", "date": "2025-07", "tags": ["멀티모달", "불량예방"]},
-          {"title": "엣지 배포 검토", "desc": "엣지 디바이스 배포 전략 및 최적화 검토", "file": "projects/AI-불량예방-시스템/note_엣지배포_검토.md", "type": "note", "date": "2025-07", "tags": ["Edge AI", "배포"]},
+          { "title": "설계검토 v7", "desc": "", "file": "projects/자동 분체 도장라인 멀티모달 AI 불량예방 시스템/note_설계검토_v7.html", "type": "note", "date": "2026-03", "tags": [] },
+          { "title": "엣지배포 검토", "desc": "배포", "file": "projects/자동 분체 도장라인 멀티모달 AI 불량예방 시스템/note_엣지배포_검토.md", "type": "note", "date": "2026-03", "tags": ["배포"] },
         ],
       },
     ],
   },
 
 ];
-
 
 // ════════════════════════════════════════════════════════════════
 //  렌더링 (수정 불필요)
