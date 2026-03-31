@@ -3,10 +3,18 @@ name: Update Document Archive
 on:
   push:
     paths:
-      - 'daewon/**'
-      - 'safety/**'
-      # 새 프로젝트 폴더 추가 시 여기에 함께 추가
-  workflow_dispatch: # 수동 실행도 가능
+      # ── 주제 폴더 ──────────────────────────────
+      - 'computer-vision/**'
+      - 'machine-learning/**'
+      # 새 주제 폴더 추가 시 여기에도 추가
+
+      # ── 프로젝트 폴더 (하위 전체 자동 감지) ────
+      - 'projects/**'
+
+      # ── 스크립트 자체가 바뀌면 재실행 ──────────
+      - 'scripts/update_archive.py'
+
+  workflow_dispatch: # Actions 탭에서 수동 실행 가능
 
 jobs:
   update-index:
@@ -31,5 +39,5 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git diff --cached --quiet && echo "No changes" || \
-            git commit -m "chore: auto-update archive index [skip ci]" && git push
+          git diff --cached --quiet && echo "No changes — skip commit" || \
+            (git commit -m "chore: auto-update archive index [skip ci]" && git push)
