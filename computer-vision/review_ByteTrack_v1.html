@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ByteTrack 논문 리뷰 — Multi-Object Tracking by Associating Every Detection Box</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --bg2: #ffffff; --bg3: #eeecea;
+    --text: #1a1a18; --text2: #5a5955; --text3: #9c9a92;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --blue: #185FA5; --blue-bg: #E6F1FB;
+    --teal: #0F6E56; --teal-bg: #E1F5EE;
+    --amber: #854F0B; --amber-bg: #FAEEDA; --amber-mid: #EF9F27;
+    --coral: #993C1D; --coral-bg: #FAECE7;
+    --green: #3B6D11; --green-bg: #EAF3DE;
+    --purple: #534AB7; --purple-bg: #EEEDFE;
+    --red: #A32D2D; --red-bg: #FCEBEB;
+    --gray: #5F5E5A; --gray-bg: #F1EFE8;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18; --bg2: #242422; --bg3: #2e2e2b;
+      --text: #e8e6de; --text2: #a8a69e; --text3: #6e6c65;
+      --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
+      --blue: #85B7EB; --blue-bg: #042C53;
+      --teal: #5DCAA5; --teal-bg: #04342C;
+      --amber: #FAC775; --amber-bg: #412402; --amber-mid: #EF9F27;
+      --coral: #F0997B; --coral-bg: #4A1B0C;
+      --green: #97C459; --green-bg: #173404;
+      --purple: #AFA9EC; --purple-bg: #26215C;
+      --red: #F09595; --red-bg: #501313;
+      --gray: #B4B2A9; --gray-bg: #2C2C2A;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.7; }
+  .layout { display: flex; min-height: 100vh; }
+  nav { width: 240px; flex-shrink: 0; background: var(--bg2); border-right: 0.5px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 0 40px; }
+  nav .logo { padding: 0 20px 20px; border-bottom: 0.5px solid var(--border); margin-bottom: 16px; }
+  nav .logo .tag { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  nav .logo .title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  nav .logo .parent-link { font-size: 11px; color: var(--text3); margin-top: 6px; display: block; text-decoration: none; }
+  nav .logo .parent-link:hover { color: var(--purple); }
+  nav ul { list-style: none; padding: 0 8px; }
+  nav ul li a { display: block; padding: 7px 12px; border-radius: 6px; font-size: 13px; color: var(--text2); text-decoration: none; transition: background .15s, color .15s; }
+  nav ul li a:hover { background: var(--bg3); color: var(--text); }
+  nav ul li a.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  nav ul li .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; padding: 12px 12px 4px; }
+  main { flex: 1; max-width: 860px; padding: 48px 40px 80px; }
+
+  /* HEADER */
+  .doc-header { margin-bottom: 40px; padding-bottom: 32px; border-bottom: 0.5px solid var(--border); }
+  .doc-header .eyebrow { font-size: 12px; font-weight: 500; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .doc-header h1 { font-size: 26px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
+  .doc-header .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 20px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .meta-item { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .meta-item .label { font-size: 11px; color: var(--text3); margin-bottom: 3px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .meta-item .value { font-size: 13px; font-weight: 500; color: var(--text); }
+
+  .case-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--blue-bg); border: 1px solid var(--blue); border-radius: 20px; padding: 4px 14px 4px 10px; font-size: 12px; font-weight: 500; color: var(--blue); margin-bottom: 16px; }
+  .case-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+
+  /* SECTION */
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section h2 { font-size: 20px; font-weight: 500; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  section h2 .num { font-size: 12px; font-weight: 500; background: var(--blue-bg); color: var(--blue); border-radius: 20px; padding: 2px 9px; }
+  section h3 { font-size: 16px; font-weight: 500; margin: 28px 0 10px; color: var(--text); }
+  section h4 { font-size: 14px; font-weight: 500; margin: 20px 0 8px; color: var(--text2); }
+  p { color: var(--text2); margin-bottom: 12px; }
+
+  /* QUESTION BLOCK */
+  .q-block { border-left: 3px solid var(--blue); background: var(--blue-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .q-block .q-label { font-size: 10px; font-weight: 500; color: var(--blue); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .q-block .q-text { font-size: 14px; color: var(--text); font-weight: 500; line-height: 1.5; }
+
+  /* ANSWER BLOCK */
+  .a-block { border-left: 3px solid var(--teal); background: var(--teal-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .a-block .a-label { font-size: 10px; font-weight: 500; color: var(--teal); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .a-block .a-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .a-block .a-text strong { color: var(--text); }
+
+  /* INSIGHT BLOCK */
+  .insight-block { border-left: 3px solid var(--amber-mid); background: var(--amber-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .insight-block .i-label { font-size: 10px; font-weight: 500; color: var(--amber); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .insight-block .i-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .insight-block .i-text strong { color: var(--text); }
+
+  /* PROBLEM BLOCK */
+  .wrong-block { border-left: 3px solid var(--red); background: var(--red-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .wrong-block .w-label { font-size: 10px; font-weight: 500; color: var(--red); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .wrong-block .w-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .wrong-block .w-text strong { color: var(--text); }
+
+  /* CONCLUSION BLOCK */
+  .conclusion { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 20px 24px; margin: 20px 0; }
+  .conclusion .c-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px; }
+  .conclusion .c-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 10px; }
+  .conclusion .c-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .conclusion .c-body strong { color: var(--text); }
+
+  /* CARD */
+  .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card-grid .card { margin-bottom: 0; }
+  .card .card-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .card .card-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .card .card-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  /* CALLOUT */
+  .callout { border-left: 3px solid var(--amber-mid); background: var(--amber-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .callout p { margin: 0; font-size: 13px; color: var(--text2); }
+  .callout strong { color: var(--text); }
+
+  /* BADGE */
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; border-radius: 20px; padding: 2px 9px; }
+  .badge-blue   { background: var(--blue-bg);   color: var(--blue); }
+  .badge-teal   { background: var(--teal-bg);   color: var(--teal); }
+  .badge-amber  { background: var(--amber-bg);  color: var(--amber); }
+  .badge-red    { background: var(--red-bg);    color: var(--red); }
+  .badge-gray   { background: var(--gray-bg);   color: var(--gray); }
+  .badge-green  { background: var(--green-bg);  color: var(--green); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; margin-bottom: 16px; border: 0.5px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--bg3); }
+  th { padding: 10px 14px; text-align: left; font-weight: 500; color: var(--text2); font-size: 12px; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+  .cmp-good { color: var(--teal);  font-weight: 500; }
+  .cmp-bad  { color: var(--red);   font-weight: 500; }
+  .cmp-mid  { color: var(--amber); font-weight: 500; }
+
+  /* SVG WRAP */
+  .svg-wrap { margin: 16px 0 20px; overflow-x: auto; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 12px; }
+  .svg-wrap svg text { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif; }
+
+  /* INFO BOX */
+  .info-box { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 20px; }
+  .info-box .info-title { font-size: 13px; font-weight: 500; color: var(--text3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; }
+  .info-box .info-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .info-box .info-body strong { color: var(--text); }
+
+  /* STEP LIST */
+  .step-list { list-style: none; padding: 0; counter-reset: step; }
+  .step-list li { display: flex; gap: 14px; padding: 12px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; color: var(--text2); }
+  .step-list li:last-child { border-bottom: none; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--blue-bg); color: var(--blue); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-list li .step-title { font-weight: 500; color: var(--text); display: block; margin-bottom: 2px; }
+  .step-list li .step-desc { font-size: 12px; color: var(--text3); display: block; margin-top: 2px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 720px) {
+    nav { display: none; }
+    main { padding: 24px 20px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- 사이드 내비 -->
+<nav>
+  <div class="logo">
+    <div class="tag">논문 리뷰 노트</div>
+    <div class="title">ByteTrack<br>논문 리뷰 v1</div>
+    <a class="parent-link" href="비전_전처리_연구노트_CaseB_v1.html">← Case B 연구노트</a>
+  </div>
+  <ul>
+    <li><div class="section-label">개요</div></li>
+    <li><a href="#overview">논문 기본 정보</a></li>
+    <li><a href="#problem">문제 정의</a></li>
+    <li><div class="section-label">핵심 개념</div></li>
+    <li><a href="#tracklet">Tracklet</a></li>
+    <li><a href="#kalman">Kalman Filter</a></li>
+    <li><a href="#iou">IoU</a></li>
+    <li><div class="section-label">알고리즘</div></li>
+    <li><a href="#byte">BYTE 알고리즘</a></li>
+    <li><a href="#occlusion">Occlusion 처리 원리</a></li>
+    <li><div class="section-label">결과 & 요약</div></li>
+    <li><a href="#results">성능 결과</a></li>
+    <li><a href="#summary">핵심 요약</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<!-- 문서 헤더 -->
+<div class="doc-header">
+  <div class="eyebrow">논문 리뷰 노트</div>
+  <div class="case-badge"><span class="dot"></span>ECCV 2022 — Multi-Object Tracking</div>
+  <h1>ByteTrack 논문 리뷰</h1>
+  <p class="subtitle">모든 Detection Box를 활용한 다중 객체 추적 — 핵심 개념부터 Occlusion 처리 원리까지</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">논문 제목</div><div class="value">ByteTrack: Multi-Object Tracking by Associating Every Detection Box</div></div>
+    <div class="meta-item"><div class="label">발표</div><div class="value">ECCV 2022</div></div>
+    <div class="meta-item"><div class="label">저자</div><div class="value">Yifu Zhang 외 8인</div></div>
+    <div class="meta-item"><div class="label">작성일</div><div class="value">2026. 03. 31.</div></div>
+  </div>
+</div>
+
+
+<!-- 1. 논문 기본 정보 -->
+<section id="overview">
+  <h2><span class="num">개요</span> 논문 기본 정보</h2>
+
+  <p>ByteTrack은 다중 객체 추적(Multi-Object Tracking, MOT) 분야에서 ECCV 2022에 발표된 논문이다. 핵심 아이디어는 단순하지만 강력하다 — 기존 방법이 신뢰도 높은 detection box만 추적에 활용하는 것과 달리, <strong>낮은 신뢰도의 box까지 추적에 활용</strong>하여 가려진 객체(occluded object)의 궤적 단절을 방지한다.</p>
+
+  <div class="info-box">
+    <div class="info-title">논문의 한 줄 요약</div>
+    <div class="info-body">
+      "낮은 점수의 detection box = 쓸모없는 box"라는 기존 통념을 뒤집고, <strong>tracklet과의 IoU 유사도를 증거로 삼아 낮은 점수 box가 진짜 객체인지 배경인지 구분</strong>한다. 이 단순한 아이디어 하나로 9개의 최신 트래커에서 IDF1 점수를 1~10포인트 향상시켰다.
+    </div>
+  </div>
+
+  <!-- 파이프라인 개요 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 720 130" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arr0" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arr0b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="360" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1. ByteTrack 전체 처리 흐름</text>
+
+      <!-- 비디오 프레임 -->
+      <rect x="20" y="28" width="90" height="60" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="65" y="52" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">비디오</text>
+      <text x="65" y="65" text-anchor="middle" font-size="10" fill="#5F5E5A">프레임 입력</text>
+      <text x="65" y="80" text-anchor="middle" font-size="9" fill="#9c9a92">연속 이미지</text>
+      <line x1="110" y1="58" x2="126" y2="58" stroke="#888780" stroke-width="1" marker-end="url(#arr0)"/>
+
+      <!-- YOLOX 검출기 -->
+      <rect x="128" y="28" width="100" height="60" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="178" y="49" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">YOLOX</text>
+      <text x="178" y="63" text-anchor="middle" font-size="10" fill="#534AB7">객체 검출기</text>
+      <text x="178" y="77" text-anchor="middle" font-size="9" fill="#AFA9EC">score 0.0~1.0</text>
+      <line x1="228" y1="58" x2="244" y2="58" stroke="#534AB7" stroke-width="1" marker-end="url(#arr0)"/>
+
+      <!-- score 분류 -->
+      <rect x="246" y="22" width="110" height="72" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1"/>
+      <text x="301" y="44" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">Score 분류</text>
+      <text x="301" y="58" text-anchor="middle" font-size="9" fill="#854F0B">High ≥ 0.6</text>
+      <text x="301" y="70" text-anchor="middle" font-size="9" fill="#854F0B">Low 0.1~0.6</text>
+      <text x="301" y="82" text-anchor="middle" font-size="9" fill="#B4B2A9">BG &lt; 0.1 → 폐기</text>
+      <line x1="356" y1="58" x2="372" y2="58" stroke="#EF9F27" stroke-width="1" marker-end="url(#arr0)"/>
+
+      <!-- BYTE 2단계 매칭 -->
+      <rect x="374" y="22" width="120" height="72" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="434" y="44" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">BYTE 매칭</text>
+      <text x="434" y="58" text-anchor="middle" font-size="9" fill="#185FA5">① 1차: High ↔ Tracklet</text>
+      <text x="434" y="70" text-anchor="middle" font-size="9" fill="#185FA5">② 2차: Low ↔ 미매칭</text>
+      <text x="434" y="82" text-anchor="middle" font-size="9" fill="#85B7EB">Kalman + IoU</text>
+      <line x1="494" y1="58" x2="510" y2="58" stroke="#185FA5" stroke-width="1" marker-end="url(#arr0b)"/>
+
+      <!-- Kalman Update -->
+      <rect x="512" y="28" width="100" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="562" y="49" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">Tracklet</text>
+      <text x="562" y="63" text-anchor="middle" font-size="10" fill="#0F6E56">상태 업데이트</text>
+      <text x="562" y="77" text-anchor="middle" font-size="9" fill="#5DCAA5">ID 연속 유지</text>
+      <line x1="612" y1="58" x2="628" y2="58" stroke="#888780" stroke-width="1" marker-end="url(#arr0)"/>
+
+      <!-- 출력 -->
+      <rect x="630" y="36" width="72" height="44" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+      <text x="666" y="55" text-anchor="middle" font-size="10" font-weight="500" fill="#27500A">bbox +</text>
+      <text x="666" y="68" text-anchor="middle" font-size="10" fill="#3B6D11">Track ID</text>
+    </svg>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">검출기</div>
+      <div class="card-title">YOLOX-X</div>
+      <div class="card-body">당시 최고 성능의 one-stage 검출기. 입력 해상도 1600×896. 모든 detection box와 confidence score를 출력한다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">연관 알고리즘</div>
+      <div class="card-title">BYTE (핵심 기여)</div>
+      <div class="card-body">BY associaTing Every detection box. High/Low score를 분리해 2단계 매칭. Re-ID 네트워크 없이 Kalman Filter + IoU만 사용.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--green)">성능 (MOT17)</div>
+      <div class="card-title">80.3 MOTA · 77.3 IDF1</div>
+      <div class="card-body">30 FPS 실시간. 리더보드 1위. Re-ID 없이 달성했다는 점에서 구조적으로도 의미 있는 결과.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 2. 문제 정의 -->
+<section id="problem">
+  <h2><span class="num">배경</span> 문제 정의 — 왜 기존 방법이 실패하는가</h2>
+
+  <div class="q-block">
+    <div class="q-label">핵심 질문</div>
+    <div class="q-text">기존 MOT 방법은 왜 가림(Occlusion) 상황에서 객체 ID가 끊기는가?</div>
+  </div>
+
+  <p>기존 Tracking-by-Detection 방법들은 confidence score가 임계값(예: 0.5) 이상인 box만 추적에 활용한다. 이는 false positive(배경을 객체로 오인)를 줄이기 위한 합리적인 설계처럼 보이지만, 다음 상황에서 치명적인 문제가 된다.</p>
+
+  <div class="wrong-block">
+    <div class="w-label">기존 방법의 한계</div>
+    <div class="w-text">가림이 발생하면 검출기는 객체를 일부만 볼 수 있어 confidence score가 급락한다 (0.9 → 0.4 → 0.1). 이 순간 해당 box는 threshold 미만으로 <strong>즉시 폐기</strong>되고, tracklet이 끊긴다. 가림이 풀려도 시스템은 이 객체를 처음 보는 것으로 인식해 <strong>새 ID를 부여한다 (ID Switch)</strong>.</div>
+  </div>
+
+  <!-- 문제 시나리오 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arrP" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 2. 기존 방법에서 Occlusion 발생 시 ID 단절 시나리오</text>
+
+      <!-- Frame labels -->
+      <text x="87"  y="38" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">Frame t1</text>
+      <text x="237" y="38" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">Frame t2</text>
+      <text x="412" y="38" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">Frame t3</text>
+      <text x="587" y="38" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">Frame t4</text>
+
+      <!-- t1 frame -->
+      <rect x="42" y="46" width="90" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="52" y="58" width="28" height="52" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="66" y="87" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="92" y="60" width="28" height="52" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="106" y="89" text-anchor="middle" font-size="9" fill="#712B13">R</text>
+      <text x="66"  y="130" text-anchor="middle" font-size="9" fill="#3B6D11">0.91</text>
+      <text x="106" y="130" text-anchor="middle" font-size="9" fill="#3B6D11">0.89</text>
+      <text x="66"  y="143" text-anchor="middle" font-size="8" fill="#3B6D11">HIGH</text>
+      <text x="106" y="143" text-anchor="middle" font-size="8" fill="#3B6D11">HIGH</text>
+      <text x="87"  y="158" text-anchor="middle" font-size="9" fill="#0F6E56">✓ A:ID1  R:ID2</text>
+
+      <!-- t2 frame -->
+      <rect x="192" y="46" width="90" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="210" y="58" width="28" height="52" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="224" y="87" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="232" y="62" width="28" height="52" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1" opacity="0.6"/>
+      <rect x="232" y="62" width="10" height="52" rx="2" fill="#B5D4F4" opacity="0.7"/>
+      <text x="246" y="91" text-anchor="middle" font-size="9" fill="#712B13" opacity="0.7">R</text>
+      <text x="224" y="130" text-anchor="middle" font-size="9" fill="#3B6D11">0.88</text>
+      <text x="246" y="130" text-anchor="middle" font-size="9" fill="#993C1D">0.38</text>
+      <text x="224" y="143" text-anchor="middle" font-size="8" fill="#3B6D11">HIGH</text>
+      <text x="246" y="143" text-anchor="middle" font-size="8" fill="#BA7517">LOW</text>
+      <text x="237" y="158" text-anchor="middle" font-size="9" fill="#A32D2D">✕ R 제거됨</text>
+
+      <!-- t3 frame -->
+      <rect x="367" y="46" width="90" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="377" y="58" width="28" height="52" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="391" y="87" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="400" y="62" width="28" height="52" rx="3" fill="none" stroke="#993C1D" stroke-width="1" stroke-dasharray="4 3" opacity="0.4"/>
+      <text x="414" y="91" text-anchor="middle" font-size="9" fill="#993C1D" opacity="0.4">R?</text>
+      <text x="391" y="130" text-anchor="middle" font-size="9" fill="#3B6D11">0.90</text>
+      <text x="414" y="130" text-anchor="middle" font-size="9" fill="#888780">0.07</text>
+      <text x="391" y="143" text-anchor="middle" font-size="8" fill="#3B6D11">HIGH</text>
+      <text x="414" y="143" text-anchor="middle" font-size="8" fill="#888780">LOW</text>
+      <text x="412" y="158" text-anchor="middle" font-size="9" fill="#A32D2D">✕ R 제거됨</text>
+
+      <!-- t4 frame -->
+      <rect x="542" y="46" width="90" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="552" y="58" width="28" height="52" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="566" y="87" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="590" y="58" width="28" height="52" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="604" y="87" text-anchor="middle" font-size="9" fill="#712B13">R?</text>
+      <text x="566" y="130" text-anchor="middle" font-size="9" fill="#3B6D11">0.89</text>
+      <text x="604" y="130" text-anchor="middle" font-size="9" fill="#3B6D11">0.91</text>
+      <text x="566" y="143" text-anchor="middle" font-size="8" fill="#3B6D11">HIGH</text>
+      <text x="604" y="143" text-anchor="middle" font-size="8" fill="#3B6D11">HIGH</text>
+      <rect x="574" y="155" width="56" height="18" rx="4" fill="#FCEBEB" stroke="#E24B4A" stroke-width="0.5"/>
+      <text x="602" y="168" text-anchor="middle" font-size="8" fill="#A32D2D">NEW ID!</text>
+
+      <!-- Trajectory -->
+      <line x1="106" y1="87" x2="192" y2="87" stroke="#993C1D" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.5" marker-end="url(#arrP)"/>
+      <line x1="282" y1="87" x2="367" y2="87" stroke="#E24B4A" stroke-width="1" stroke-dasharray="3 5" opacity="0.3" marker-end="url(#arrP)"/>
+      <text x="325" y="82" text-anchor="middle" font-size="9" fill="#A32D2D">— 끊김 —</text>
+      <line x1="457" y1="87" x2="542" y2="87" stroke="#E24B4A" stroke-width="1" stroke-dasharray="3 5" opacity="0.3" marker-end="url(#arrP)"/>
+    </svg>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">ByteTrack의 핵심 통찰</div>
+    <div class="i-text">score가 낮은 box는 "없는 객체"가 아니라 <strong>"일부만 보이는 객체"</strong>다. 가림이 발생하면 검출기가 특징(윤곽, 관절 등)을 덜 볼 수 있어 확신이 낮아질 뿐, 그 box 안에 실제 객체가 존재한다. 이 낮은 점수 box를 tracklet과 매칭하면 <strong>배경 noise와 진짜 객체를 구분할 수 있다.</strong></div>
+  </div>
+</section>
+
+
+<!-- 3. Tracklet -->
+<section id="tracklet">
+  <h2><span class="num">개념 1</span> Tracklet — 프레임을 관통하는 궤적</h2>
+
+  <p>Tracklet은 하나의 객체가 여러 프레임에 걸쳐 이동한 궤적 조각이다. 단순히 한 프레임의 bounding box가 아니라, <strong>"ID가 n번인 객체가 지금까지 어디에 있었는가"의 상태 이력 묶음</strong>이다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label">구성 정보</div>
+      <div class="card-title">상태 벡터</div>
+      <div class="card-body">각 tracklet은 <code>[x, y, w, h, vx, vy, vw, vh]</code>를 유지한다. 위치(x,y), 크기(w,h)와 그 변화율(속도)을 함께 관리한다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label">생명 주기</div>
+      <div class="card-title">생성 → 활성 → 소실 → 삭제</div>
+      <div class="card-body">신규 객체 검출 시 생성(Newborn). 매칭 유지 시 Active 상태. 일정 프레임 미매칭 시 Lost → 일정 시간 후 완전 삭제.</div>
+    </div>
+    <div class="card">
+      <div class="card-label">ByteTrack에서의 역할</div>
+      <div class="card-title">2차 매칭의 기준점</div>
+      <div class="card-body">가림 발생 시 tracklet이 "이 위치에 객체가 있어야 한다"는 예측 위치를 제공한다. Low score box와의 IoU 비교 기준이 된다.</div>
+    </div>
+  </div>
+
+  <!-- Tracklet 개념 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arrT" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 3. 두 객체의 Tracklet — 각 프레임별 위치 이력</text>
+
+      <!-- frame column headers -->
+      <text x="90"  y="36" text-anchor="middle" font-size="10" fill="#5F5E5A">Frame 1</text>
+      <text x="240" y="36" text-anchor="middle" font-size="10" fill="#5F5E5A">Frame 2</text>
+      <text x="400" y="36" text-anchor="middle" font-size="10" fill="#5F5E5A">Frame 3</text>
+      <text x="560" y="36" text-anchor="middle" font-size="10" fill="#5F5E5A">Frame 4</text>
+
+      <!-- frame boxes -->
+      <rect x="44" y="44"  width="92" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="196" y="44" width="92" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="354" y="44" width="92" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="514" y="44" width="92" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+
+      <!-- Object A (blue) -->
+      <rect x="52"  y="56" width="28" height="50" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="66"  y="84" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="208" y="62" width="28" height="50" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="222" y="90" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="374" y="68" width="28" height="50" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="388" y="96" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="534" y="72" width="28" height="50" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="548" y="100" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+
+      <!-- Object B (coral) -->
+      <rect x="96"  y="78" width="28" height="50" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="110" y="106" text-anchor="middle" font-size="9" fill="#712B13">B</text>
+      <rect x="246" y="70" width="28" height="50" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="260" y="98" text-anchor="middle" font-size="9" fill="#712B13">B</text>
+      <rect x="418" y="64" width="28" height="50" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="432" y="92" text-anchor="middle" font-size="9" fill="#712B13">B</text>
+      <rect x="572" y="80" width="28" height="50" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="586" y="108" text-anchor="middle" font-size="9" fill="#712B13">B</text>
+
+      <!-- Tracklet A trajectory -->
+      <polyline points="66,81 222,87 388,93 548,97" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.7"/>
+
+      <!-- Tracklet B trajectory -->
+      <polyline points="110,103 260,95 432,89 586,105" fill="none" stroke="#993C1D" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.7"/>
+
+      <!-- Legend -->
+      <line x1="44" y1="180" x2="80" y2="180" stroke="#185FA5" stroke-width="1.5" stroke-dasharray="6 3"/>
+      <text x="86" y="184" font-size="10" fill="#185FA5">Tracklet A (ID: 1) — 프레임 전체의 궤적 이력</text>
+      <line x1="370" y1="180" x2="406" y2="180" stroke="#993C1D" stroke-width="1.5" stroke-dasharray="6 3"/>
+      <text x="412" y="184" font-size="10" fill="#993C1D">Tracklet B (ID: 2)</text>
+    </svg>
+  </div>
+</section>
+
+
+<!-- 4. Kalman Filter -->
+<section id="kalman">
+  <h2><span class="num">개념 2</span> Kalman Filter — 예측과 보정의 반복</h2>
+
+  <p>Kalman Filter는 노이즈가 있는 관측값과 물리적 운동 예측을 결합해 현재 상태를 최적으로 추정하는 알고리즘이다. MOT에서는 <strong>검출이 없는 프레임에서도 객체 위치를 예측하여 tracklet을 살아있게 유지</strong>하는 역할을 한다.</p>
+
+  <!-- Kalman 사이클 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 230" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arrK" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrKb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 4. Kalman Filter — 예측(Predict) → 관측(Detect) → 보정(Update) 사이클</text>
+
+      <!-- Time axis -->
+      <line x1="50" y1="120" x2="650" y2="120" stroke="#D3D1C7" stroke-width="1"/>
+      <text x="50" y="135" font-size="10" fill="#9c9a92">시간 →</text>
+
+      <!-- t=1 observed -->
+      <circle cx="110" cy="120" r="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="110" y="124" text-anchor="middle" font-size="9" fill="#085041">t1</text>
+      <text x="110" y="150" text-anchor="middle" font-size="9" fill="#0F6E56">관측값</text>
+
+      <!-- t=2 prediction ellipse -->
+      <ellipse cx="280" cy="112" rx="36" ry="26" fill="none" stroke="#185FA5" stroke-width="1.2" stroke-dasharray="5 3" opacity="0.7"/>
+      <circle cx="280" cy="112" r="5" fill="#378ADD" opacity="0.8"/>
+      <text x="280" y="86" text-anchor="middle" font-size="9" fill="#185FA5">예측 위치</text>
+      <text x="280" y="97" text-anchor="middle" font-size="9" fill="#185FA5">(불확실성)</text>
+      <line x1="120" y1="118" x2="270" y2="114" stroke="#185FA5" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#arrKb)"/>
+      <text x="196" y="105" text-anchor="middle" font-size="9" fill="#185FA5">속도 기반 예측</text>
+
+      <!-- t=2 actual detection -->
+      <circle cx="326" cy="132" r="9" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+      <text x="326" y="136" text-anchor="middle" font-size="9" fill="#712B13">det</text>
+      <text x="326" y="154" text-anchor="middle" font-size="9" fill="#993C1D">실제 검출</text>
+
+      <!-- Corrected position -->
+      <circle cx="360" cy="120" r="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="360" y="124" text-anchor="middle" font-size="9" fill="#085041">보정</text>
+      <line x1="284" y1="113" x2="350" y2="119" stroke="#D3D1C7" stroke-width="0.5" stroke-dasharray="3 2"/>
+      <line x1="322" y1="130" x2="350" y2="121" stroke="#D3D1C7" stroke-width="0.5" stroke-dasharray="3 2"/>
+      <text x="440" y="108" text-anchor="middle" font-size="9" fill="#0F6E56">← 예측 + 관측 가중 평균</text>
+      <text x="420" y="120" text-anchor="middle" font-size="9" fill="#5F5E5A">(불확실성이 클수록 관측값 비중 ↑)</text>
+
+      <!-- t=3 next prediction -->
+      <ellipse cx="530" cy="116" rx="28" ry="20" fill="none" stroke="#185FA5" stroke-width="1.2" stroke-dasharray="5 3" opacity="0.7"/>
+      <circle cx="530" cy="116" r="5" fill="#378ADD" opacity="0.8"/>
+      <line x1="368" y1="120" x2="520" y2="117" stroke="#185FA5" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#arrKb)"/>
+      <text x="530" y="150" text-anchor="middle" font-size="9" fill="#185FA5">t3 예측</text>
+
+      <!-- Legend -->
+      <circle cx="56" cy="190" r="7" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.2"/>
+      <text x="70" y="194" font-size="10" fill="#0F6E56">관측값 / 보정 결과</text>
+      <circle cx="220" cy="190" r="5" fill="#378ADD" opacity="0.8"/>
+      <text x="232" y="194" font-size="10" fill="#185FA5">예측 위치 (중심)</text>
+      <circle cx="380" cy="190" r="7" fill="#FAECE7" stroke="#993C1D" stroke-width="1.2"/>
+      <text x="394" y="194" font-size="10" fill="#993C1D">실제 검출 박스</text>
+
+      <text x="350" y="215" text-anchor="middle" font-size="10" fill="#9c9a92">ByteTrack에서 Kalman은 가림 구간에서도 tracklet 위치를 살려두는 "생명선" 역할을 한다</text>
+    </svg>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">Predict 단계</div>
+      <div class="card-title">이전 상태 + 속도 → 위치 추정</div>
+      <div class="card-body">이전 프레임의 위치와 속도 정보를 이용해 현재 프레임의 위치를 추정한다. 시간이 지날수록 불확실성(covariance)이 커진다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">Update 단계</div>
+      <div class="card-title">예측 + 관측 → 최적 추정</div>
+      <div class="card-body">실제 detection box가 들어오면 예측값과 관측값을 불확실성 크기에 따라 가중 평균한다. 불확실성이 클수록 관측값에 더 의존한다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">ByteTrack에서의 역할</div>
+      <div class="card-title">가림 구간에서 tracklet 생존</div>
+      <div class="card-body">검출이 없는(가림) 프레임에서도 Kalman 예측으로 tracklet 위치를 유지한다. 이 예측 위치가 2차 매칭에서 Low score box와의 IoU 비교 기준이 된다.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 5. IoU -->
+<section id="iou">
+  <h2><span class="num">개념 3</span> IoU — 두 박스가 얼마나 겹치는가</h2>
+
+  <p>IoU(Intersection over Union)는 두 bounding box의 겹침 정도를 0~1 사이 값으로 표현하는 지표다. ByteTrack에서 IoU는 <strong>"Kalman이 예측한 tracklet 위치"와 "새로 검출된 box"가 같은 객체인지 판단하는 핵심 기준</strong>이다.</p>
+
+  <!-- IoU 수식 / 시각화 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 5. IoU 계산 원리와 매칭 판단 기준</text>
+
+      <!-- Case 1: High IoU -->
+      <text x="166" y="36" text-anchor="middle" font-size="11" fill="#0F6E56" font-weight="500">높은 IoU — 같은 객체</text>
+      <rect x="50" y="44" width="234" height="150" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+      <!-- Predicted box -->
+      <rect x="66" y="62" width="110" height="90" rx="4" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="122" y="58" text-anchor="middle" font-size="9" fill="#534AB7">Kalman 예측</text>
+      <!-- Detected box (overlapping) -->
+      <rect x="94" y="80" width="110" height="90" rx="4" fill="none" stroke="#0F6E56" stroke-width="1.5" stroke-dasharray="5 3"/>
+      <text x="200" y="178" text-anchor="middle" font-size="9" fill="#0F6E56">검출 box</text>
+      <!-- Intersection -->
+      <rect x="94" y="80" width="82" height="72" rx="2" fill="#1D9E75" opacity="0.3"/>
+      <text x="135" y="118" text-anchor="middle" font-size="9" fill="#085041" font-weight="500">교집합</text>
+      <!-- IoU value -->
+      <text x="166" y="208" text-anchor="middle" font-size="13" fill="#0F6E56" font-weight="500">IoU ≈ 0.72</text>
+      <text x="166" y="224" text-anchor="middle" font-size="10" fill="#085041">→ 같은 객체로 매칭</text>
+
+      <!-- Case 2: Low IoU -->
+      <text x="532" y="36" text-anchor="middle" font-size="11" fill="#A32D2D" font-weight="500">낮은 IoU — 다른 객체</text>
+      <rect x="416" y="44" width="268" height="150" rx="8" fill="#FCEBEB" stroke="#F09595" stroke-width="0.5"/>
+      <!-- Predicted box -->
+      <rect x="432" y="62" width="100" height="80" rx="4" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="482" y="58" text-anchor="middle" font-size="9" fill="#534AB7">Kalman 예측</text>
+      <!-- Detected box (far) -->
+      <rect x="570" y="96" width="100" height="80" rx="4" fill="none" stroke="#A32D2D" stroke-width="1.5" stroke-dasharray="5 3"/>
+      <text x="620" y="184" text-anchor="middle" font-size="9" fill="#A32D2D">검출 box</text>
+      <!-- IoU value -->
+      <text x="532" y="208" text-anchor="middle" font-size="13" fill="#A32D2D" font-weight="500">IoU ≈ 0.00</text>
+      <text x="532" y="224" text-anchor="middle" font-size="10" fill="#791F1F">→ 다른 객체, 매칭 안 함</text>
+
+      <!-- Formula -->
+      <text x="350" y="256" text-anchor="middle" font-size="12" fill="#5F5E5A" font-weight="500">IoU = 교집합 넓이 ÷ 합집합 넓이   (범위: 0.0 ~ 1.0)</text>
+      <text x="350" y="272" text-anchor="middle" font-size="10" fill="#9c9a92">2차 매칭에서는 항상 IoU 사용 — 가려진 box는 Re-ID 특징이 신뢰할 수 없어 외형 비교 부적합</text>
+    </svg>
+  </div>
+
+  <div class="callout">
+    <p><strong>왜 2차 매칭에는 항상 IoU를 쓰는가:</strong> Low score box는 가려진 객체를 포함하므로 얼굴·몸 특징이 제대로 보이지 않는다. Re-ID 특징 벡터가 신뢰할 수 없는 상황이다. 반면 Kalman이 예측한 위치와의 공간적 거리(IoU)는 가림과 무관하게 계산 가능하다.</p>
+  </div>
+</section>
+
+
+<!-- 6. BYTE 알고리즘 -->
+<section id="byte">
+  <h2><span class="num">알고리즘</span> BYTE — 2단계 매칭의 전체 흐름</h2>
+
+  <p>BYTE는 ByteTrack의 핵심 연관(association) 알고리즘이다. "BY associaTing Every detection box"의 약자로, 높은 점수 box뿐 아니라 낮은 점수 box까지 추적에 활용하는 것이 핵심이다.</p>
+
+  <!-- BYTE 알고리즘 흐름 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 420" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arrB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrBt" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrBa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#BA7517" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 6. BYTE 알고리즘 2단계 매칭 상세 흐름</text>
+
+      <!-- 전체 Detections -->
+      <rect x="250" y="28" width="200" height="44" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="350" y="46" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">전체 Detection Boxes</text>
+      <text x="350" y="62" text-anchor="middle" font-size="10" fill="#5F5E5A">score 0.0 ~ 1.0 모두 포함</text>
+      <line x1="320" y1="72" x2="230" y2="100" stroke="#1D9E75" stroke-width="1" marker-end="url(#arrBt)"/>
+      <line x1="380" y1="72" x2="470" y2="100" stroke="#BA7517" stroke-width="1" marker-end="url(#arrBa)"/>
+
+      <!-- High score boxes -->
+      <rect x="80" y="100" width="210" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="185" y="120" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">High score boxes</text>
+      <text x="185" y="138" text-anchor="middle" font-size="10" fill="#0F6E56">score ≥ τ_high (예: 0.6)</text>
+
+      <!-- Low score boxes -->
+      <rect x="410" y="100" width="210" height="50" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.5"/>
+      <text x="515" y="120" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">Low score boxes</text>
+      <text x="515" y="138" text-anchor="middle" font-size="10" fill="#854F0B">τ_low ≤ score &lt; τ_high</text>
+
+      <!-- Kalman 예측 -->
+      <rect x="244" y="182" width="212" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+      <text x="350" y="200" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">Kalman Filter 예측</text>
+      <text x="350" y="216" text-anchor="middle" font-size="10" fill="#534AB7">기존 tracklet 위치 추정</text>
+      <line x1="185" y1="150" x2="300" y2="182" stroke="#534AB7" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrB)"/>
+
+      <!-- 1차 매칭 -->
+      <rect x="80" y="258" width="210" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="185" y="278" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">① 1차 매칭</text>
+      <text x="185" y="294" text-anchor="middle" font-size="10" fill="#0F6E56">High score ↔ 모든 tracklet</text>
+      <text x="185" y="306" text-anchor="middle" font-size="9" fill="#5DCAA5">IoU 또는 Re-ID 유사도</text>
+      <line x1="280" y1="204" x2="220" y2="258" stroke="#1D9E75" stroke-width="1" marker-end="url(#arrBt)"/>
+
+      <!-- 미매칭 tracklet -->
+      <rect x="80" y="344" width="210" height="44" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="1"/>
+      <text x="185" y="362" text-anchor="middle" font-size="11" font-weight="500" fill="#712B13">미매칭 Tracklet</text>
+      <text x="185" y="378" text-anchor="middle" font-size="10" fill="#993C1D">1차에서 연결 못한 궤적들</text>
+      <line x1="185" y1="312" x2="185" y2="344" stroke="#993C1D" stroke-width="1" marker-end="url(#arrB)"/>
+
+      <!-- 2차 매칭 -->
+      <rect x="410" y="258" width="210" height="54" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.5"/>
+      <text x="515" y="278" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">② 2차 매칭</text>
+      <text x="515" y="294" text-anchor="middle" font-size="10" fill="#854F0B">Low score ↔ 미매칭 Tracklet</text>
+      <text x="515" y="306" text-anchor="middle" font-size="9" fill="#B4B2A9">항상 IoU만 사용</text>
+      <line x1="515" y1="150" x2="515" y2="258" stroke="#BA7517" stroke-width="1" marker-end="url(#arrBa)"/>
+      <line x1="185" y1="366" x2="410" y2="290" stroke="#993C1D" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#arrB)"/>
+
+      <!-- 최종 출력 -->
+      <rect x="244" y="344" width="212" height="44" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+      <text x="350" y="362" text-anchor="middle" font-size="11" font-weight="500" fill="#27500A">ID 유지 Tracklet 업데이트</text>
+      <text x="350" y="378" text-anchor="middle" font-size="10" fill="#3B6D11">가려진 객체 ID 보존</text>
+      <line x1="185" y1="344" x2="288" y2="344" stroke="#3B6D11" stroke-width="1" marker-end="url(#arrB)"/>
+      <line x1="515" y1="312" x2="420" y2="344" stroke="#3B6D11" stroke-width="1" marker-end="url(#arrB)"/>
+
+      <!-- Background note -->
+      <text x="350" y="405" text-anchor="middle" font-size="10" fill="#9c9a92">* score &lt; τ_low (배경 noise)는 양쪽 단계 모두에서 제외 — tracklet과 IoU가 높을 리 없으므로</text>
+    </svg>
+  </div>
+
+  <h3>단계별 상세 설명</h3>
+  <ol class="step-list">
+    <li>
+      <div class="step-num">1</div>
+      <div>
+        <span class="step-title">Detection box 분류</span>
+        세 가지로 분류한다. High score (score ≥ τ_high), Low score (τ_low ≤ score &lt; τ_high), Background (score &lt; τ_low). Background box만 즉시 폐기하고 나머지는 보존한다.
+        <span class="step-desc">τ_high 예시: 0.6,  τ_low 예시: 0.1</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div>
+        <span class="step-title">Kalman Filter로 tracklet 위치 예측</span>
+        현재 프레임에서 모든 기존 tracklet의 예상 위치를 계산한다. 가림이 발생한 tracklet도 여기서 "있어야 할 위치"를 유지한다.
+        <span class="step-desc">상태 벡터: [x, y, w, h, vx, vy, vw, vh]</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div>
+        <span class="step-title">1차 매칭 — High score boxes vs. 모든 Tracklet</span>
+        헝가리안 알고리즘으로 IoU 또는 Re-ID 유사도 기반 최적 매칭. 매칭 성공 시 tracklet 상태 업데이트. 미매칭 tracklet은 다음 단계로 넘어간다.
+        <span class="step-desc">저프레임 영상은 Re-ID, 일반 영상은 IoU가 더 강건함</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div>
+        <span class="step-title">2차 매칭 — Low score boxes vs. 미매칭 Tracklet</span>
+        1차에서 연결 못한 tracklet과 Low score box를 IoU로만 매칭. 임계값은 1차보다 낮게 설정. 매칭 성공 시 해당 tracklet의 ID가 복원된다.
+        <span class="step-desc">이 단계가 ByteTrack의 핵심 — 가려진 객체를 살린다</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">5</div>
+      <div>
+        <span class="step-title">Tracklet 생명 주기 관리</span>
+        최종 미매칭 tracklet은 Lost 상태로 전환, 일정 프레임 유지 후 삭제. 미매칭 High score box는 신규 tracklet으로 생성.
+        <span class="step-desc">Lost 상태에서도 Kalman 예측은 계속 작동</span>
+      </div>
+    </li>
+  </ol>
+
+  <div class="a-block">
+    <div class="a-label">BYTE의 범용성</div>
+    <div class="a-text">BYTE는 특정 검출기에 종속되지 않는다. <strong>YOLOX, Faster-RCNN, YOLOv5/v8 등 어떤 검출기의 출력에도 적용 가능</strong>하며, 연관 방법(IoU, Re-ID)도 교체 가능하다. 9개의 서로 다른 최신 트래커에 적용해 IDF1 1~10포인트 향상을 확인했다.</div>
+  </div>
+</section>
+
+
+<!-- 7. Occlusion 처리 원리 -->
+<section id="occlusion">
+  <h2><span class="num">심화</span> Occlusion 처리 원리 — 왜 ID가 유지되는가</h2>
+
+  <p>ByteTrack이 Occlusion에서 ID를 유지할 수 있는 이유는 Tracklet, Kalman Filter, IoU의 세 가지 메커니즘이 맞물리기 때문이다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--purple)">메커니즘 ①</div>
+      <div class="card-title">Kalman이 위치를 유지한다</div>
+      <div class="card-body">가림이 시작되는 순간부터 Kalman Filter가 "이 객체가 이 위치에 계속 있을 것"이라는 예측을 매 프레임 생성한다. 검출이 없어도 tracklet이 살아있다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">메커니즘 ②</div>
+      <div class="card-title">Low score box가 흔적을 남긴다</div>
+      <div class="card-body">완전히 가려지지 않은 이상 검출기는 낮은 확신으로나마 box를 출력한다. score가 낮아진 이유는 "특징이 덜 보여서"이지 "없어서"가 아니다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">메커니즘 ③</div>
+      <div class="card-title">IoU가 증거를 제공한다</div>
+      <div class="card-body">Kalman 예측 위치와 Low score box의 위치가 겹치면(IoU 높음), 이 낮은 점수 box는 배경이 아니라 추적 중인 객체의 흔적이라는 증거가 된다.</div>
+    </div>
+  </div>
+
+  <!-- Occlusion 처리 시나리오 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 430" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arrO" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 7. ByteTrack의 Occlusion 처리 — 프레임별 단계 분해</text>
+
+      <!-- Column headers -->
+      <text x="88"  y="34" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">Frame t1 (정상)</text>
+      <text x="238" y="34" text-anchor="middle" font-size="10" fill="#BA7517" font-weight="500">Frame t2 (가림 시작)</text>
+      <text x="420" y="34" text-anchor="middle" font-size="10" fill="#A32D2D" font-weight="500">Frame t3 (완전 가림)</text>
+      <text x="604" y="34" text-anchor="middle" font-size="10" fill="#0F6E56" font-weight="500">Frame t4 (해제)</text>
+
+      <!-- Scene frames -->
+      <rect x="44"  y="44" width="88" height="130" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="194" y="44" width="88" height="130" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="376" y="44" width="88" height="130" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <rect x="560" y="44" width="88" height="130" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+
+      <!-- t1: A and R both visible -->
+      <rect x="52"  y="56" width="28" height="52" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <circle cx="66" cy="65" r="9" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="66"  y="100" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="92"  y="60" width="28" height="52" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <circle cx="106" cy="69" r="9" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="106" y="104" text-anchor="middle" font-size="9" fill="#712B13">R</text>
+      <text x="66"  y="148" text-anchor="middle" font-size="9" fill="#3B6D11">0.91 H</text>
+      <text x="106" y="148" text-anchor="middle" font-size="9" fill="#3B6D11">0.89 H</text>
+      <text x="88"  y="164" text-anchor="middle" font-size="9" fill="#0F6E56">1차 매칭 ✓</text>
+
+      <!-- t2: A partially covers R -->
+      <rect x="210" y="56" width="28" height="52" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <circle cx="224" cy="65" r="9" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="224" y="100" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="234" y="60" width="28" height="52" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1" opacity="0.65"/>
+      <circle cx="248" cy="69" r="9" fill="#F5C4B3" stroke="#993C1D" stroke-width="1" opacity="0.65"/>
+      <rect x="234" y="60" width="10" height="52" rx="2" fill="#B5D4F4" opacity="0.7"/>
+      <text x="248" y="104" text-anchor="middle" font-size="9" fill="#712B13" opacity="0.7">R</text>
+      <text x="224" y="148" text-anchor="middle" font-size="9" fill="#3B6D11">0.88 H</text>
+      <text x="248" y="148" text-anchor="middle" font-size="9" fill="#BA7517">0.37 L</text>
+      <text x="238" y="164" text-anchor="middle" font-size="9" fill="#BA7517">2차 매칭 ✓</text>
+
+      <!-- t3: R fully hidden -->
+      <rect x="384" y="56" width="28" height="52" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <circle cx="398" cy="65" r="9" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="398" y="100" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="408" y="62" width="28" height="52" rx="3" fill="none" stroke="#993C1D" stroke-width="1" stroke-dasharray="4 3" opacity="0.35"/>
+      <text x="422" y="90" text-anchor="middle" font-size="9" fill="#993C1D" opacity="0.35">R</text>
+      <text x="398" y="148" text-anchor="middle" font-size="9" fill="#3B6D11">0.90 H</text>
+      <text x="422" y="148" text-anchor="middle" font-size="9" fill="#888780">0.08 L</text>
+      <text x="420" y="164" text-anchor="middle" font-size="9" fill="#BA7517">2차 매칭 ✓</text>
+
+      <!-- t4: R reappears -->
+      <rect x="568" y="56" width="28" height="52" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <circle cx="582" cy="65" r="9" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="582" y="100" text-anchor="middle" font-size="9" fill="#0C447C">A</text>
+      <rect x="606" y="56" width="28" height="52" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <circle cx="620" cy="65" r="9" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="620" y="100" text-anchor="middle" font-size="9" fill="#712B13">R</text>
+      <text x="582" y="148" text-anchor="middle" font-size="9" fill="#3B6D11">0.89 H</text>
+      <text x="620" y="148" text-anchor="middle" font-size="9" fill="#3B6D11">0.91 H</text>
+      <text x="604" y="164" text-anchor="middle" font-size="9" fill="#0F6E56">1차 매칭 ✓</text>
+
+      <!-- Kalman strip -->
+      <rect x="44" y="192" width="644" height="32" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.8"/>
+      <text x="64" y="208" font-size="9" font-weight="500" fill="#3C3489">Kalman</text>
+      <text x="180" y="208" text-anchor="middle" font-size="9" fill="#3C3489">A(66,82)  R(106,86)</text>
+      <text x="350" y="208" text-anchor="middle" font-size="9" fill="#3C3489">A(224,82)  R(248,86) — R 예측 계속 유지</text>
+      <text x="530" y="208" text-anchor="middle" font-size="9" fill="#3C3489">A(398,82)  R(422,86) — R 예측 계속 유지</text>
+      <text x="640" y="208" text-anchor="middle" font-size="9" fill="#3C3489">복원</text>
+
+      <!-- Matching result strip -->
+      <rect x="44" y="236" width="644" height="60" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="64" y="252" font-size="9" font-weight="500" fill="#5F5E5A">매칭</text>
+      <rect x="86"  y="242" width="82" height="24" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="127" y="258" text-anchor="middle" font-size="9" fill="#085041">1차: A✓ R✓</text>
+      <rect x="236" y="242" width="82" height="24" rx="4" fill="#FAEEDA" stroke="#EF9F27" stroke-width="0.5"/>
+      <text x="277" y="258" text-anchor="middle" font-size="9" fill="#633806">2차: R(0.37)↔IoU✓</text>
+      <rect x="400" y="242" width="88" height="24" rx="4" fill="#FAEEDA" stroke="#EF9F27" stroke-width="0.5"/>
+      <text x="444" y="258" text-anchor="middle" font-size="9" fill="#633806">2차: R(0.08)↔IoU✓</text>
+      <rect x="560" y="242" width="82" height="24" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="601" y="258" text-anchor="middle" font-size="9" fill="#085041">1차: A✓ R✓</text>
+
+      <!-- ID continuity -->
+      <text x="64" y="286" font-size="9" font-weight="500" fill="#5F5E5A">ID</text>
+      <circle cx="128" cy="282" r="8" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="128" y="286" text-anchor="middle" font-size="8" fill="#0C447C">A:1</text>
+      <circle cx="278" cy="282" r="8" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="278" y="286" text-anchor="middle" font-size="8" fill="#0C447C">A:1</text>
+      <circle cx="444" cy="282" r="8" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="444" y="286" text-anchor="middle" font-size="8" fill="#0C447C">A:1</text>
+      <circle cx="601" cy="282" r="8" fill="#B5D4F4" stroke="#185FA5" stroke-width="1"/>
+      <text x="601" y="286" text-anchor="middle" font-size="8" fill="#0C447C">A:1</text>
+      <line x1="136" y1="282" x2="269" y2="282" stroke="#185FA5" stroke-width="1.5" marker-end="url(#arrO)"/>
+      <line x1="286" y1="282" x2="435" y2="282" stroke="#185FA5" stroke-width="1.5" marker-end="url(#arrO)"/>
+      <line x1="452" y1="282" x2="592" y2="282" stroke="#185FA5" stroke-width="1.5" marker-end="url(#arrO)"/>
+
+      <!-- R ID continuity -->
+      <circle cx="152" cy="296" r="8" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="152" y="300" text-anchor="middle" font-size="8" fill="#712B13">R:2</text>
+      <circle cx="278" cy="296" r="8" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="278" y="300" text-anchor="middle" font-size="8" fill="#712B13">R:2</text>
+      <circle cx="444" cy="296" r="8" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="444" y="300" text-anchor="middle" font-size="8" fill="#712B13">R:2</text>
+      <circle cx="601" cy="296" r="8" fill="#F5C4B3" stroke="#993C1D" stroke-width="1"/>
+      <text x="601" y="300" text-anchor="middle" font-size="8" fill="#712B13">R:2</text>
+      <line x1="160" y1="296" x2="269" y2="296" stroke="#993C1D" stroke-width="1.5" marker-end="url(#arrO)"/>
+      <line x1="286" y1="296" x2="435" y2="296" stroke="#993C1D" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrO)"/>
+      <text x="361" y="290" text-anchor="middle" font-size="8" fill="#BA7517">low score 구간</text>
+      <line x1="452" y1="296" x2="592" y2="296" stroke="#993C1D" stroke-width="1.5" marker-end="url(#arrO)"/>
+
+      <!-- Summary -->
+      <rect x="44" y="330" width="644" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="350" y="350" text-anchor="middle" font-size="11" fill="#085041" font-weight="500">결과: R의 ID는 t1~t4 내내 "2"로 유지됨</text>
+      <text x="350" y="368" text-anchor="middle" font-size="10" fill="#0F6E56">score가 0.08까지 떨어져도 Kalman 예측 위치와 IoU 매칭으로 궤적이 끊기지 않음</text>
+
+      <text x="350" y="415" text-anchor="middle" font-size="10" fill="#9c9a92">H = High score (1차 매칭),  L = Low score (2차 매칭)</text>
+    </svg>
+  </div>
+
+  <div class="conclusion">
+    <div class="c-label">세 메커니즘의 연결 고리</div>
+    <div class="c-title">Kalman이 기다리고, Low score box가 흔적을 남기며, IoU가 증거를 제공한다</div>
+    <div class="c-body">
+      기존 방법이 <strong>score &lt; threshold 순간 tracklet을 끊는</strong> 반면, ByteTrack은 <strong>"예측 위치에서 기다리면서 낮은 점수 box와도 매칭을 시도"</strong>한다. 가림이 풀렸을 때 새 ID가 아닌 원래 ID로 복원된다. 구현 추가 비용은 Low score box를 폐기하지 않고 2차 매칭에 활용하는 것뿐이다.
+    </div>
+  </div>
+</section>
+
+
+<!-- 8. 성능 결과 -->
+<section id="results">
+  <h2><span class="num">결과</span> 성능 결과 — 벤치마크 비교</h2>
+
+  <p>ByteTrack은 MOT17, MOT20, BDD100K, HiEve 등 주요 벤치마크에서 당시 최고 성능을 기록했다. 특히 Re-ID 없이 달성한 결과라는 점이 구조적으로 의미 있다.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>지표</th>
+          <th>의미</th>
+          <th>ByteTrack (MOT17)</th>
+          <th>기존 2위 (ReMOT)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>MOTA</strong></td>
+          <td>전체 추적 정확도 (FP, FN, ID Switch 종합)</td>
+          <td><span class="cmp-good">80.3</span></td>
+          <td>77.4</td>
+        </tr>
+        <tr>
+          <td><strong>IDF1</strong></td>
+          <td>ID 연속성 중심 F1 점수</td>
+          <td><span class="cmp-good">77.3</span></td>
+          <td>73.6</td>
+        </tr>
+        <tr>
+          <td><strong>FPS</strong></td>
+          <td>초당 처리 프레임 수</td>
+          <td><span class="cmp-good">30</span></td>
+          <td>— (더 느림)</td>
+        </tr>
+        <tr>
+          <td><strong>Re-ID 사용</strong></td>
+          <td>외형 기반 재식별 네트워크</td>
+          <td><span class="cmp-good">없음</span></td>
+          <td>있음</td>
+        </tr>
+        <tr>
+          <td><strong>IDF1 향상 (9개 트래커)</strong></td>
+          <td>BYTE 적용 시 IDF1 변화</td>
+          <td colspan="2"><span class="cmp-good">+1 ~ +10 포인트 (일관된 향상)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>IDF1 향상이 중요한 이유:</strong> MOTA는 박스 위치 정확도에 민감하지만 ID Switch를 상대적으로 낮게 패널티한다. IDF1은 같은 ID가 얼마나 오래 유지되는지를 직접 측정한다. BYTE를 적용하면 가림 구간에서 ID가 끊기지 않아 IDF1이 크게 향상된다.</p>
+  </div>
+
+  <h3>BYTE를 9개 트래커에 적용한 결과</h3>
+  <p>저자들은 BYTE를 독립 모듈로 기존 트래커에 적용해 범용성을 검증했다. CenterTrack의 경우 MOTA +1.3, IDF1 +9.8이라는 큰 향상을 보였으며, TransTrack도 IDF1 +4.1을 기록했다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">CenterTrack + BYTE</div>
+      <div class="card-title">IDF1 +9.8 포인트</div>
+      <div class="card-body">가장 큰 IDF1 향상. ID 연속성 개선 효과가 극명하게 나타났다. MOTA도 1.3 포인트 향상.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">TransTrack + BYTE</div>
+      <div class="card-title">IDF1 +4.1 포인트</div>
+      <div class="card-body">Transformer 기반 트래커에도 효과적. BYTE가 구조와 무관하게 범용적으로 적용됨을 보여준다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">Chained-Tracker + BYTE</div>
+      <div class="card-title">MOTA +1.9 · IDF1 +5.8</div>
+      <div class="card-body">MOTA와 IDF1 모두 향상. 단순 score 필터링만 바꿨을 뿐인데 전반적인 지표가 개선된다.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 9. 핵심 요약 -->
+<section id="summary">
+  <h2><span class="num">요약</span> 핵심 요약 — 논문의 기여와 한계</h2>
+
+  <h3>기여</h3>
+  <div class="info-box">
+    <div class="info-title">ByteTrack의 세 가지 기여</div>
+    <div class="info-body">
+      <strong>① 새로운 관점:</strong> "낮은 score = 쓸모없음"이라는 통념을 깨고, 낮은 score box도 tracklet과의 유사도를 통해 배경과 구분할 수 있음을 입증했다.<br><br>
+      <strong>② 범용 알고리즘:</strong> BYTE는 검출기와 연관 방법에 독립적이다. 어떤 트래커에도 "낮은 score box를 폐기하지 말고 2차 매칭에 활용하라"는 원칙을 적용할 수 있다.<br><br>
+      <strong>③ 단순하고 빠름:</strong> Re-ID 네트워크 없이 Kalman + IoU만으로 30 FPS를 달성했다. 구현 복잡도 대비 성능 향상이 매우 크다.
+    </div>
+  </div>
+
+  <h3>한계 및 후속 연구</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--red)">한계</div>
+      <div class="card-title">완전 가림 장기 지속 시</div>
+      <div class="card-body">객체가 완전히 가려진 채 오랫동안 유지되면 Low score box 자체가 없어진다. Kalman 예측만으로 유지되는 시간에는 한계가 있다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">한계</div>
+      <div class="card-title">임계값 τ 튜닝 필요</div>
+      <div class="card-body">τ_high와 τ_low는 데이터셋과 환경에 따라 조정이 필요하다. 산업 현장처럼 분진·조명 변화가 심한 환경에서는 별도 실측 튜닝이 필수다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">후속 연구</div>
+      <div class="card-title">ByteTrackV2 (2023)</div>
+      <div class="card-body">3D MOT로 확장. LiDAR/카메라 양쪽에서 계층적 data association 전략 적용. nuScenes 3D MOT 리더보드 1위 달성.</div>
+    </div>
+  </div>
+
+  <h3>핵심 스펙 요약</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>항목</th><th>내용</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>발표</strong></td><td>ECCV 2022</td></tr>
+        <tr><td><strong>핵심 알고리즘</strong></td><td>BYTE — 2단계 매칭 (High score 1차 → Low score 2차)</td></tr>
+        <tr><td><strong>검출기</strong></td><td>YOLOX-X (입력 1600×896)</td></tr>
+        <tr><td><strong>연관 방법</strong></td><td>Kalman Filter + IoU (Re-ID 없음)</td></tr>
+        <tr><td><strong>MOT17 MOTA</strong></td><td>80.3 (리더보드 1위)</td></tr>
+        <tr><td><strong>MOT17 IDF1</strong></td><td>77.3</td></tr>
+        <tr><td><strong>처리 속도</strong></td><td>30 FPS (V100 GPU)</td></tr>
+        <tr><td><strong>범용성 검증</strong></td><td>9개 기존 트래커에 BYTE 적용 → IDF1 +1~10 포인트</td></tr>
+        <tr><td><strong>코드 공개</strong></td><td>github.com/FoundationVision/ByteTrack</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="a-block">
+    <div class="a-label">이 논문에서 얻어야 할 한 가지</div>
+    <div class="a-text">ByteTrack의 진짜 기여는 알고리즘의 복잡함이 아니라 <strong>관점의 전환</strong>에 있다. "score가 낮으면 버린다"에서 "score가 낮아도 tracklet과 위치가 겹치면 증거가 있다"로의 전환. 이 단순한 아이디어가 ID 연속성을 크게 향상시켰고, 복잡한 Re-ID 모듈 없이도 실시간 최고 성능을 달성했다.</div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav ul li a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
