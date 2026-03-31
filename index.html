@@ -3,138 +3,189 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>프로젝트 문서 아카이브</title>
+<title>Research Notes Archive</title>
 <style>
+  /* ── 토큰 ── */
   :root {
-    --bg: #f5f4f0; --bg2: #ffffff; --bg3: #eeecea;
-    --text: #1a1a18; --text2: #5a5955; --text3: #9c9a92;
-    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
-    --blue: #185FA5; --blue-bg: #E6F1FB;
-    --teal: #0F6E56; --teal-bg: #E1F5EE;
-    --amber: #854F0B; --amber-bg: #FAEEDA; --amber-mid: #EF9F27;
-    --coral: #993C1D; --coral-bg: #FAECE7;
-    --green: #3B6D11; --green-bg: #EAF3DE;
-    --purple: #534AB7; --purple-bg: #EEEDFE;
-    --red: #A32D2D; --red-bg: #FCEBEB;
-    --gray: #5F5E5A; --gray-bg: #F1EFE8;
-    --radius: 12px; --radius-sm: 8px;
+    --bg:      #F4F3EF; --bg2: #FFFFFF; --bg3: #ECEAE4;
+    --text:    #1C1B18; --text2: #5C5A53; --text3: #9A9890;
+    --border:  rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+    --blue:    #1558A8; --blue-bg:   #E4EFFE;
+    --teal:    #0A6B52; --teal-bg:   #DFF5ED;
+    --amber:   #7E4B08; --amber-bg:  #FAF0D8;
+    --coral:   #953A1A; --coral-bg:  #FAECE6;
+    --green:   #376510; --green-bg:  #E8F2DC;
+    --purple:  #4F46B0; --purple-bg: #ECEAFD;
+    --gray:    #5A5955; --gray-bg:   #EFEDE6;
+    --red:     #9E2A2A; --red-bg:    #FBEAEA;
+    --r: 10px; --rs: 7px;
+    --sidebar: 248px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #1a1a18; --bg2: #242422; --bg3: #2e2e2b;
-      --text: #e8e6de; --text2: #a8a69e; --text3: #6e6c65;
-      --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
-      --blue: #85B7EB; --blue-bg: #042C53;
-      --teal: #5DCAA5; --teal-bg: #04342C;
-      --amber: #FAC775; --amber-bg: #412402; --amber-mid: #EF9F27;
-      --coral: #F0997B; --coral-bg: #4A1B0C;
-      --green: #97C459; --green-bg: #173404;
-      --purple: #AFA9EC; --purple-bg: #26215C;
-      --red: #F09595; --red-bg: #501313;
-      --gray: #B4B2A9; --gray-bg: #2C2C2A;
+      --bg:#1B1B18; --bg2:#232320; --bg3:#2C2C28;
+      --text:#E6E4DC; --text2:#A6A49C; --text3:#6A6860;
+      --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+      --blue:#7EB5F0; --blue-bg:#022850;
+      --teal:#52C9A2; --teal-bg:#023328;
+      --amber:#F5C36A; --amber-bg:#3E2301;
+      --coral:#EE9270; --coral-bg:#481808;
+      --green:#93C253; --green-bg:#153202;
+      --purple:#AAA5EA; --purple-bg:#231F58;
+      --gray:#B2B09A; --gray-bg:#2A2A26;
+      --red:#EE9090; --red-bg:#4C1010;
     }
   }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.7; }
-  .layout { display: flex; min-height: 100vh; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',sans-serif;
+       background:var(--bg);color:var(--text);font-size:14px;line-height:1.7}
 
-  /* ── SIDEBAR ── */
-  nav { width: 256px; flex-shrink: 0; background: var(--bg2); border-right: 0.5px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 0 40px; }
-  nav .logo { padding: 0 20px 20px; border-bottom: 0.5px solid var(--border); margin-bottom: 12px; }
-  nav .logo .tag { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
-  nav .logo .title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.45; }
-  nav .nav-section { padding: 16px 20px 6px; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; }
-  nav ul { list-style: none; padding: 0 8px; }
-  nav ul li a { display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; border-radius: 6px; font-size: 13px; color: var(--text2); text-decoration: none; transition: background .15s, color .15s; line-height: 1.4; }
-  nav ul li a:hover { background: var(--bg3); color: var(--text); }
-  nav ul li a.active { background: var(--purple-bg); color: var(--purple); font-weight: 500; }
-  nav ul li a .nav-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
-  nav ul li a .nav-label { flex: 1; }
-  nav ul li a .nav-count { flex-shrink: 0; font-size: 11px; font-weight: 500; background: var(--bg3); color: var(--text3); border-radius: 20px; padding: 1px 7px; margin-top: 1px; }
-  nav ul li a.active .nav-count { background: var(--purple); color: #fff; }
+  /* ── 레이아웃 ── */
+  .shell{display:flex;min-height:100vh}
 
-  /* ── MAIN ── */
-  main { flex: 1; max-width: 860px; padding: 48px 40px 100px; }
+  /* ── 사이드바 ── */
+  aside{
+    width:var(--sidebar);flex-shrink:0;
+    background:var(--bg2);border-right:.5px solid var(--border);
+    position:sticky;top:0;height:100vh;overflow-y:auto;
+    padding:20px 0 48px;display:flex;flex-direction:column;gap:0
+  }
+  .aside-logo{padding:0 16px 18px;border-bottom:.5px solid var(--border);margin-bottom:10px}
+  .aside-logo .al-tag{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:3px}
+  .aside-logo .al-name{font-size:13px;font-weight:500;color:var(--text);line-height:1.4}
+  .aside-sec{padding:14px 16px 5px;font-size:10px;font-weight:600;letter-spacing:.09em;color:var(--text3);text-transform:uppercase}
+  aside ul{list-style:none;padding:0 8px}
+  aside ul li a{
+    display:flex;align-items:center;gap:8px;padding:7px 10px;
+    border-radius:6px;font-size:12.5px;color:var(--text2);text-decoration:none;
+    transition:background .12s,color .12s;line-height:1.4
+  }
+  aside ul li a:hover{background:var(--bg3);color:var(--text)}
+  aside ul li a.active{background:var(--purple-bg);color:var(--purple);font-weight:500}
+  aside ul li a .ni{font-size:13px;flex-shrink:0}
+  aside ul li a .nl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  aside ul li a .nc{font-size:10px;font-weight:600;background:var(--bg3);color:var(--text3);border-radius:20px;padding:1px 6px;flex-shrink:0}
+  aside ul li a.active .nc{background:var(--purple);color:#fff}
 
-  /* ── PAGE HEADER ── */
-  .page-header { margin-bottom: 40px; padding-bottom: 32px; border-bottom: 0.5px solid var(--border); }
-  .page-header .eyebrow { font-size: 12px; font-weight: 500; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
-  .page-header h1 { font-size: 26px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
-  .page-header .subtitle { font-size: 15px; color: var(--text2); }
+  /* 사이드바 서브 아이템 */
+  aside ul li.sub a{padding-left:28px;font-size:12px}
 
-  /* ── SEARCH ── */
-  .search-wrap { position: relative; margin-bottom: 32px; }
-  .search-wrap input { width: 100%; padding: 11px 16px 11px 40px; background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; color: var(--text); font-family: inherit; outline: none; transition: border-color .15s; }
-  .search-wrap input::placeholder { color: var(--text3); }
-  .search-wrap input:focus { border-color: var(--purple); }
-  .search-wrap .s-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; pointer-events: none; }
+  /* ── 메인 ── */
+  main{flex:1;min-width:0;padding:40px 36px 100px}
 
-  /* ── PROJECT BLOCK ── */
-  .project-block { margin-bottom: 52px; scroll-margin-top: 28px; }
-  .project-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 0.5px solid var(--border); }
-  .project-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; margin-top: 2px; }
-  .project-info { flex: 1; min-width: 0; }
-  .project-info .p-label { font-size: 11px; font-weight: 500; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
-  .project-info h2 { font-size: 18px; font-weight: 500; color: var(--text); line-height: 1.35; margin-bottom: 8px; }
-  .project-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* ── 페이지 헤더 ── */
+  .ph{margin-bottom:28px}
+  .ph .ph-eye{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+  .ph h1{font-size:22px;font-weight:500;line-height:1.3;margin-bottom:4px}
+  .ph .ph-sub{font-size:13.5px;color:var(--text2)}
 
-  /* ── FILE LIST ── */
-  .file-list { display: flex; flex-direction: column; gap: 8px; }
-  .file-row { display: flex; align-items: center; gap: 14px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px 18px; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; }
-  .file-row:hover { border-color: var(--border2); box-shadow: 0 1px 8px rgba(0,0,0,0.06); }
-  .file-type-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-  .file-body { flex: 1; min-width: 0; }
-  .file-title { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.35; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .file-desc { font-size: 12px; color: var(--text3); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .file-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .file-date { font-size: 11px; color: var(--text3); white-space: nowrap; }
-  .file-arrow { font-size: 16px; color: var(--text3); }
+  /* ── 탭 ── */
+  .tabs{display:flex;gap:2px;background:var(--bg3);border-radius:var(--rs);padding:3px;width:fit-content;margin-bottom:24px}
+  .tab-btn{
+    padding:6px 18px;border-radius:5px;font-size:12.5px;font-weight:500;
+    color:var(--text2);background:transparent;border:none;cursor:pointer;
+    transition:background .15s,color .15s;font-family:inherit
+  }
+  .tab-btn.on{background:var(--bg2);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
 
-  /* ── BADGE ── */
-  .badge { display: inline-block; font-size: 11px; font-weight: 500; border-radius: 20px; padding: 2px 9px; white-space: nowrap; }
-  .badge-blue   { background: var(--blue-bg);   color: var(--blue); }
-  .badge-teal   { background: var(--teal-bg);   color: var(--teal); }
-  .badge-amber  { background: var(--amber-bg);  color: var(--amber); }
-  .badge-gray   { background: var(--gray-bg);   color: var(--gray); }
-  .badge-green  { background: var(--green-bg);  color: var(--green); }
-  .badge-purple { background: var(--purple-bg); color: var(--purple); }
-  .badge-coral  { background: var(--coral-bg);  color: var(--coral); }
+  /* ── 검색 ── */
+  .search-wrap{position:relative;margin-bottom:28px}
+  .search-wrap input{
+    width:100%;padding:9px 14px 9px 36px;
+    background:var(--bg2);border:.5px solid var(--border2);border-radius:var(--rs);
+    font-size:13px;color:var(--text);font-family:inherit;outline:none;
+    transition:border-color .15s
+  }
+  .search-wrap input::placeholder{color:var(--text3)}
+  .search-wrap input:focus{border-color:var(--purple)}
+  .search-wrap .si{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
 
-  .type-report  { background: var(--blue-bg); }
-  .type-note    { background: var(--purple-bg); }
-  .type-spec    { background: var(--teal-bg); }
-  .type-data    { background: var(--amber-bg); }
-  .type-etc     { background: var(--gray-bg); }
+  /* ── 섹션 (주제 or 프로젝트) ── */
+  .section-block{margin-bottom:44px;scroll-margin-top:24px}
+  .section-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:.5px solid var(--border)}
+  .sh-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;margin-top:1px}
+  .sh-info{flex:1;min-width:0}
+  .sh-info .shi-label{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
+  .sh-info h2{font-size:16px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:6px}
+  .sh-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 
-  /* ── EMPTY ── */
-  .empty-row { background: var(--bg2); border: 0.5px dashed var(--border2); border-radius: var(--radius-sm); padding: 18px 20px; font-size: 13px; color: var(--text3); }
+  /* ── 서브폴더 그룹 ── */
+  .subfolder{margin-bottom:12px}
+  .subfolder-label{
+    display:flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--text3);margin-bottom:7px;padding-left:2px
+  }
+  .subfolder-label::after{content:'';flex:1;height:.5px;background:var(--border)}
 
-  /* ── NO RESULT ── */
-  .no-result { text-align: center; padding: 60px 0; color: var(--text3); font-size: 14px; }
-  .no-result .nr-icon { font-size: 36px; margin-bottom: 12px; }
+  /* ── 파일 행 ── */
+  .file-list{display:flex;flex-direction:column;gap:6px}
+  .file-row{
+    display:flex;align-items:center;gap:12px;
+    background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rs);
+    padding:11px 15px;text-decoration:none;color:inherit;
+    transition:border-color .14s,box-shadow .14s
+  }
+  .file-row:hover{border-color:var(--border2);box-shadow:0 1px 6px rgba(0,0,0,.05)}
+  .ft-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+  .fb{flex:1;min-width:0}
+  .fb .ft{font-size:13px;font-weight:500;color:var(--text);line-height:1.3;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fb .fd{font-size:11.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fr{display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .fdate{font-size:11px;color:var(--text3);white-space:nowrap}
+  .farrow{font-size:15px;color:var(--text3)}
 
-  @media (max-width: 720px) {
-    nav { display: none; }
-    main { padding: 28px 18px 60px; }
-    .file-desc, .file-date { display: none; }
+  /* ── 빈 상태 ── */
+  .empty-row{background:var(--bg2);border:.5px dashed var(--border2);border-radius:var(--rs);padding:16px 18px;font-size:13px;color:var(--text3)}
+  .no-result{text-align:center;padding:56px 0;color:var(--text3);font-size:13px}
+  .no-result .nr-icon{font-size:32px;margin-bottom:10px}
+
+  /* ── 배지 ── */
+  .badge{display:inline-block;font-size:10.5px;font-weight:500;border-radius:20px;padding:2px 8px;white-space:nowrap}
+  .b-blue  {background:var(--blue-bg);  color:var(--blue)}
+  .b-teal  {background:var(--teal-bg);  color:var(--teal)}
+  .b-amber {background:var(--amber-bg); color:var(--amber)}
+  .b-gray  {background:var(--gray-bg);  color:var(--gray)}
+  .b-green {background:var(--green-bg); color:var(--green)}
+  .b-purple{background:var(--purple-bg);color:var(--purple)}
+  .b-coral {background:var(--coral-bg); color:var(--coral)}
+  .b-red   {background:var(--red-bg);   color:var(--red)}
+
+  /* 타입별 아이콘 bg */
+  .ti-review {background:var(--blue-bg)}
+  .ti-note   {background:var(--purple-bg)}
+  .ti-ref    {background:var(--teal-bg)}
+  .ti-report {background:var(--coral-bg)}
+  .ti-spec   {background:var(--green-bg)}
+  .ti-data   {background:var(--amber-bg)}
+  .ti-etc    {background:var(--gray-bg)}
+
+  @media(max-width:700px){
+    aside{display:none}
+    main{padding:24px 16px 60px}
+    .fb .fd,.fdate{display:none}
   }
 </style>
 </head>
 <body>
-<div class="layout">
-
-<nav id="sidebar"></nav>
-
+<div class="shell">
+<aside id="sidebar"></aside>
 <main>
-  <div class="page-header">
-    <div class="eyebrow">Document Archive</div>
-    <h1>프로젝트 문서 아카이브</h1>
-    <p class="subtitle">프로젝트별 보고서·연구노트·설계문서를 한 곳에서 관리합니다.</p>
+  <div class="ph">
+    <div class="ph-eye">Research Archive</div>
+    <h1>Research Notes</h1>
+    <p class="ph-sub">논문 리뷰 · 연구노트 · 참고자료를 주제별 · 프로젝트별로 탐색합니다.</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn on" id="tab-topic"   onclick="switchTab('topic')">📚 주제별</button>
+    <button class="tab-btn"   id="tab-project" onclick="switchTab('project')">🗂 프로젝트별</button>
   </div>
 
   <div class="search-wrap">
-    <span class="s-icon">🔍</span>
-    <input type="text" id="search" placeholder="문서 제목, 태그, 설명으로 검색…" oninput="render()">
+    <span class="si">🔍</span>
+    <input type="text" id="search" placeholder="제목, 태그, 설명으로 검색…" oninput="render()">
   </div>
 
   <div id="content"></div>
@@ -142,48 +193,105 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════
-     ★  데이터 영역  —  여기만 수정하면 됩니다
+     ★  데이터 영역  —  update_archive.py 가 자동 갱신합니다
 ════════════════════════════════════════════════════════════════ -->
 <script>
 
 // ── 문서 타입 정의 ──────────────────────────────────────────────
-// type 값 하나만 지정하면 아이콘·배지 색상 자동 적용
 const DOC_TYPE = {
-  report: { label: '보고서',   icon: '📄', bg: 'type-report',  badge: 'badge-blue'   },
-  note:   { label: '연구노트', icon: '🔬', bg: 'type-note',    badge: 'badge-purple' },
-  spec:   { label: '설계문서', icon: '📐', bg: 'type-spec',    badge: 'badge-teal'   },
-  data:   { label: '데이터',   icon: '📊', bg: 'type-data',    badge: 'badge-amber'  },
-  etc:    { label: '기타',     icon: '📎', bg: 'type-etc',     badge: 'badge-gray'   },
+  review: { label: '논문리뷰',  icon: '📑', ti: 'ti-review', badge: 'b-blue'   },
+  note:   { label: '연구노트',  icon: '🔬', ti: 'ti-note',   badge: 'b-purple' },
+  ref:    { label: '참고자료',  icon: '📌', ti: 'ti-ref',    badge: 'b-teal'   },
+  report: { label: '보고서',    icon: '📄', ti: 'ti-report', badge: 'b-coral'  },
+  spec:   { label: '설계문서',  icon: '📐', ti: 'ti-spec',   badge: 'b-green'  },
+  data:   { label: '데이터',    icon: '📊', ti: 'ti-data',   badge: 'b-amber'  },
+  etc:    { label: '기타',      icon: '📎', ti: 'ti-etc',    badge: 'b-gray'   },
 };
 
-// ── 프로젝트 & 파일 데이터 ──────────────────────────────────────
-const projects = [
+// ── 주제 데이터 ─────────────────────────────────────────────────
+// update_archive.py 가 topics 배열 전체를 자동 교체합니다.
+const topics = [
 
-  // ── 자동 분체 도장라인 멀티모달 AI 불량예방 시스템 ──
+  // ── computer-vision ──
   {
-    id: "daewon",
-    icon: "🏭",
-    iconBg: "#E6F1FB",
-    label: "수요기관 · 대원공업㈜",
-    title: "자동 분체 도장라인 멀티모달 AI 불량예방 시스템",
+    id: "computer-vision",
+    icon: "👁",
+    iconBg: "#E4EFFE",
+    label: "주제 · Computer Vision",
+    title: "Computer Vision",
     color: "blue",
-    files: [
-      { "title": "AI 불량예방 시스템 보고서 v4", "desc": "불량예방", "file": "daewon/AI_불량예방_시스템_보고서_v4.html", "type": "report", "date": "2026-03", "tags": ["\ubd88\ub7c9\uc608\ubc29"] },
-      { "title": "비전 전처리 연구노트 CaseA v1", "desc": "", "file": "daewon/비전_전처리_연구노트_CaseA_v1.html", "type": "note", "date": "2026-03", "tags": [] },
-      { "title": "비전 전처리 연구노트 CaseB v1", "desc": "", "file": "daewon/비전_전처리_연구노트_CaseB_v1.html", "type": "note", "date": "2026-03", "tags": [] },
+    subfolders: [
+      {
+        label: "tracking",
+        files: [
+          {"title": "ByteTrack 리뷰", "desc": "Multi-Object Tracking 알고리즘", "file": "computer-vision/tracking/review_ByteTrack_v1.html", "type": "review", "date": "2025-06", "tags": ["ByteTrack", "MOT"]},
+          {"title": "DeepSORT 리뷰",  "desc": "Deep appearance descriptor 기반 트래킹", "file": "computer-vision/tracking/review_DeepSORT_v1.html", "type": "review", "date": "2025-06", "tags": ["DeepSORT", "Re-ID"]},
+          {"title": "MOT 메트릭 정리", "desc": "MOTA·HOTA·IDF1 비교", "file": "computer-vision/tracking/ref_MOT_metrics_정리.md", "type": "ref", "date": "2025-06", "tags": ["MOT", "메트릭"]},
+        ],
+      },
+      {
+        label: "detection",
+        files: [
+          {"title": "YOLOX 리뷰", "desc": "Anchor-free YOLO 계열 detector", "file": "computer-vision/detection/review_YOLOX_v1.html", "type": "review", "date": "2025-05", "tags": ["YOLO", "anchor-free"]},
+          {"title": "Anchor-free 비교", "desc": "FCOS·CenterNet·YOLOX 비교", "file": "computer-vision/detection/ref_anchor_free_비교.md", "type": "ref", "date": "2025-05", "tags": ["anchor-free"]},
+        ],
+      },
+      {
+        label: "preprocessing",
+        files: [
+          {"title": "비전 전처리 연구노트 — Case A", "desc": "고정 ROI 기반 Optical Flow → CNN → GRU", "file": "computer-vision/preprocessing/note_비전전처리_CaseA_v1.html", "type": "note", "date": "2025-06", "tags": ["Optical Flow", "GRU", "Edge AI"]},
+          {"title": "비전 전처리 연구노트 — Case B", "desc": "YOLO 검출 기반 동적 ROI, ID별 시퀀스 버퍼", "file": "computer-vision/preprocessing/note_비전전처리_CaseB_v1.html", "type": "note", "date": "2025-07", "tags": ["YOLO", "ByteTrack", "GRU"]},
+        ],
+      },
     ],
   },
 
-  // ── 사고 실시간 탐지 시스템 ──
+  // ── machine-learning ──
   {
-    id: "safety",
-    icon: "⚠️",
-    iconBg: "#FAEEDA",
-    label: "중소 제조현장",
-    title: "사고 실시간 탐지 시스템",
-    color: "amber",
-    files: [
-      { "title": "Safety system report", "desc": "", "file": "safety/Safety system report.html", "type": "report", "date": "2026-03", "tags": [] },
+    id: "machine-learning",
+    icon: "🧠",
+    iconBg: "#DFF5ED",
+    label: "주제 · Machine Learning",
+    title: "Machine Learning",
+    color: "teal",
+    subfolders: [
+      {
+        label: "time-series",
+        files: [
+          {"title": "Temporal Fusion Transformer 리뷰", "desc": "멀티호라이즌 시계열 예측", "file": "machine-learning/time-series/review_Temporal_Fusion_Transformer_v1.html", "type": "review", "date": "2025-07", "tags": ["TFT", "시계열"]},
+        ],
+      },
+      {
+        label: "optimization",
+        files: [
+          {"title": "LR 스케줄러 비교", "desc": "CosineAnnealing·OneCycleLR·ReduceLROnPlateau", "file": "machine-learning/optimization/ref_learning_rate_스케줄러_비교.md", "type": "ref", "date": "2025-06", "tags": ["LR", "optimizer"]},
+        ],
+      },
+    ],
+  },
+
+];
+
+// ── 프로젝트 데이터 ─────────────────────────────────────────────
+// update_archive.py 가 projects 배열 전체를 자동 교체합니다.
+const projects = [
+
+  // ── AI 불량예방 시스템 ──
+  {
+    id: "AI-불량예방-시스템",
+    icon: "🏭",
+    iconBg: "#E4EFFE",
+    label: "수요기관 · 대원공업㈜",
+    title: "자동 분체 도장라인 멀티모달 AI 불량예방 시스템",
+    color: "blue",
+    subfolders: [
+      {
+        label: "AI-불량예방-시스템",
+        files: [
+          {"title": "AI 불량예방 시스템 보고서 v4", "desc": "멀티모달 AI 불량예방 시스템 설계·성과 종합 보고서", "file": "projects/AI-불량예방-시스템/note_설계검토_v4.html", "type": "report", "date": "2025-07", "tags": ["멀티모달", "불량예방"]},
+          {"title": "엣지 배포 검토", "desc": "엣지 디바이스 배포 전략 및 최적화 검토", "file": "projects/AI-불량예방-시스템/note_엣지배포_검토.md", "type": "note", "date": "2025-07", "tags": ["Edge AI", "배포"]},
+        ],
+      },
     ],
   },
 
@@ -193,119 +301,140 @@ const projects = [
 // ════════════════════════════════════════════════════════════════
 //  렌더링 (수정 불필요)
 // ════════════════════════════════════════════════════════════════
-function typeOf(t) { return DOC_TYPE[t] || DOC_TYPE.etc; }
+let currentTab = 'topic';
 
-function render() {
-  const q = (document.getElementById('search').value || '').toLowerCase().trim();
-
-  // ── 사이드바 ──
-  let navHTML = `
-    <div class="logo">
-      <div class="tag">Document Archive</div>
-      <div class="title">프로젝트 문서 아카이브</div>
-    </div>
-    <div class="nav-section">프로젝트</div>
-    <ul>`;
-  projects.forEach(p => {
-    navHTML += `
-      <li><a href="#${p.id}">
-        <span class="nav-icon">${p.icon}</span>
-        <span class="nav-label">${p.title}</span>
-        <span class="nav-count">${p.files.length}</span>
-      </a></li>`;
-  });
-  navHTML += `</ul>`;
-  document.getElementById('sidebar').innerHTML = navHTML;
-
-  // ── 메인 콘텐츠 ──
-  let html = '';
-  let anyResult = false;
-
-  projects.forEach(p => {
-    const filtered = q
-      ? p.files.filter(f =>
-          f.title.toLowerCase().includes(q) ||
-          (f.desc||'').toLowerCase().includes(q) ||
-          (f.tags||[]).some(t => t.toLowerCase().includes(q))
-        )
-      : p.files;
-
-    if (q && filtered.length === 0) return;
-    anyResult = true;
-
-    const types = [...new Set(filtered.map(f => f.type))];
-
-    html += `
-    <div class="project-block" id="${p.id}">
-      <div class="project-header">
-        <div class="project-icon" style="background:${p.iconBg}">${p.icon}</div>
-        <div class="project-info">
-          <div class="p-label">${p.label}</div>
-          <h2>${p.title}</h2>
-          <div class="project-meta">
-            <span class="badge badge-${p.color}">파일 ${filtered.length}개</span>
-            ${types.map(t => `<span class="badge ${typeOf(t).badge}">${typeOf(t).label}</span>`).join('')}
-          </div>
-        </div>
-      </div>
-      <div class="file-list">`;
-
-    if (filtered.length === 0) {
-      html += `<div class="empty-row">📭 &nbsp;아직 등록된 파일이 없습니다. <code>files</code> 배열에 항목을 추가하세요.</div>`;
-    } else {
-      filtered.forEach(f => {
-        const t = typeOf(f.type);
-        const tags = (f.tags||[]).map(tag =>
-          `<span class="badge badge-gray" style="font-size:10px;padding:1px 7px">${tag}</span>`
-        ).join('');
-        html += `
-        <a class="file-row" href="${f.file}">
-          <div class="file-type-icon ${t.bg}">${t.icon}</div>
-          <div class="file-body">
-            <div class="file-title">${f.title}</div>
-            <div class="file-desc">${f.desc || ''}</div>
-          </div>
-          <div class="file-right">
-            <span class="badge ${t.badge}">${t.label}</span>
-            ${tags}
-            <span class="file-date">${f.date || ''}</span>
-            <span class="file-arrow">›</span>
-          </div>
-        </a>`;
-      });
-    }
-
-    html += `</div></div>`;
-  });
-
-  if (!anyResult) {
-    html = `<div class="no-result"><div class="nr-icon">🔍</div><div>"${q}"에 해당하는 문서가 없습니다</div></div>`;
-  }
-
-  document.getElementById('content').innerHTML = html;
-  bindScrollSpy();
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-topic').classList.toggle('on', tab === 'topic');
+  document.getElementById('tab-project').classList.toggle('on', tab === 'project');
+  render();
 }
 
-// 스크롤 spy
-function bindScrollSpy() {
+function T(t) { return DOC_TYPE[t] || DOC_TYPE.etc; }
+
+function badgeHtml(color, text) {
+  return `<span class="badge b-${color}">${text}</span>`;
+}
+
+function tagBadges(tags) {
+  return (tags||[]).map(t => `<span class="badge b-gray" style="font-size:10px;padding:1px 6px">${t}</span>`).join('');
+}
+
+function fileRowHtml(f) {
+  const t = T(f.type);
+  return `
+  <a class="file-row" href="${f.file}">
+    <div class="ft-icon ${t.ti}">${t.icon}</div>
+    <div class="fb">
+      <div class="ft">${f.title}</div>
+      <div class="fd">${f.desc||''}</div>
+    </div>
+    <div class="fr">
+      <span class="badge ${t.badge}">${t.label}</span>
+      ${tagBadges(f.tags)}
+      <span class="fdate">${f.date||''}</span>
+      <span class="farrow">›</span>
+    </div>
+  </a>`;
+}
+
+function subfolderHtml(sf, q) {
+  const files = q
+    ? sf.files.filter(f =>
+        f.title.toLowerCase().includes(q) ||
+        (f.desc||'').toLowerCase().includes(q) ||
+        (f.tags||[]).some(t => t.toLowerCase().includes(q)))
+    : sf.files;
+  if (q && files.length === 0) return '';
+  let h = `<div class="subfolder">`;
+  if (sf.label) h += `<div class="subfolder-label">📁 ${sf.label}</div>`;
+  h += `<div class="file-list">`;
+  if (files.length === 0) {
+    h += `<div class="empty-row">📭 &nbsp;파일이 없습니다.</div>`;
+  } else {
+    files.forEach(f => { h += fileRowHtml(f); });
+  }
+  h += `</div></div>`;
+  return h;
+}
+
+function sectionHtml(sec, q) {
+  const subHtmls = sec.subfolders.map(sf => subfolderHtml(sf, q)).filter(Boolean);
+  if (q && subHtmls.length === 0) return '';
+
+  const totalFiles = sec.subfolders.reduce((a, sf) => a + sf.files.length, 0);
+  const types = [...new Set(sec.subfolders.flatMap(sf => sf.files.map(f => f.type)))];
+
+  return `
+  <div class="section-block" id="${sec.id}">
+    <div class="section-header">
+      <div class="sh-icon" style="background:${sec.iconBg}">${sec.icon}</div>
+      <div class="sh-info">
+        <div class="shi-label">${sec.label}</div>
+        <h2>${sec.title}</h2>
+        <div class="sh-meta">
+          ${badgeHtml(sec.color, `파일 ${totalFiles}개`)}
+          ${types.map(t => `<span class="badge ${T(t).badge}">${T(t).label}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+    ${subHtmls.join('')}
+  </div>`;
+}
+
+function render() {
+  const q = (document.getElementById('search').value||'').toLowerCase().trim();
+  const list = currentTab === 'topic' ? topics : projects;
+
+  // 사이드바
+  let nav = `
+    <div class="aside-logo">
+      <div class="al-tag">Research Archive</div>
+      <div class="al-name">Research Notes</div>
+    </div>
+    <div class="aside-sec">${currentTab === 'topic' ? '주제' : '프로젝트'}</div>
+    <ul>`;
+  list.forEach(s => {
+    const total = s.subfolders.reduce((a, sf) => a + sf.files.length, 0);
+    nav += `<li><a href="#${s.id}">
+      <span class="ni">${s.icon}</span>
+      <span class="nl">${s.title}</span>
+      <span class="nc">${total}</span>
+    </a></li>`;
+  });
+  nav += `</ul>`;
+  document.getElementById('sidebar').innerHTML = nav;
+
+  // 콘텐츠
+  let html = '';
+  let any = false;
+  list.forEach(sec => {
+    const sh = sectionHtml(sec, q);
+    if (sh) { html += sh; any = true; }
+  });
+  if (!any) {
+    html = `<div class="no-result"><div class="nr-icon">🔍</div><div>"${q}"에 해당하는 문서가 없습니다</div></div>`;
+  }
+  document.getElementById('content').innerHTML = html;
+  bindSpy();
+}
+
+function bindSpy() {
   window.onscroll = () => {
-    const blocks = document.querySelectorAll('.project-block');
-    const links  = document.querySelectorAll('nav ul li a');
+    const blocks = document.querySelectorAll('.section-block');
+    const links  = document.querySelectorAll('aside ul li a');
     let cur = '';
     blocks.forEach(b => { if (b.getBoundingClientRect().top <= 80) cur = b.id; });
-    links.forEach(a => {
-      a.classList.toggle('active', a.getAttribute('href') === `#${cur}`);
-    });
+    links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === `#${cur}`));
   };
 }
 
-// 앵커 부드러운 스크롤
 document.addEventListener('click', e => {
   const a = e.target.closest('a[href^="#"]');
   if (!a) return;
   e.preventDefault();
   const el = document.getElementById(a.getAttribute('href').slice(1));
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (el) el.scrollIntoView({behavior:'smooth',block:'start'});
 });
 
 render();
