@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기술 실습 보고서 — 카메라 캘리브레이션 & 호모그래피</title>
+<style>
+  :root {
+    --bg:#f5f4f0;--bg2:#ffffff;--bg3:#eeecea;--text:#1a1a18;--text2:#5a5955;--text3:#9c9a92;
+    --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+    --blue:#185FA5;--blue-bg:#E6F1FB;--teal:#0F6E56;--teal-bg:#E1F5EE;
+    --amber:#854F0B;--amber-bg:#FAEEDA;--amber-mid:#EF9F27;
+    --coral:#993C1D;--coral-bg:#FAECE7;--green:#3B6D11;--green-bg:#EAF3DE;
+    --purple:#534AB7;--purple-bg:#EEEDFE;--red:#A32D2D;--red-bg:#FCEBEB;
+    --gray:#5F5E5A;--gray-bg:#F1EFE8;--radius:12px;--radius-sm:8px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#1a1a18;--bg2:#242422;--bg3:#2e2e2b;--text:#e8e6de;--text2:#a8a69e;--text3:#6e6c65;
+      --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
+      --blue:#85B7EB;--blue-bg:#042C53;--teal:#5DCAA5;--teal-bg:#04342C;
+      --amber:#FAC775;--amber-bg:#412402;--amber-mid:#EF9F27;
+      --coral:#F0997B;--coral-bg:#4A1B0C;--green:#97C459;--green-bg:#173404;
+      --purple:#AFA9EC;--purple-bg:#26215C;--red:#F09595;--red-bg:#501313;
+      --gray:#B4B2A9;--gray-bg:#2C2C2A;
+    }
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.7;}
+  .layout{display:flex;min-height:100vh;}
+  nav{width:240px;flex-shrink:0;background:var(--bg2);border-right:0.5px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto;padding:24px 0 40px;}
+  nav .logo{padding:0 20px 20px;border-bottom:0.5px solid var(--border);margin-bottom:16px;}
+  nav .logo .tag{font-size:10px;font-weight:500;letter-spacing:0.08em;color:var(--text3);text-transform:uppercase;margin-bottom:4px;}
+  nav .logo .title{font-size:13px;font-weight:500;color:var(--text);line-height:1.4;}
+  nav ul{list-style:none;padding:0 8px;}
+  nav ul li a{display:block;padding:7px 12px;border-radius:6px;font-size:13px;color:var(--text2);text-decoration:none;transition:background .15s,color .15s;}
+  nav ul li a:hover{background:var(--bg3);color:var(--text);}
+  nav ul li a.active{background:var(--blue-bg);color:var(--blue);font-weight:500;}
+  nav ul li .section-label{font-size:10px;font-weight:500;letter-spacing:0.08em;color:var(--text3);text-transform:uppercase;padding:12px 12px 4px;}
+  main{flex:1;max-width:860px;padding:48px 40px 80px;}
+  .doc-header{margin-bottom:40px;padding-bottom:32px;border-bottom:0.5px solid var(--border);}
+  .doc-header .eyebrow{font-size:12px;font-weight:500;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;}
+  .doc-header h1{font-size:26px;font-weight:500;line-height:1.3;margin-bottom:6px;}
+  .doc-header .subtitle{font-size:15px;color:var(--text2);margin-bottom:20px;}
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+  .meta-item{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+  .meta-item .label{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;}
+  .meta-item .value{font-size:13px;font-weight:500;color:var(--text);}
+  section{margin-bottom:56px;scroll-margin-top:24px;}
+  section h2{font-size:20px;font-weight:500;margin-bottom:16px;padding-bottom:10px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;}
+  section h2 .num{font-size:12px;font-weight:500;background:var(--blue-bg);color:var(--blue);border-radius:20px;padding:2px 9px;}
+  section h3{font-size:16px;font-weight:500;margin:24px 0 10px;color:var(--text);}
+  p{color:var(--text2);margin-bottom:12px;}
+  .card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px;}
+  .card-grid .card{margin-bottom:0;}
+  .card .card-label{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;}
+  .card .card-title{font-size:15px;font-weight:500;margin-bottom:6px;color:var(--text);}
+  .card .card-body{font-size:13px;color:var(--text2);line-height:1.6;}
+  .info-box{background:var(--blue-bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;}
+  .info-box .info-title{font-size:13px;font-weight:500;color:var(--blue);margin-bottom:6px;}
+  .info-box .info-body{font-size:13px;color:var(--text2);line-height:1.6;}
+  .callout{border-left:3px solid var(--amber-mid);background:var(--amber-bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 18px;margin-bottom:16px;}
+  .callout p{margin:0;font-size:13px;color:var(--text2);}
+  .callout strong{color:var(--text);}
+  .callout-teal{border-left:3px solid var(--teal);background:var(--teal-bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 18px;margin-bottom:16px;}
+  .callout-teal p{margin:0;font-size:13px;color:var(--text2);}
+  .callout-teal strong{color:var(--teal);}
+  .callout-red{border-left:3px solid var(--red);background:var(--red-bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 18px;margin-bottom:16px;}
+  .callout-red p{margin:0;font-size:13px;color:var(--text2);}
+  .callout-red strong{color:var(--red);}
+  .badge{display:inline-block;font-size:11px;font-weight:500;border-radius:20px;padding:2px 9px;}
+  .badge-blue{background:var(--blue-bg);color:var(--blue);}
+  .badge-teal{background:var(--teal-bg);color:var(--teal);}
+  .badge-amber{background:var(--amber-bg);color:var(--amber);}
+  .badge-green{background:var(--green-bg);color:var(--green);}
+  .badge-red{background:var(--red-bg);color:var(--red);}
+  .badge-gray{background:var(--gray-bg);color:var(--gray);}
+  .badge-coral{background:var(--coral-bg);color:var(--coral);}
+  .badge-purple{background:var(--purple-bg);color:var(--purple);}
+  .table-wrap{overflow-x:auto;margin-bottom:16px;border:0.5px solid var(--border);border-radius:var(--radius);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead tr{background:var(--bg3);}
+  th{padding:10px 14px;text-align:left;font-weight:500;color:var(--text2);font-size:12px;letter-spacing:0.04em;border-bottom:0.5px solid var(--border);white-space:nowrap;}
+  td{padding:10px 14px;color:var(--text2);border-bottom:0.5px solid var(--border);vertical-align:top;line-height:1.5;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--bg3);}
+  .timeline{display:flex;flex-direction:column;gap:0;margin-bottom:16px;}
+  .tl-item{display:flex;gap:16px;align-items:flex-start;}
+  .tl-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+  .tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+  .tl-line{width:1px;flex:1;background:var(--border2);min-height:28px;}
+  .tl-content{padding:0 0 24px;flex:1;}
+  .tl-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;}
+  .tl-desc{font-size:13px;color:var(--text2);line-height:1.5;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;}
+  .kpi .kpi-val{font-size:24px;font-weight:500;margin-bottom:4px;}
+  .kpi .kpi-label{font-size:12px;color:var(--text3);}
+  .arch-box{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+  .arch-box .arch-title{font-size:13px;font-weight:500;color:var(--text3);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px;}
+  .arch-row{display:flex;gap:10px;margin-bottom:10px;align-items:stretch;}
+  .arch-node{flex:1;border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;line-height:1.5;border:0.5px solid var(--border);background:var(--bg3);}
+  .arch-node strong{display:block;font-size:13px;margin-bottom:3px;font-weight:500;}
+  .arch-arrow{width:28px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:14px;flex-shrink:0;}
+  .code-block{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px;font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:12px;color:var(--text2);line-height:1.8;overflow-x:auto;white-space:pre;}
+  .code-block .comment{color:var(--text3);}
+  code{font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:12px;background:var(--bg3);color:var(--blue);padding:2px 6px;border-radius:4px;}
+  .step-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;}
+  .step-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
+  .step-card .step-num{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;}
+  .step-card .step-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;}
+  .step-card .step-desc{font-size:12px;color:var(--text2);line-height:1.6;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .two-col .card{margin-bottom:0;}
+  @media(max-width:720px){nav{display:none;}main{padding:24px 20px 60px;}.two-col{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav>
+  <div class="logo">
+    <div class="tag">기술연구소</div>
+    <div class="title">캘리브레이션 &amp; 호모그래피<br>실습 보고서</div>
+  </div>
+  <ul>
+    <li><div class="section-label">개요</div></li>
+    <li><a href="#overview">배경 및 목적</a></li>
+    <li><a href="#concept">핵심 개념 정리</a></li>
+    <li><div class="section-label">실습 과정</div></li>
+    <li><a href="#step0">Step 0 — 환경 설치</a></li>
+    <li><a href="#step1">Step 1 — 이미지 업로드</a></li>
+    <li><a href="#step2">Step 2 — 기준점 수집</a></li>
+    <li><a href="#step3">Step 3 — 실측 좌표 입력</a></li>
+    <li><a href="#step4">Step 4 — H 행렬 계산</a></li>
+    <li><a href="#step5">Step 5 — 실거리 계산</a></li>
+    <li><a href="#step6">Step 6 — 조감도 시각화</a></li>
+    <li><div class="section-label">결과 &amp; 다음 단계</div></li>
+    <li><a href="#result">검증 결과</a></li>
+    <li><a href="#next">다음 단계</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<div class="doc-header">
+  <div class="eyebrow">기술 실습 보고서</div>
+  <h1>카메라 캘리브레이션 &amp; 호모그래피 실습</h1>
+  <p class="subtitle">실화상 CCTV 기반 픽셀 좌표 → 실제 거리(미터) 변환 파이프라인 구축 및 Google Colab 실습</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">실습 환경</div><div class="value">Google Colab (Python 3)</div></div>
+    <div class="meta-item"><div class="label">핵심 기술</div><div class="value">OpenCV · 호모그래피 · HTML Canvas</div></div>
+    <div class="meta-item"><div class="label">입력</div><div class="value">실화상 카메라 영상 스냅샷</div></div>
+    <div class="meta-item"><div class="label">출력</div><div class="value">H 행렬 (homography.json)</div></div>
+    <div class="meta-item"><div class="label">목표</div><div class="value">객체 간 실거리 자동 산출</div></div>
+    <div class="meta-item"><div class="label">최종 목적</div><div class="value">TTC 기반 충돌 위험 감지</div></div>
+  </div>
+</div>
+
+<!-- 1. 배경 -->
+<section id="overview">
+  <h2><span class="num">1</span> 배경 및 목적</h2>
+  <p>작업자 이상행동 실시간 감지 시스템의 핵심 기술 중 하나인 <strong>호모그래피 기반 실거리 변환</strong>을 실제 공장 카메라 영상으로 직접 구현하고 검증하기 위한 실습이다. 단일 카메라는 3D 공간을 2D 이미지로 투영하므로 픽셀 거리만으로는 실제 거리를 알 수 없다. 이를 해결하기 위해 캘리브레이션으로 H 행렬을 산출하고, 런타임에서 매 프레임 적용하는 파이프라인을 구축한다.</p>
+
+  <div class="info-box">
+    <div class="info-title">왜 픽셀 거리만으로는 안 되는가</div>
+    <div class="info-body">
+      카메라는 3D 공간을 2D로 압축하기 때문에 서로 다른 통로에 있는 두 객체가 화면에서 가까워 보일 수 있다 (오탐). 반대로 같은 바닥에 있어도 원근 효과로 멀어 보일 수 있다 (미탐). 호모그래피는 이 왜곡을 수학적으로 보정하여 픽셀 좌표를 실제 미터 단위로 변환한다.
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val" style="color:var(--blue)">3×3</div><div class="kpi-label">H 행렬 크기</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--teal)">6개+</div><div class="kpi-label">권장 기준점 수</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--green)">10%</div><div class="kpi-label">허용 오차 이내</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--amber)">1회</div><div class="kpi-label">카메라 고정 시 캘리브레이션</div></div>
+  </div>
+</section>
+
+<!-- 2. 핵심 개념 -->
+<section id="concept">
+  <h2><span class="num">2</span> 핵심 개념 정리</h2>
+
+  <h3>캘리브레이션과 호모그래피의 관계</h3>
+  <p>두 개념은 별개가 아니다. <strong>캘리브레이션이 호모그래피를 만드는 과정</strong>이고, 호모그래피는 그 결과물이다.</p>
+
+  <div class="arch-box">
+    <div class="arch-title">전체 파이프라인</div>
+    <div class="arch-row">
+      <div class="arch-node" style="background:var(--blue-bg);border-color:var(--blue);">
+        <strong style="color:var(--blue)">캘리브레이션 (1회)</strong>
+        기준점 픽셀 좌표 + 실측 좌표 쌍을 입력하여 H 행렬 산출. 카메라 고정 시 반영구 재사용.
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node" style="background:var(--teal-bg);border-color:var(--teal);">
+        <strong style="color:var(--teal)">H 행렬 (homography.json)</strong>
+        픽셀 (u, v) → 실제 바닥 (X, Y) 변환 공식. 3×3 행렬.
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node" style="background:var(--green-bg);border-color:var(--green);">
+        <strong style="color:var(--green)">런타임 적용 (매 프레임)</strong>
+        YOLO 바운딩박스 발 좌표 → H 적용 → 실거리 → TTC 판단.
+      </div>
+    </div>
+  </div>
+
+  <h3>발 좌표 기준 측정이 핵심인 이유</h3>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-red">잘못된 방법</span></div>
+      <div class="card-title">바운딩박스 중심점 사용</div>
+      <div class="card-body">객체의 키나 크기가 다르면 같은 바닥 위치도 중심점 높이가 달라진다. 원근 왜곡과 결합되면 오탐이 빈번하게 발생한다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-teal">올바른 방법</span></div>
+      <div class="card-title">바운딩박스 하단 중심 (발/바퀴)</div>
+      <div class="card-body">발과 바퀴는 항상 바닥에 닿아 있다. 키·차종과 무관하게 동일 바닥 평면 위의 한 점으로 H 행렬에 입력하면 정확한 거리가 나온다.</div>
+    </div>
+  </div>
+
+  <div class="code-block"><span class="comment"># 발 좌표 추출 공식</span>
+foot_u = (bbox_x1 + bbox_x2) / 2   <span class="comment"># 수평 중심</span>
+foot_v = bbox_y2                     <span class="comment"># 하단 (발/바퀴)</span>
+pt = H @ np.array([foot_u, foot_v, 1.0])
+X, Y = pt[0]/pt[2], pt[1]/pt[2]     <span class="comment"># 실제 좌표 (미터)</span></div>
+
+  <h3>기준점 선택 기준</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>우선순위</th><th>기준점 종류</th><th>특징</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-blue">1순위</span></td><td>기둥·벽이 바닥에 닿는 하단 모서리</td><td>고정·선명·불변. 카메라에서 명확하게 식별 가능</td></tr>
+        <tr><td><span class="badge badge-blue">1순위</span></td><td>바닥 안전선(황색/백색)의 꺾임·교차점</td><td>도면 있으면 줄자 없이 좌표 획득 가능</td></tr>
+        <tr><td><span class="badge badge-teal">2순위</span></td><td>바닥 타일·슬래브 줄눈 교차점</td><td>규격 타일이면 한 점 실측 후 나머지 계산 가능</td></tr>
+        <tr><td><span class="badge badge-gray">3순위</span></td><td>임시 마커 (테이프·콘) 설치</td><td>기존 마킹 없는 넓은 공간에 적용. 캘리브레이션 후 제거 가능</td></tr>
+        <tr><td><span class="badge badge-red">금지</span></td><td>이동 물체 근처, 가려지는 곳</td><td>측정 중 위치가 바뀌거나 픽셀 좌표가 정확하지 않음</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>배치 원칙:</strong> 최소 6개 이상, 화면 전체에 골고루 분산 (근거리 2점 + 중거리 2점 + 원거리 2점 이상). 한쪽에 몰리면 반대쪽 왜곡이 심해진다.</p>
+  </div>
+</section>
+
+<!-- Step 0 -->
+<section id="step0">
+  <h2><span class="num">Step 0</span> 환경 설치 및 한글 폰트 설정</h2>
+  <p>Google Colab은 GUI가 없는 환경이므로 <code>opencv-python-headless</code>를 사용한다. 한글 폰트는 NanumGothic을 직접 FontManager에 등록하는 방식으로 설정한다.</p>
+
+  <div class="code-block">!pip install opencv-python-headless Pillow -q
+!apt-get install -y fonts-nanum -qq > /dev/null 2>&1
+
+import cv2, numpy as np, json, os, base64, io
+from IPython.display import display, HTML
+import matplotlib, matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+from google.colab import output as colab_output
+
+<span class="comment"># NanumGothic 폰트 직접 등록 (rcParams 이름 지정 방식은 캐시 문제로 실패 가능)</span>
+nanum = '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'
+if os.path.exists(nanum):
+    fe = fm.FontEntry(fname=nanum, name='NanumGothic')
+    fm.fontManager.ttflist.insert(0, fe)
+    matplotlib.rcParams['font.family'] = 'NanumGothic'
+matplotlib.rcParams['axes.unicode_minus'] = False</div>
+
+  <div class="callout-teal">
+    <p><strong>Colab 제약사항:</strong> <code>cv2.imshow()</code>와 <code>cv2.setMouseCallback()</code>은 GUI 없음으로 작동 불가. matplotlib 정적 출력에서도 클릭 이벤트 불가. 모든 인터랙션은 HTML Canvas + <code>google.colab.kernel.invokeFunction</code>으로 대체한다.</p>
+  </div>
+</section>
+
+<!-- Step 1 -->
+<section id="step1">
+  <h2><span class="num">Step 1</span> 이미지 업로드</h2>
+  <p>실화상 카메라에서 캡처한 이미지를 Colab에 업로드한다. <code>files.upload()</code>로 파일 선택 다이얼로그를 띄운 뒤 OpenCV로 읽는다.</p>
+
+  <div class="code-block">from google.colab import files
+uploaded = files.upload()
+filename = list(uploaded.keys())[0]
+img_bgr = cv2.imread(filename)
+img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+H_px, W_px = img_bgr.shape[:2]</div>
+
+  <div class="info-box">
+    <div class="info-title">실습에 사용한 이미지 정보</div>
+    <div class="info-body">
+      공장 내부 실화상 카메라 스냅샷 (어안렌즈, 고각 설치). 해상도 709×400 픽셀. 녹색 에폭시 바닥, 복수의 기둥 구조물, 노란 안전선 확인 가능.
+    </div>
+  </div>
+</section>
+
+<!-- Step 2 -->
+<section id="step2">
+  <h2><span class="num">Step 2</span> 기준점 픽셀 좌표 수집 (클릭)</h2>
+  <p>Colab에서 마우스 클릭으로 픽셀 좌표를 수집하기 위해 HTML Canvas와 Colab kernel callback을 결합한 방식을 사용한다. 이미지를 base64로 인코딩하여 Canvas에 한 번만 로드하고, 클릭 시 JS가 Python 콜백을 호출하여 좌표를 수집한다.</p>
+
+  <div class="callout-red">
+    <p><strong>시행착오:</strong> <code>%matplotlib notebook</code> / <code>%matplotlib widget</code> 방식과 <code>mpl_connect</code> 클릭 이벤트는 Colab 정적 출력에서 작동하지 않는다. Canvas 재렌더링 시 이미지가 사라지는 버그도 발생했다. 최종적으로 이미지를 JS 변수에 고정 저장하고 점만 추가 그리는 방식으로 해결했다.</p>
+  </div>
+
+  <div class="code-block"><span class="comment"># 핵심 구조: 이미지를 JS _img 변수에 한 번만 로드</span>
+_img.onload = function() { drawCanvas(); };
+_img.src = 'data:image/png;base64,{IMG_B64}';
+
+<span class="comment"># 클릭 시 Python 콜백 호출 (이미지 재로드 없이 점만 추가)</span>
+canvas.onclick = function(e) {
+    google.colab.kernel.invokeFunction('nb.click', [cx, cy], {});
+};
+
+<span class="comment"># Python 측: 표시 좌표 → 원본 좌표 환산</span>
+def on_canvas_click(cx, cy):
+    rx = int(round(cx / scale))   <span class="comment"># 축소 비율 역보정</span>
+    ry = int(round(cy / scale))
+    clicked_pts.append([rx, ry])</div>
+
+  <p>클릭할 때마다 빨간 점과 번호가 찍히며 하단에 픽셀 좌표가 출력된다. 잘못 찍은 경우 [되돌리기] 버튼으로 마지막 점을 삭제할 수 있다.</p>
+
+  <div class="info-box">
+    <div class="info-title">이번 실습에서 수집한 기준점 (6개)</div>
+    <div class="info-body">
+      1번 (373, 245) · 2번 (593, 208) · 3번 (151, 256) · 4번 (237, 213) · 5번 (577, 363) · 6번 (443, 192)<br>
+      바닥 중앙부, 오른쪽 구조물 하단, 왼쪽 기둥 하단, 안전선 주변 등 화면 전체에 분산 배치.
+    </div>
+  </div>
+</section>
+
+<!-- Step 3 -->
+<section id="step3">
+  <h2><span class="num">Step 3</span> 실측 좌표 입력</h2>
+  <p>Step 2에서 클릭한 순서와 동일하게 줄자로 잰 실제 거리(미터)를 입력한다. 1번 기준점을 원점 <code>(0, 0)</code>으로 정하고, X는 좌우(가로), Y는 앞뒤(깊이) 방향으로 측정한다.</p>
+
+  <div class="code-block">real_pts = np.array([
+    [ 0.0,  0.0],   <span class="comment"># 1번 원점</span>
+    [ 6.0,  1.0],   <span class="comment"># 2번 — 오른쪽으로 6m, 약간 더 멀리</span>
+    [-6.0,  0.5],   <span class="comment"># 3번 — 왼쪽으로 6m, 비슷한 깊이</span>
+    [-3.5,  2.5],   <span class="comment"># 4번 — 왼쪽 3.5m, 앞쪽 2.5m 더 멀리</span>
+    [ 5.5, -3.5],   <span class="comment"># 5번 — 오른쪽 5.5m, 카메라 방향으로 3.5m 가까움</span>
+    [ 1.5,  3.5],   <span class="comment"># 6번 — 약간 오른쪽, 3.5m 더 멀리</span>
+], dtype=np.float32)</div>
+
+  <div class="callout">
+    <p><strong>현장 미측정 시 주의:</strong> 이번 실습에서는 현장 측정이 불가한 상황이므로 카메라 화각과 공장 규모를 고려한 어림값을 사용했다. 실제 운영 전 반드시 줄자로 재측정하고 Step 4부터 재실행해야 한다. 오차가 10% 이내가 될 때까지 반복한다.</p>
+  </div>
+</section>
+
+<!-- Step 4 -->
+<section id="step4">
+  <h2><span class="num">Step 4</span> H 행렬 계산 (findHomography)</h2>
+  <p>OpenCV <code>findHomography()</code>에 픽셀 좌표 배열과 실측 좌표 배열을 입력하면 3×3 변환 행렬 H가 산출된다. RANSAC 옵션으로 잘못 입력된 이상치를 자동으로 제거한다.</p>
+
+  <div class="code-block">H_mat, mask = cv2.findHomography(pixel_pts, real_pts, cv2.RANSAC, 5.0)
+
+<span class="comment"># H 행렬: 픽셀 (u,v) → 실제 (X,Y) 변환 공식</span>
+<span class="comment"># mask: 각 기준점이 인라이어인지 여부 (1=정상, 0=이상치)</span>
+
+<span class="comment"># JSON으로 저장 — 카메라 고정 시 재사용 가능</span>
+with open('homography.json', 'w') as f:
+    json.dump({'H': H_mat.tolist(),
+               'pixel_pts': pixel_pts.tolist(),
+               'real_pts':  real_pts.tolist()}, f, indent=2)</div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>설명</th><th>판단 기준</th></tr></thead>
+      <tbody>
+        <tr><td>Inliers 수</td><td>RANSAC이 정상으로 판단한 기준점 수</td><td>4개 이상이면 계산 가능. 많을수록 정확</td></tr>
+        <tr><td>H 행렬 값</td><td>3×3 실수 행렬. 특이한 값(무한대, NaN) 없어야 함</td><td>정상 범위 내 실수값</td></tr>
+        <tr><td>저장 파일</td><td>homography.json</td><td>카메라 미이동 시 재사용 가능</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Step 5 -->
+<section id="step5">
+  <h2><span class="num">Step 5</span> 발 좌표 기준 실거리 계산</h2>
+  <p>바운딩박스를 직접 드래그로 그린 뒤 각 박스의 하단 중심(발/바퀴 위치)을 H 행렬에 입력하여 실거리를 계산한다. Step 2와 동일한 Canvas 방식으로 드래그 박스 그리기를 구현했다.</p>
+
+  <div class="arch-box">
+    <div class="arch-title">실거리 계산 흐름</div>
+    <div class="arch-row">
+      <div class="arch-node"><strong>드래그로 bbox 그리기</strong>JS mousedown/mouseup 이벤트로 좌표 수집</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node"><strong>발 좌표 추출</strong>foot_u = (x1+x2)/2<br>foot_v = y2 (하단)</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node"><strong>H 행렬 적용</strong>pt = H @ [u, v, 1]<br>X = pt[0]/pt[2]</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node"><strong>실거리 산출</strong>√((X₁-X₂)²+(Y₁-Y₂)²)<br>단위: 미터</div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">실습 결과 예시</div>
+    <div class="info-body">
+      A: (4.30, 0.27) m &nbsp;|&nbsp; B: (2.41, 0.47) m &nbsp;|&nbsp; <strong>실거리: 1.91 m</strong><br>
+      실제 시스템에서는 이 bbox를 YOLO가 자동으로 출력하며, 매 프레임 동일한 계산이 자동 실행된다.
+    </div>
+  </div>
+
+  <div class="callout-teal">
+    <p><strong>실제 시스템과의 차이:</strong> 이번 실습에서는 바운딩박스를 수동으로 그렸다. 실제 시스템에서는 YOLO가 작업자·지게차를 자동 감지하여 bbox를 출력하고, 그 결과가 H 행렬에 자동으로 입력된다.</p>
+  </div>
+</section>
+
+<!-- Step 6 -->
+<section id="step6">
+  <h2><span class="num">Step 6</span> Bird's-Eye View 조감도 시각화</h2>
+  <p>H 행렬을 이용하여 카메라 원본 이미지를 위에서 수직으로 내려다보는 평면도(조감도)로 변환한다. 원근 왜곡이 제거되어 실제 비율의 평면도가 생성된다.</p>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-blue">용도 1</span></div>
+      <div class="card-title">H 행렬 검증 도구</div>
+      <div class="card-body">조감도에서 기둥 간격·안전선 비율이 실제 공장 배치와 비슷하면 H 행렬이 정상. 심하게 찌그러지면 real_pts 재입력 필요.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-teal">용도 2</span></div>
+      <div class="card-title">실시간 위치 모니터링</div>
+      <div class="card-body">YOLO 연동 후 감지된 객체 위치를 조감도 위에 실시간 표시하면 관제실에서 모든 객체 위치를 한눈에 파악 가능.</div>
+    </div>
+  </div>
+
+  <div class="code-block">PPM = 60  <span class="comment"># 1미터 = 60픽셀로 표현</span>
+H_bev, _ = cv2.findHomography(pixel_pts, dst_pts)
+bev = cv2.warpPerspective(img_bgr, H_bev, (out_W, out_H))
+<span class="comment"># warpPerspective: 이미지 전체를 H 행렬로 변환하여 조감도 생성</span></div>
+</section>
+
+<!-- 검증 결과 -->
+<section id="result">
+  <h2><span class="num">7</span> 검증 결과</h2>
+  <p>H 행렬 완성 후 기준점 간 거리를 H로 계산한 값과 real_pts 실측값을 비교했다. 현장 미측정 어림값 사용으로 오차가 다소 크게 나왔으며, 실측 후 재보정이 필요하다.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>기준점 쌍</th><th>H 계산 (m)</th><th>실측 (m)</th><th>오차 (m)</th><th>판정</th></tr></thead>
+      <tbody>
+        <tr><td>1번 ↔ 3번</td><td>5.99</td><td>6.02</td><td>0.03</td><td><span class="badge badge-green">✅ 양호</span></td></tr>
+        <tr><td>1번 ↔ 5번</td><td>6.60</td><td>6.52</td><td>0.09</td><td><span class="badge badge-green">✅ 양호</span></td></tr>
+        <tr><td>3번 ↔ 5번</td><td>11.88</td><td>12.18</td><td>0.30</td><td><span class="badge badge-green">✅ 양호</span></td></tr>
+        <tr><td>1번 ↔ 2번</td><td>5.70</td><td>6.08</td><td>0.38</td><td><span class="badge badge-amber">⚠️ 주의</span></td></tr>
+        <tr><td>1번 ↔ 4번</td><td>4.84</td><td>4.30</td><td>0.54</td><td><span class="badge badge-amber">⚠️ 주의</span></td></tr>
+        <tr><td>1번 ↔ 6번</td><td>2.75</td><td>3.81</td><td>1.06</td><td><span class="badge badge-red">❌ 재측정</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>오차 원인 분석:</strong> real_pts를 현장 실측 없이 어림값으로 입력했기 때문이다. 특히 6번 기준점(원거리)의 오차가 크게 나타났다. 어안렌즈 왜곡도 가장자리 점의 정확도에 영향을 준다. 현장 실측 후 재입력하면 대부분 10% 이내로 개선될 것으로 예상된다.</p>
+  </div>
+</section>
+
+<!-- 다음 단계 -->
+<section id="next">
+  <h2><span class="num">8</span> 다음 단계</h2>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--amber)"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-title">현장 실측 및 재캘리브레이션</div>
+        <div class="tl-desc">6개 기준점의 실제 좌표를 줄자로 측정하여 real_pts 재입력. Step 4부터 재실행하여 오차 10% 이내 달성. homography.json 최종 확정.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--blue)"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-title">YOLO 모델 연동</div>
+        <div class="tl-desc">YOLOv8/v11로 작업자·지게차를 실시간 감지하고 바운딩박스를 자동으로 H 행렬에 입력. 수동 드래그 없이 매 프레임 자동 실거리 계산.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--teal)"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-title">TTC(충돌 예상 시간) 계산 연동</div>
+        <div class="tl-desc">실거리 + 이동 벡터(MOT 추적)로 TTC 산출. TTC 3초 이하 → 경고 / 1초 이하 → 긴급 인터락 발령 로직 구현.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--green)"></div></div>
+      <div class="tl-content">
+        <div class="tl-title">실시간 조감도 대시보드</div>
+        <div class="tl-desc">YOLO 감지 결과를 Bird's-Eye View에 실시간 표시. 관제실에서 모든 객체 위치와 위험 등급을 한눈에 모니터링하는 시스템 완성.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-teal">
+    <p><strong>완료된 것:</strong> 캘리브레이션 파이프라인 전체 (Step 0~6) 구현 및 검증 완료. homography.json 산출. 실거리 계산 함수 구현. 현장 실측값 입력 후 즉시 운영 가능한 상태.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+const links = document.querySelectorAll('nav a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, {threshold: 0.3});
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
