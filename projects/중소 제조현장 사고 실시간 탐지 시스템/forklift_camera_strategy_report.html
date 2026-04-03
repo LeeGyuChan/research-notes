@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 기술 검토 보고서 — 지게차 충돌 감지 카메라 전략 및 한계</title>
+<style>
+  :root {
+    --bg:#f5f4f0;--bg2:#ffffff;--bg3:#eeecea;--text:#1a1a18;--text2:#5a5955;--text3:#9c9a92;
+    --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+    --blue:#185FA5;--blue-bg:#E6F1FB;--teal:#0F6E56;--teal-bg:#E1F5EE;
+    --amber:#854F0B;--amber-bg:#FAEEDA;--amber-mid:#EF9F27;
+    --coral:#993C1D;--coral-bg:#FAECE7;--green:#3B6D11;--green-bg:#EAF3DE;
+    --purple:#534AB7;--purple-bg:#EEEDFE;--red:#A32D2D;--red-bg:#FCEBEB;
+    --gray:#5F5E5A;--gray-bg:#F1EFE8;--radius:12px;--radius-sm:8px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#1a1a18;--bg2:#242422;--bg3:#2e2e2b;--text:#e8e6de;--text2:#a8a69e;--text3:#6e6c65;
+      --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
+      --blue:#85B7EB;--blue-bg:#042C53;--teal:#5DCAA5;--teal-bg:#04342C;
+      --amber:#FAC775;--amber-bg:#412402;--amber-mid:#EF9F27;
+      --coral:#F0997B;--coral-bg:#4A1B0C;--green:#97C459;--green-bg:#173404;
+      --purple:#AFA9EC;--purple-bg:#26215C;--red:#F09595;--red-bg:#501313;
+      --gray:#B4B2A9;--gray-bg:#2C2C2A;
+    }
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.7;}
+  .layout{display:flex;min-height:100vh;}
+  nav{width:240px;flex-shrink:0;background:var(--bg2);border-right:0.5px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto;padding:24px 0 40px;}
+  nav .logo{padding:0 20px 20px;border-bottom:0.5px solid var(--border);margin-bottom:16px;}
+  nav .logo .tag{font-size:10px;font-weight:500;letter-spacing:0.08em;color:var(--text3);text-transform:uppercase;margin-bottom:4px;}
+  nav .logo .title{font-size:13px;font-weight:500;color:var(--text);line-height:1.4;}
+  nav ul{list-style:none;padding:0 8px;}
+  nav ul li a{display:block;padding:7px 12px;border-radius:6px;font-size:13px;color:var(--text2);text-decoration:none;transition:background .15s,color .15s;}
+  nav ul li a:hover{background:var(--bg3);color:var(--text);}
+  nav ul li a.active{background:var(--blue-bg);color:var(--blue);font-weight:500;}
+  nav ul li .section-label{font-size:10px;font-weight:500;letter-spacing:0.08em;color:var(--text3);text-transform:uppercase;padding:12px 12px 4px;}
+  main{flex:1;max-width:860px;padding:48px 40px 80px;}
+  .doc-header{margin-bottom:40px;padding-bottom:32px;border-bottom:0.5px solid var(--border);}
+  .doc-header .eyebrow{font-size:12px;font-weight:500;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;}
+  .doc-header h1{font-size:26px;font-weight:500;line-height:1.3;margin-bottom:6px;}
+  .doc-header .subtitle{font-size:15px;color:var(--text2);margin-bottom:20px;}
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+  .meta-item{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+  .meta-item .label{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;}
+  .meta-item .value{font-size:13px;font-weight:500;color:var(--text);}
+  section{margin-bottom:56px;scroll-margin-top:24px;}
+  section h2{font-size:20px;font-weight:500;margin-bottom:16px;padding-bottom:10px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;}
+  section h2 .num{font-size:12px;font-weight:500;background:var(--blue-bg);color:var(--blue);border-radius:20px;padding:2px 9px;}
+  section h3{font-size:16px;font-weight:500;margin:24px 0 10px;color:var(--text);}
+  p{color:var(--text2);margin-bottom:12px;}
+  .card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px;}
+  .card-grid .card{margin-bottom:0;}
+  .card .card-label{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px;}
+  .card .card-title{font-size:15px;font-weight:500;margin-bottom:6px;color:var(--text);}
+  .card .card-body{font-size:13px;color:var(--text2);line-height:1.6;}
+  .info-box{background:var(--blue-bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;}
+  .info-box .info-title{font-size:13px;font-weight:500;color:var(--blue);margin-bottom:6px;}
+  .info-box .info-body{font-size:13px;color:var(--text2);line-height:1.6;}
+  .callout{border-left:3px solid var(--amber-mid);background:var(--amber-bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 18px;margin-bottom:16px;}
+  .callout p{margin:0;font-size:13px;color:var(--text2);}
+  .callout strong{color:var(--text);}
+  .callout-red{border-left:3px solid var(--red);background:var(--red-bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 18px;margin-bottom:16px;}
+  .callout-red p{margin:0;font-size:13px;color:var(--text2);}
+  .callout-red strong{color:var(--red);}
+  .callout-teal{border-left:3px solid var(--teal);background:var(--teal-bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 18px;margin-bottom:16px;}
+  .callout-teal p{margin:0;font-size:13px;color:var(--text2);}
+  .callout-teal strong{color:var(--teal);}
+  .badge{display:inline-block;font-size:11px;font-weight:500;border-radius:20px;padding:2px 9px;}
+  .badge-blue{background:var(--blue-bg);color:var(--blue);}
+  .badge-teal{background:var(--teal-bg);color:var(--teal);}
+  .badge-amber{background:var(--amber-bg);color:var(--amber);}
+  .badge-green{background:var(--green-bg);color:var(--green);}
+  .badge-red{background:var(--red-bg);color:var(--red);}
+  .badge-gray{background:var(--gray-bg);color:var(--gray);}
+  .badge-coral{background:var(--coral-bg);color:var(--coral);}
+  .badge-purple{background:var(--purple-bg);color:var(--purple);}
+  .table-wrap{overflow-x:auto;margin-bottom:16px;border:0.5px solid var(--border);border-radius:var(--radius);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead tr{background:var(--bg3);}
+  th{padding:10px 14px;text-align:left;font-weight:500;color:var(--text2);font-size:12px;letter-spacing:0.04em;border-bottom:0.5px solid var(--border);white-space:nowrap;}
+  td{padding:10px 14px;color:var(--text2);border-bottom:0.5px solid var(--border);vertical-align:top;line-height:1.5;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--bg3);}
+  .timeline{display:flex;flex-direction:column;gap:0;margin-bottom:16px;}
+  .tl-item{display:flex;gap:16px;align-items:flex-start;}
+  .tl-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+  .tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+  .tl-line{width:1px;flex:1;background:var(--border2);min-height:28px;}
+  .tl-content{padding:0 0 24px;flex:1;}
+  .tl-date{font-size:11px;color:var(--text3);font-weight:500;margin-bottom:2px;letter-spacing:0.04em;}
+  .tl-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;}
+  .tl-desc{font-size:13px;color:var(--text2);line-height:1.5;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;}
+  .kpi .kpi-val{font-size:24px;font-weight:500;margin-bottom:4px;}
+  .kpi .kpi-label{font-size:12px;color:var(--text3);}
+  .arch-box{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+  .arch-box .arch-title{font-size:13px;font-weight:500;color:var(--text3);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px;}
+  .arch-row{display:flex;gap:10px;margin-bottom:10px;align-items:stretch;}
+  .arch-node{flex:1;border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;line-height:1.5;border:0.5px solid var(--border);background:var(--bg3);}
+  .arch-node strong{display:block;font-size:13px;margin-bottom:3px;font-weight:500;}
+  .arch-arrow{width:28px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:14px;flex-shrink:0;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .two-col .card{margin-bottom:0;}
+  code{font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:12px;background:var(--bg3);color:var(--blue);padding:2px 6px;border-radius:4px;}
+  .code-block{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px;font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:12px;color:var(--text2);line-height:1.8;overflow-x:auto;}
+  .code-block .comment{color:var(--text3);}
+  .fig-wrap{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;overflow-x:auto;}
+  .fig-caption{font-size:12px;color:var(--text3);text-align:center;margin-top:10px;}
+  @media(max-width:720px){nav{display:none;}main{padding:24px 20px 60px;}.two-col{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="logo">
+    <div class="tag">기술연구소</div>
+    <div class="title">AI 기술검토보고서<br>충돌 감지 카메라 전략</div>
+  </div>
+  <ul>
+    <li><div class="section-label">개요</div></li>
+    <li><a href="#overview">검토 배경 및 목적</a></li>
+    <li><a href="#problem">핵심 문제 정의</a></li>
+    <li><div class="section-label">카메라 전략</div></li>
+    <li><a href="#fixed-ceiling">고정 천장 카메라</a></li>
+    <li><a href="#mounted">지게차 탑재 카메라</a></li>
+    <li><a href="#uwb">UWB · 비전 혼합</a></li>
+    <li><a href="#industry">업계 실제 사례</a></li>
+    <li><div class="section-label">기술 분석</div></li>
+    <li><a href="#homography-limit">호모그래피 한계</a></li>
+    <li><a href="#bbox-error">bbox 기준점 오차</a></li>
+    <li><a href="#improvement">개선 방향</a></li>
+    <li><div class="section-label">운영 설계</div></li>
+    <li><a href="#comparison">방식별 비교</a></li>
+    <li><a href="#risk">리스크 및 대응</a></li>
+    <li><a href="#roadmap">단계별 로드맵</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<div class="doc-header">
+  <div class="eyebrow">AI 기술 검토 보고서</div>
+  <h1>지게차-작업자 충돌 감지<br>카메라 위치 전략 및 한계 분석</h1>
+  <p class="subtitle">고정 천장 카메라 vs 지게차 탑재 카메라 — 실측 오차 구조, 업계 접근법, 현실적 개선 방향 검토</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">작성 부서</div><div class="value">기술연구소</div></div>
+    <div class="meta-item"><div class="label">작성일</div><div class="value">2026. 04. 03.</div></div>
+    <div class="meta-item"><div class="label">문서 버전</div><div class="value">Rev. 1.0 (초안)</div></div>
+    <div class="meta-item"><div class="label">상위 문서</div><div class="value">작업자 이상행동 감지 시스템 Rev.1.1</div></div>
+    <div class="meta-item"><div class="label">현재 구성</div><div class="value">단안 RGB 카메라 + 호모그래피</div></div>
+    <div class="meta-item"><div class="label">핵심 기술</div><div class="value">YOLO · 호모그래피 · BEV · UWB</div></div>
+  </div>
+</div>
+
+<!-- 1. 검토 배경 -->
+<section id="overview">
+  <h2><span class="num">1</span> 검토 배경 및 목적</h2>
+  <p>현재 시스템은 단안 RGB 카메라 + 호모그래피(H 행렬) 방식으로 지게차와 작업자 간 실거리를 계산하고 충돌 위험을 감지한다. 테스트 영상 분석 과정에서 대각선으로 진입하는 지게차에 대해 좌·우 방향 작업자의 거리가 비대칭하게 측정되는 구조적 오차가 확인되었으며, 이 문제의 근본 원인과 업계의 실제 해결 방식을 검토하기 위해 본 문서를 작성한다.</p>
+  <div class="info-box">
+    <div class="info-title">검토 범위</div>
+    <div class="info-body">
+      <strong>분석 대상:</strong> bbox 하단 중심점 기준 거리 계산의 구조적 오차 / 카메라 위치·앙각에 따른 호모그래피 신뢰도 변화 / 업계 실제 채택 방식과 그 근거<br><br>
+      <strong>검토 목표:</strong> 현재 시스템의 소프트웨어 개선 가능 범위 확정 + 하드웨어 구성 변경이 필요한 한계선 명시<br><br>
+      <strong>검토 제외:</strong> 쓰러짐·시야차단 등 행동 감지 모듈 — 상위 문서(Rev.1.1)에서 별도 처리
+    </div>
+  </div>
+</section>
+
+<!-- 2. 핵심 문제 정의 -->
+<section id="problem">
+  <h2><span class="num">2</span> 핵심 문제 정의 — 대각선 배치 시 거리 비대칭 오차</h2>
+  <p>테스트 영상에서 지게차가 대각선으로 진입할 때 bbox 하단 중심점이 차체의 좌측 뒷바퀴 근처에 위치하는 현상이 확인되었다. 이로 인해 동일한 실거리에 있는 좌측 작업자와 우측 작업자의 측정 거리가 다르게 계산된다.</p>
+
+  <div class="fig-wrap">
+    <svg width="100%" viewBox="0 0 680 340">
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+      <!-- 좌측: 현재 방식 -->
+      <text font-family="inherit" font-size="13" font-weight="500" fill="var(--red)" x="160" y="22" text-anchor="middle">현재 — bbox 하단 중심점 1개</text>
+      <rect x="20" y="34" width="280" height="220" rx="8" fill="none" stroke="var(--border2)" stroke-width="0.5"/>
+
+      <!-- 지게차 bbox -->
+      <rect x="60" y="54" width="160" height="170" rx="4" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="1.5" opacity="0.8"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--amber)" x="140" y="140" text-anchor="middle">지게차</text>
+      <text font-family="inherit" font-size="11" fill="var(--amber)" x="140" y="158" text-anchor="middle">(대각선 배치)</text>
+
+      <!-- bbox 하단 라인 -->
+      <line x1="60" y1="224" x2="220" y2="224" stroke="var(--text3)" stroke-width="1" stroke-dasharray="4 3"/>
+
+      <!-- 하단 중심점 -->
+      <circle cx="140" cy="224" r="8" fill="var(--red)" stroke="white" stroke-width="2"/>
+      <text font-family="inherit" font-size="11" fill="var(--red)" x="140" y="248" text-anchor="middle">중심점 (좌측 치우침)</text>
+
+      <!-- 사람 A 좌측 -->
+      <circle cx="36" cy="185" r="9" fill="var(--blue-bg)" stroke="var(--blue)" stroke-width="1.5"/>
+      <text font-family="inherit" font-size="11" fill="var(--blue)" x="36" y="206" text-anchor="middle">A</text>
+
+      <!-- 사람 B 우측 -->
+      <circle cx="284" cy="185" r="9" fill="var(--blue-bg)" stroke="var(--blue)" stroke-width="1.5"/>
+      <text font-family="inherit" font-size="11" fill="var(--blue)" x="284" y="206" text-anchor="middle">B</text>
+
+      <!-- 거리선 A (짧음) -->
+      <line x1="45" y1="224" x2="132" y2="224" stroke="var(--red)" stroke-width="2" marker-end="url(#arr)"/>
+      <text font-family="inherit" font-size="11" fill="var(--red)" x="88" y="215" text-anchor="middle">1.8m 측정</text>
+
+      <!-- 거리선 B (길어짐) -->
+      <line x1="148" y1="224" x2="275" y2="224" stroke="var(--red)" stroke-width="2" marker-end="url(#arr)"/>
+      <text font-family="inherit" font-size="11" fill="var(--red)" x="212" y="215" text-anchor="middle">4.2m 측정</text>
+
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--red)" x="160" y="278" text-anchor="middle">A·B 모두 실제 3m — 측정값 불일치</text>
+
+      <!-- 우측: 선분 방식 -->
+      <text font-family="inherit" font-size="13" font-weight="500" fill="var(--teal)" x="520" y="22" text-anchor="middle">개선 — 하단 선분 최단거리</text>
+      <rect x="380" y="34" width="280" height="220" rx="8" fill="none" stroke="var(--teal)" stroke-width="1"/>
+
+      <!-- 지게차 bbox -->
+      <rect x="420" y="54" width="160" height="170" rx="4" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="1.5" opacity="0.8"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--amber)" x="500" y="140" text-anchor="middle">지게차</text>
+      <text font-family="inherit" font-size="11" fill="var(--amber)" x="500" y="158" text-anchor="middle">(대각선 배치)</text>
+
+      <!-- 하단 선분 (굵게 강조) -->
+      <line x1="420" y1="224" x2="580" y2="224" stroke="var(--teal)" stroke-width="4" stroke-linecap="round"/>
+      <text font-family="inherit" font-size="11" fill="var(--teal)" x="500" y="248" text-anchor="middle">하단 선분 전체 사용</text>
+
+      <!-- 사람 A 좌측 -->
+      <circle cx="396" cy="185" r="9" fill="var(--blue-bg)" stroke="var(--blue)" stroke-width="1.5"/>
+      <text font-family="inherit" font-size="11" fill="var(--blue)" x="396" y="206" text-anchor="middle">A</text>
+
+      <!-- 사람 B 우측 -->
+      <circle cx="644" cy="185" r="9" fill="var(--blue-bg)" stroke="var(--blue)" stroke-width="1.5"/>
+      <text font-family="inherit" font-size="11" fill="var(--blue)" x="644" y="206" text-anchor="middle">B</text>
+
+      <!-- A → 선분 좌측 끝 -->
+      <circle cx="420" cy="224" r="5" fill="var(--teal)" stroke="white" stroke-width="1.5"/>
+      <line x1="403" y1="194" x2="420" y2="219" stroke="var(--teal)" stroke-width="2" marker-end="url(#arr)"/>
+      <text font-family="inherit" font-size="11" fill="var(--teal)" x="396" y="215" text-anchor="middle">3m</text>
+
+      <!-- B → 선분 우측 끝 -->
+      <circle cx="580" cy="224" r="5" fill="var(--teal)" stroke="white" stroke-width="1.5"/>
+      <line x1="635" y1="194" x2="581" y2="219" stroke="var(--teal)" stroke-width="2" marker-end="url(#arr)"/>
+      <text font-family="inherit" font-size="11" fill="var(--teal)" x="644" y="215" text-anchor="middle">3m</text>
+
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--teal)" x="520" y="278" text-anchor="middle">A·B 모두 3m — 좌우 대칭 보정</text>
+    </svg>
+    <div class="fig-caption">그림 1. bbox 하단 중심점(현재) vs 하단 선분 최단거리(개선) 비교 — 대각선 지게차 시나리오</div>
+  </div>
+
+  <h3>오차의 세 가지 층위</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-red">원인 A</span></div>
+      <div class="card-title">bbox 내 빈 공간</div>
+      <div class="card-body">대각선 배치 시 차체는 bbox 한쪽에 치우치고, 반대쪽은 빈 공간이 된다. 하단 중심점은 차체가 없는 영역을 가리키게 된다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-red">원인 B</span></div>
+      <div class="card-title">원근 투영 왜곡</div>
+      <div class="card-body">천장 카메라의 사선 앙각으로 인해 지게차 상단과 하단의 픽셀 위치가 실제 지면 위치와 다르게 투영된다. 앙각이 클수록 왜곡이 심해진다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-red">원인 C</span></div>
+      <div class="card-title">호모그래피 가정 위반</div>
+      <div class="card-body">H 행렬은 지면(z=0)의 점을 실좌표로 변환하는 것을 전제로 한다. 지게차 몸체의 중간·상단은 지면이 아니어서 변환 오차가 발생한다.</div>
+    </div>
+  </div>
+
+  <div class="callout-red">
+    <p><strong>핵심 결론:</strong> 세 원인이 동시에 작용하기 때문에 "중심점을 여러 점으로 늘리는 멀티포인트 방식"도 근본 해결책이 되지 못한다. bbox 꼭짓점들은 여전히 지면이 아닌 공중을 가리키는 점이 포함되어 있기 때문이다. 유일하게 z=0 가정을 지키는 점은 <strong>bbox 하단 라인(y2)</strong>뿐이다.</p>
+  </div>
+</section>
+
+<!-- 3. 고정 천장 카메라 -->
+<section id="fixed-ceiling">
+  <h2><span class="num">3</span> 방식 A — 고정 천장 카메라 + 호모그래피</h2>
+  <p>현재 시스템이 채택한 방식이다. 천장 또는 고소에 카메라를 고정 설치하고 호모그래피 행렬(H)로 픽셀 좌표를 실제 지면 좌표로 변환한다.</p>
+
+  <div class="fig-wrap">
+    <svg width="100%" viewBox="0 0 680 260">
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+      <!-- 앙각 낮음 -->
+      <rect x="20" y="20" width="190" height="220" rx="8" fill="none" stroke="var(--teal)" stroke-width="1"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--teal)" x="115" y="38" text-anchor="middle">앙각 낮음 (30~45°)</text>
+
+      <circle cx="80" cy="60" r="7" fill="var(--purple)"/>
+      <text font-family="inherit" font-size="10" fill="var(--purple)" x="80" y="50" text-anchor="middle">카메라</text>
+      <line x1="80" y1="67" x2="50" y2="200" stroke="var(--purple)" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <line x1="80" y1="67" x2="160" y2="200" stroke="var(--purple)" stroke-width="0.8" stroke-dasharray="4 3"/>
+
+      <line x1="30" y1="200" x2="200" y2="200" stroke="var(--border2)" stroke-width="1"/>
+      <rect x="60" y="168" width="100" height="32" rx="3" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="1"/>
+      <text font-family="inherit" font-size="11" fill="var(--amber)" x="110" y="187" text-anchor="middle">지게차</text>
+      <text font-family="inherit" font-size="11" fill="var(--teal)" x="115" y="225" text-anchor="middle">bbox 왜곡 적음 ✓</text>
+
+      <!-- 앙각 중간 -->
+      <rect x="245" y="20" width="190" height="220" rx="8" fill="none" stroke="var(--amber-mid)" stroke-width="1"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--amber)" x="340" y="38" text-anchor="middle">앙각 중간 (45~60°)</text>
+
+      <circle cx="340" cy="55" r="7" fill="var(--purple)"/>
+      <text font-family="inherit" font-size="10" fill="var(--purple)" x="340" y="45" text-anchor="middle">카메라</text>
+      <line x1="340" y1="62" x2="270" y2="200" stroke="var(--purple)" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <line x1="340" y1="62" x2="410" y2="200" stroke="var(--purple)" stroke-width="0.8" stroke-dasharray="4 3"/>
+
+      <line x1="255" y1="200" x2="425" y2="200" stroke="var(--border2)" stroke-width="1"/>
+      <rect x="280" y="160" width="120" height="40" rx="3" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="1"/>
+      <text font-family="inherit" font-size="11" fill="var(--amber)" x="340" y="183" text-anchor="middle">지게차</text>
+      <text font-family="inherit" font-size="11" fill="var(--amber)" x="340" y="225" text-anchor="middle">오차 10~20% 수준</text>
+
+      <!-- 앙각 높음 (현재) -->
+      <rect x="470" y="20" width="190" height="220" rx="8" fill="none" stroke="var(--red)" stroke-width="1"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--red)" x="565" y="38" text-anchor="middle">앙각 높음 (60°+) ← 현재</text>
+
+      <circle cx="565" cy="48" r="7" fill="var(--purple)"/>
+      <text font-family="inherit" font-size="10" fill="var(--purple)" x="565" y="38" text-anchor="middle">카메라</text>
+      <line x1="565" y1="55" x2="500" y2="200" stroke="var(--purple)" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <line x1="565" y1="55" x2="630" y2="200" stroke="var(--purple)" stroke-width="0.8" stroke-dasharray="4 3"/>
+
+      <line x1="480" y1="200" x2="650" y2="200" stroke="var(--border2)" stroke-width="1"/>
+      <rect x="495" y="148" width="140" height="52" rx="3" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="1"/>
+      <text font-family="inherit" font-size="11" fill="var(--amber)" x="565" y="178" text-anchor="middle">지게차</text>
+      <text font-family="inherit" font-size="11" fill="var(--red)" x="565" y="225" text-anchor="middle">bbox 왜곡 심각 ✗</text>
+    </svg>
+    <div class="fig-caption">그림 2. 카메라 앙각에 따른 bbox 왜곡 정도 — 앙각이 클수록 지게차 투영 형태 왜곡 심화</div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-teal">장점</span></div>
+      <div class="card-title">인프라 변경 불필요</div>
+      <div class="card-body">기존 CCTV 위치 활용 가능. 소프트웨어 중심으로 배포. 지게차 개조 없이 전체 구역 모니터링 가능. 운영 중 카메라 위치·각도 조정 용이.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-red">단점</span></div>
+      <div class="card-title">앙각 의존 오차 상존</div>
+      <div class="card-body">카메라가 높을수록 bbox 왜곡 증가. 대각선 진입 시 거리 비대칭 오차. 지게차 높이(포크 상승 시) 변수 미반영. 캘리브레이션 주기 관리 필요.</div>
+    </div>
+  </div>
+
+  <h3>소프트웨어 개선으로 보정 가능한 범위</h3>
+  <div class="arch-box">
+    <div class="arch-title">현재 → 개선 파이프라인</div>
+    <div class="arch-row">
+      <div class="arch-node" style="background:var(--red-bg);border-color:var(--red);">
+        <strong style="color:var(--red)">현재 (점 1개)</strong>
+        <code>(cx, y2)</code> 단일점<br>→ 실좌표 변환<br>→ 사람 발까지 거리
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node" style="background:var(--teal-bg);border-color:var(--teal);">
+        <strong style="color:var(--teal)">개선 (선분)</strong>
+        <code>(x1,y2)</code> ~ <code>(x2,y2)</code><br>→ 각각 실좌표 변환<br>→ 선분까지 최단거리
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node" style="background:var(--green-bg);border-color:var(--green);">
+        <strong style="color:var(--green)">효과</strong>
+        대각선 배치 좌우<br>비대칭 오차 해소<br>코드 10줄 이내 변경
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+<span class="comment"># 현재 방식</span>
+fu, fv = (x1+x2)/2.0, float(y2)
+X, Y = pixel_to_real(fu, fv, H_mat)
+dist = np.hypot(wx-X, wy-Y)
+
+<span class="comment"># 개선: 선분 최단거리</span>
+def point_to_segment_dist(p, a, b):
+    ab = np.array(b) - np.array(a)
+    t  = np.clip(np.dot(np.array(p)-np.array(a), ab)
+                 / (np.dot(ab,ab)+1e-9), 0, 1)
+    return float(np.linalg.norm(np.array(p) - (np.array(a)+t*ab)))
+
+left_real  = pixel_to_real(x1, y2, H_mat)   <span class="comment"># bbox 좌하단</span>
+right_real = pixel_to_real(x2, y2, H_mat)   <span class="comment"># bbox 우하단</span>
+dist = point_to_segment_dist(person_real, left_real, right_real)
+  </div>
+
+  <div class="callout">
+    <p><strong>보정 한계:</strong> 선분 방식은 "bbox 중심점 치우침"은 해결하지만, 앙각에 의한 bbox 자체의 깊이 왜곡은 여전히 남는다. 카메라 앙각이 60° 이상인 환경에서는 소프트웨어 보정만으로 15~25% 오차가 잔류할 수 있으며, 이는 구조적 한계이다.</p>
+  </div>
+</section>
+
+<!-- 4. 지게차 탑재 카메라 -->
+<section id="mounted">
+  <h2><span class="num">4</span> 방식 B — 지게차 탑재 카메라 (업계 주류)</h2>
+  <p>카메라를 지게차 본체에 직접 부착하고 온보드 프로세서에서 AI 추론을 수행한다. 카메라와 지게차의 상대 위치가 항상 고정되어 있어, 지게차 방향·각도에 무관하게 동일한 좌표계를 유지한다. 실제 상용 솔루션(OmniPro Vision AI, Proxicam, ImageVision 등)이 채택하는 방식이다.</p>
+
+  <div class="fig-wrap">
+    <svg width="100%" viewBox="0 0 680 240">
+      <defs><marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+      <!-- 지게차 바디 -->
+      <rect x="240" y="80" width="200" height="120" rx="8" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="2"/>
+      <text font-family="inherit" font-size="14" font-weight="500" fill="var(--amber)" x="340" y="145" text-anchor="middle">지게차</text>
+
+      <!-- 4방향 카메라 -->
+      <circle cx="240" cy="80" r="10" fill="var(--teal)" stroke="white" stroke-width="2"/>
+      <text font-family="inherit" font-size="10" fill="var(--teal)" x="225" y="68" text-anchor="middle">전방 카메라</text>
+      <circle cx="440" cy="80" r="10" fill="var(--teal)" stroke="white" stroke-width="2"/>
+      <text font-family="inherit" font-size="10" fill="var(--teal)" x="455" y="68" text-anchor="middle">우측 카메라</text>
+      <circle cx="240" cy="200" r="10" fill="var(--teal)" stroke="white" stroke-width="2"/>
+      <text font-family="inherit" font-size="10" fill="var(--teal)" x="225" y="218" text-anchor="middle">좌측 카메라</text>
+      <circle cx="440" cy="200" r="10" fill="var(--teal)" stroke="white" stroke-width="2"/>
+      <text font-family="inherit" font-size="10" fill="var(--teal)" x="455" y="218" text-anchor="middle">후방 카메라</text>
+
+      <!-- 감지 영역 삼각형들 -->
+      <polygon points="230,70 170,30 150,80" fill="var(--teal)" opacity="0.15"/>
+      <polygon points="450,70 510,30 530,80" fill="var(--teal)" opacity="0.15"/>
+      <polygon points="230,210 170,250 150,200" fill="var(--teal)" opacity="0.15"/>
+      <polygon points="450,210 510,250 530,200" fill="var(--teal)" opacity="0.15"/>
+
+      <!-- 사람들 -->
+      <circle cx="120" cy="60" r="12" fill="var(--blue-bg)" stroke="var(--blue)" stroke-width="1.5"/>
+      <text font-family="inherit" font-size="10" fill="var(--blue)" x="120" y="82" text-anchor="middle">작업자</text>
+      <circle cx="560" cy="140" r="12" fill="var(--blue-bg)" stroke="var(--blue)" stroke-width="1.5"/>
+      <text font-family="inherit" font-size="10" fill="var(--blue)" x="560" y="162" text-anchor="middle">작업자</text>
+
+      <!-- 거리 직선 -->
+      <line x1="132" y1="60" x2="230" y2="77" stroke="var(--teal)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr3)"/>
+      <line x1="548" y1="140" x2="450" y2="148" stroke="var(--teal)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr3)"/>
+
+      <!-- 360° 텍스트 -->
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--teal)" x="340" y="30" text-anchor="middle">360° 실시간 감지 — 지게차 방향 무관</text>
+    </svg>
+    <div class="fig-caption">그림 3. 지게차 탑재 4방향 카메라 구성 — 지게차 회전 방향에 무관하게 항상 동일한 시점 유지</div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-teal">장점</span></div>
+      <div class="card-title">방향 독립 좌표계</div>
+      <div class="card-body">카메라-지게차 상대 위치 고정. 지게차가 어느 방향을 향해도 시점 불변. 대각선 배치 오차 구조 자체가 없음. 스테레오 구성 시 깊이 직접 측정 가능.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-red">단점</span></div>
+      <div class="card-title">차량 개조 필요</div>
+      <div class="card-body">지게차 1대당 카메라·컴퓨팅 유닛 장착. 다수 대수 현장에서 초기 비용 증가. 충격·진동에 의한 캘리브레이션 틀어짐 관리 필요. 구역 전체가 아닌 각 지게차 중심 감지.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. UWB 혼합 -->
+<section id="uwb">
+  <h2><span class="num">5</span> 방식 C — UWB · 비전 혼합</h2>
+  <p>UWB(초광대역) 무선 신호로 지게차-작업자 간 거리를 직접 측정하고, 카메라 비전은 보조 수단으로 활용하는 방식이다. Litum PathAware, Pozyx 등 솔루션이 채택하며, 거리 측정을 무선 신호에 위임하므로 카메라 앙각·bbox 왜곡 문제가 원천적으로 없다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-blue">UWB 특성</span></div>
+      <div class="card-title">15cm 정밀도 직접 측정</div>
+      <div class="card-body">벽·적재물 투과 가능. 가시선(Line-of-Sight) 불필요. 비전 카메라가 못 보는 사각지대에서도 감지. 작업자 태그 착용 또는 태그리스 선택 가능.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-amber">한계</span></div>
+      <div class="card-title">인프라 앵커 설치 필요</div>
+      <div class="card-body">현장 곳곳에 UWB 앵커 설치 필요. 전체 RTLS 구성 시 비용 증가. 작업자 태그 미착용 시 감지 불가(태그리스 모드는 정확도 낮아짐). 카메라 없이 시각 정보 부재.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-purple">혼합 전략</span></div>
+      <div class="card-title">비전 + UWB 보완</div>
+      <div class="card-body">비전: 객체 분류·행동 감지 담당. UWB: 실거리 측정 담당. 각자의 강점 분담으로 단독 운용 대비 높은 신뢰도 달성. 고위험 교차로 집중 배치 가능.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 업계 실제 사례 -->
+<section id="industry">
+  <h2><span class="num">6</span> 업계 실제 적용 사례</h2>
+  <p>실제 상용화된 솔루션들이 카메라 위치 문제를 어떻게 해결하고 있는지 정리한다.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>솔루션</th><th>카메라 위치</th><th>거리 측정 방식</th><th>특징</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>OmniPro Vision AI</strong><br><span class="badge badge-gray">Matrix</span></td>
+          <td>교차로·코너 고정 설치<br>(인프라 카메라)</td>
+          <td>AI 비전 + 구역 기반</td>
+          <td>태그리스. 교차로·사각지대 집중 감지. 인터락·경광등 연동. 2024년 산업안전 제품상 수상.</td>
+        </tr>
+        <tr>
+          <td><strong>Proxicam</strong><br><span class="badge badge-gray">Riodatos</span></td>
+          <td>지게차 탑재<br>(다방향 카메라)</td>
+          <td>스테레오 비전 깊이 추정</td>
+          <td>태그리스 360° 감지. 스테레오로 실거리 직접 계산. bbox 왜곡 문제 없음.</td>
+        </tr>
+        <tr>
+          <td><strong>PathAware</strong><br><span class="badge badge-gray">Litum</span></td>
+          <td>카메라 없음</td>
+          <td>UWB 직접 거리 측정</td>
+          <td>가시선 불필요. 15cm 정밀도. 비전 미지원. 태그 또는 태그리스 선택.</td>
+        </tr>
+        <tr>
+          <td><strong>viAct</strong><br><span class="badge badge-gray">viAct.ai</span></td>
+          <td>천장 고정 + 엣지 AI</td>
+          <td>비전 구역 기반 + TTC</td>
+          <td>현장 맞춤 위험 구역 설정. 엣지 컴퓨팅으로 저지연. 실거리보다 구역 침범 기반 경보.</td>
+        </tr>
+        <tr>
+          <td><strong>Vision Plus</strong><br><span class="badge badge-gray">Taylor Forklifts</span></td>
+          <td>지게차 탑재</td>
+          <td>비전 + 속도·방향 TTC</td>
+          <td>충돌 예측 시 경보 강도 자동 조절. 보행자 전용 추적(비차량 오탐 억제).</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout-teal">
+    <p><strong>업계 공통 패턴:</strong> 천장 고정 카메라는 <strong>구역 침범(zone violation) 기반</strong>으로 경보를 발령하고, 정밀 거리 측정은 지게차 탑재 카메라 또는 UWB에 위임한다. 단일 천장 카메라로 정밀 실거리 측정을 시도하는 방식은 업계 주류가 아니다.</p>
+  </div>
+</section>
+
+<!-- 7. 호모그래피 한계 -->
+<section id="homography-limit">
+  <h2><span class="num">7</span> 호모그래피 기반 거리 측정의 구조적 한계</h2>
+  <p>호모그래피는 "카메라에서 바라본 지면 평면을 실제 지면 좌표로 변환"한다. 이 변환이 정확하게 성립하는 조건이 엄격하다.</p>
+
+  <div class="fig-wrap">
+    <svg width="100%" viewBox="0 0 680 290">
+      <!-- 헤더 행 -->
+      <rect x="20" y="10" width="220" height="36" rx="4" fill="var(--bg3)" stroke="var(--border)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--text2)" x="130" y="28" text-anchor="middle" dominant-baseline="central">카메라 조건</text>
+      <rect x="244" y="10" width="196" height="36" rx="4" fill="var(--bg3)" stroke="var(--border)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--text2)" x="342" y="28" text-anchor="middle" dominant-baseline="central">H 행렬 적용 결과</text>
+      <rect x="444" y="10" width="216" height="36" rx="4" fill="var(--bg3)" stroke="var(--border)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--text2)" x="552" y="28" text-anchor="middle" dominant-baseline="central">실측 오차 수준 및 권고</text>
+
+      <!-- 행 1: 수직 탑뷰 -->
+      <rect x="20" y="50" width="220" height="52" rx="4" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--teal)" x="130" y="70" text-anchor="middle" dominant-baseline="central">수직 탑뷰 (90°)</text>
+      <text font-family="inherit" font-size="11" fill="var(--text2)" x="130" y="90" text-anchor="middle" dominant-baseline="central">지면 정사영</text>
+      <rect x="244" y="50" width="196" height="52" rx="4" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="13" font-weight="500" fill="var(--teal)" x="342" y="76" text-anchor="middle" dominant-baseline="central">이상적 정확도</text>
+      <rect x="444" y="50" width="216" height="52" rx="4" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="11" fill="var(--text2)" x="552" y="70" text-anchor="middle" dominant-baseline="central">오차 3~5% 달성 가능</text>
+      <text font-family="inherit" font-size="11" fill="var(--teal)" x="552" y="90" text-anchor="middle" dominant-baseline="central">이상적 설치 환경</text>
+
+      <!-- 행 2: 앙각 45~60 -->
+      <rect x="20" y="106" width="220" height="52" rx="4" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--amber)" x="130" y="126" text-anchor="middle" dominant-baseline="central">앙각 45~60° (일반적)</text>
+      <text font-family="inherit" font-size="11" fill="var(--text2)" x="130" y="146" text-anchor="middle" dominant-baseline="central">천장 사선 설치</text>
+      <rect x="244" y="106" width="196" height="52" rx="4" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="13" font-weight="500" fill="var(--amber)" x="342" y="132" text-anchor="middle" dominant-baseline="central">사용 가능 수준</text>
+      <rect x="444" y="106" width="216" height="52" rx="4" fill="var(--amber-bg)" stroke="var(--amber-mid)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="11" fill="var(--text2)" x="552" y="126" text-anchor="middle" dominant-baseline="central">거리 정확도 + 탐지율 균형</text>
+      <text font-family="inherit" font-size="11" fill="var(--amber)" x="552" y="146" text-anchor="middle" dominant-baseline="central">오차 10~20% — 선분 방식 권장</text>
+
+      <!-- 행 3: 앙각 60+ (현재) -->
+      <rect x="20" y="162" width="220" height="52" rx="4" fill="var(--red-bg)" stroke="var(--red)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--red)" x="130" y="182" text-anchor="middle" dominant-baseline="central">앙각 60°+ ← 현재 추정</text>
+      <text font-family="inherit" font-size="11" fill="var(--text2)" x="130" y="202" text-anchor="middle" dominant-baseline="central">높은 천장, 사선 각도</text>
+      <rect x="244" y="162" width="196" height="52" rx="4" fill="var(--red-bg)" stroke="var(--red)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="13" font-weight="500" fill="var(--red)" x="342" y="188" text-anchor="middle" dominant-baseline="central">bbox 왜곡 심각</text>
+      <rect x="444" y="162" width="216" height="52" rx="4" fill="var(--red-bg)" stroke="var(--red)" stroke-width="0.5"/>
+      <text font-family="inherit" font-size="11" fill="var(--text2)" x="552" y="182" text-anchor="middle" dominant-baseline="central">오차 20~30%+ 잔류</text>
+      <text font-family="inherit" font-size="11" fill="var(--red)" x="552" y="202" text-anchor="middle" dominant-baseline="central">구역 기반 감지로 전환 검토</text>
+
+      <!-- 행 4: 낮은 앙각 -->
+      <rect x="20" y="218" width="220" height="52" rx="4" fill="var(--red-bg)" stroke="var(--red)" stroke-width="0.5" opacity="0.7"/>
+      <text font-family="inherit" font-size="12" font-weight="500" fill="var(--red)" x="130" y="238" text-anchor="middle" dominant-baseline="central">앙각 15~25° (너무 낮음)</text>
+      <text font-family="inherit" font-size="11" fill="var(--text2)" x="130" y="258" text-anchor="middle" dominant-baseline="central">거의 수평에 가까움</text>
+      <rect x="244" y="218" width="196" height="52" rx="4" fill="var(--red-bg)" stroke="var(--red)" stroke-width="0.5" opacity="0.7"/>
+      <text font-family="inherit" font-size="13" font-weight="500" fill="var(--red)" x="342" y="244" text-anchor="middle" dominant-baseline="central">호모그래피 부정확</text>
+      <rect x="444" y="218" width="216" height="52" rx="4" fill="var(--red-bg)" stroke="var(--red)" stroke-width="0.5" opacity="0.7"/>
+      <text font-family="inherit" font-size="11" fill="var(--text2)" x="552" y="238" text-anchor="middle" dominant-baseline="central">원근 왜곡 극심</text>
+      <text font-family="inherit" font-size="11" fill="var(--red)" x="552" y="258" text-anchor="middle" dominant-baseline="central">오차 30%+ → 설치 재검토</text>
+    </svg>
+    <div class="fig-caption">그림 4. 카메라 앙각별 호모그래피 적용 가능 여부 및 권장 대응</div>
+  </div>
+
+  <div class="callout-red">
+    <p><strong>호모그래피의 근본 가정:</strong> H 행렬은 <strong>"모든 기준점이 동일한 평면(z=0) 위에 있다"</strong>는 전제로 계산된다. 지게차처럼 높이가 있는 물체의 bbox 중간·상단 픽셀은 이 가정을 위반한다. 지면에 실제로 닿아 있는 <strong>bbox 하단 라인(y2)</strong>만이 이 가정을 만족하며, 따라서 거리 기준으로 사용할 수 있는 유일한 점/선이다.</p>
+  </div>
+</section>
+
+<!-- 8. bbox 오차 상세 -->
+<section id="bbox-error">
+  <h2><span class="num">8</span> bbox 기준점 오차 상세 분석</h2>
+  <p>현재 방식과 개선 방식의 실제 동작 차이를 수식으로 정리한다.</p>
+
+  <h3>현재 방식 — 단일 중심점</h3>
+  <div class="code-block">
+<span class="comment"># get_foot() 현재 구현</span>
+def get_foot(bbox):
+    x1, y1, x2, y2 = bbox
+    return (x1+x2)/2.0, float(y2)   <span class="comment"># ← 항상 bbox 수평 중앙</span>
+
+<span class="comment"># 문제: 지게차가 대각선이면 (cx, y2)는 차체가 없는 빈 공간을 가리킴</span>
+<span class="comment"># → 좌측 사람: 기준점이 가까워 보임 (실제보다 짧게 측정)</span>
+<span class="comment"># → 우측 사람: 기준점이 멀어 보임 (실제보다 길게 측정)</span>
+  </div>
+
+  <h3>개선 방식 — 선분 최단거리</h3>
+  <div class="code-block">
+<span class="comment"># 지게차 하단 라인 전체를 선분으로 모델링</span>
+def calc_dist_segment(worker_real, vehicle_bbox, H_mat):
+    x1, y1, x2, y2 = vehicle_bbox
+
+    <span class="comment"># 하단 좌·우 끝점만 변환 (y2 라인 = 지면 접지 → H 가정 성립)</span>
+    left_real  = pixel_to_real(x1, y2, H_mat)
+    right_real = pixel_to_real(x2, y2, H_mat)
+
+    <span class="comment"># 사람 실좌표 → 선분까지 수직 최단거리</span>
+    a  = np.array(left_real)
+    b  = np.array(right_real)
+    p  = np.array(worker_real)
+    ab = b - a
+    t  = np.clip(np.dot(p - a, ab) / (np.dot(ab, ab) + 1e-9), 0.0, 1.0)
+    closest = a + t * ab
+    return float(np.linalg.norm(p - closest))
+
+<span class="comment"># 효과: 사람이 좌측이면 left_real 기준, 우측이면 right_real 기준 자동 선택</span>
+<span class="comment"># → 대각선 배치에서 좌우 비대칭 오차 해소</span>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">YOLOv8-seg 추가 시 더 정밀한 개선 가능</div>
+    <div class="info-body">
+      bbox 대신 <strong>instance segmentation 마스크</strong>를 사용하면 차체 실루엣 하단 경계선을 접지선으로 쓸 수 있다. 대각선 배치에서 bbox보다 훨씬 정확한 차체 윤곽을 반영하며, bbox의 빈 공간 문제를 근본 해소한다. 단, YOLOv8-seg 모델로 교체 및 마스크 후처리 코드 추가가 필요하다.
+    </div>
+  </div>
+</section>
+
+<!-- 9. 개선 방향 -->
+<section id="improvement">
+  <h2><span class="num">9</span> 단계별 개선 방향</h2>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--teal)"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-teal">즉시 적용</span> 코드 수정 1회, 재배포</div>
+        <div class="tl-title">bbox 하단 선분 최단거리 방식 교체</div>
+        <div class="tl-desc"><code>get_foot()</code> 함수를 <code>calc_dist_segment()</code>로 교체. 10줄 이내 변경으로 대각선 배치 좌우 비대칭 오차 해소. 기존 H 행렬 재사용 가능. 앙각에 의한 잔류 오차는 남으나 가장 큰 비대칭 오차는 제거된다.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--amber-mid)"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-amber">단기 (1~2개월)</span> 모델 교체 + 마스크 처리</div>
+        <div class="tl-title">YOLOv8-seg 전환 — 마스크 기반 접지선</div>
+        <div class="tl-desc">YOLOv8n-seg 모델로 교체 후 차체 마스크 하단 경계를 접지 기준으로 사용. bbox보다 실제 차체 윤곽에 가까운 접지선 확보. 처리 속도 약 10~15% 증가 예상, GPU 가속 적용으로 보완 가능.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--purple)"></div><div class="tl-line"></div></div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-purple">중기 (3~6개월)</span> 구역 기반 + 정밀 측정 분리</div>
+        <div class="tl-title">천장 카메라 구역 감지 + 고위험 지점 UWB 보완</div>
+        <div class="tl-desc">교차로·사각지대 등 고위험 지점에 UWB 앵커 설치. 천장 카메라는 구역 침범·행동 감지 전담, UWB는 실거리 측정 전담으로 역할 분리. 업계 표준 구성에 수렴하는 방향.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot" style="background:var(--blue)"></div></div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-blue">장기 (6개월+)</span> 하드웨어 구성 변경</div>
+        <div class="tl-title">지게차 탑재 카메라 추가 (업계 주류)</div>
+        <div class="tl-desc">신규 도입 지게차부터 탑재 카메라 적용. 스테레오 카메라 구성으로 깊이 직접 측정. 기존 천장 카메라는 광역 감시 및 행동 분석으로 역할 전환. bbox 왜곡 문제 원천 해소.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 방식별 비교 -->
+<section id="comparison">
+  <h2><span class="num">10</span> 방식별 종합 비교</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>고정 천장 카메라<br>(현재)</th><th>고정 천장 카메라<br>(선분 개선)</th><th>지게차 탑재<br>카메라</th><th>UWB 혼합</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>대각선 오차</strong></td>
+          <td><span class="badge badge-red">심각</span></td>
+          <td><span class="badge badge-amber">부분 해소</span></td>
+          <td><span class="badge badge-teal">없음</span></td>
+          <td><span class="badge badge-teal">없음</span></td>
+        </tr>
+        <tr>
+          <td><strong>앙각 오차</strong></td>
+          <td><span class="badge badge-red">상존</span></td>
+          <td><span class="badge badge-red">상존</span></td>
+          <td><span class="badge badge-teal">없음</span></td>
+          <td><span class="badge badge-teal">없음</span></td>
+        </tr>
+        <tr>
+          <td><strong>거리 측정 정밀도</strong></td>
+          <td>오차 20~30%+</td>
+          <td>오차 10~20%</td>
+          <td>오차 5~10%</td>
+          <td>오차 1~3% (UWB)</td>
+        </tr>
+        <tr>
+          <td><strong>행동 감지</strong></td>
+          <td><span class="badge badge-teal">가능</span></td>
+          <td><span class="badge badge-teal">가능</span></td>
+          <td><span class="badge badge-amber">제한적</span></td>
+          <td><span class="badge badge-red">불가</span></td>
+        </tr>
+        <tr>
+          <td><strong>사각지대 커버</strong></td>
+          <td><span class="badge badge-amber">카메라 수에 의존</span></td>
+          <td><span class="badge badge-amber">카메라 수에 의존</span></td>
+          <td><span class="badge badge-teal">360° 커버</span></td>
+          <td><span class="badge badge-teal">투과 감지</span></td>
+        </tr>
+        <tr>
+          <td><strong>초기 비용</strong></td>
+          <td><span class="badge badge-teal">낮음</span></td>
+          <td><span class="badge badge-teal">낮음</span></td>
+          <td><span class="badge badge-red">높음</span></td>
+          <td><span class="badge badge-amber">중간</span></td>
+        </tr>
+        <tr>
+          <td><strong>지게차 개조 필요</strong></td>
+          <td><span class="badge badge-teal">불필요</span></td>
+          <td><span class="badge badge-teal">불필요</span></td>
+          <td><span class="badge badge-red">필요</span></td>
+          <td><span class="badge badge-amber">태그 착용</span></td>
+        </tr>
+        <tr>
+          <td><strong>즉시 적용 가능</strong></td>
+          <td><span class="badge badge-teal">가능</span></td>
+          <td><span class="badge badge-teal">가능</span></td>
+          <td><span class="badge badge-red">불가</span></td>
+          <td><span class="badge badge-amber">앵커 설치 필요</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout-teal">
+    <p><strong>실무 전략 요약:</strong> 현재 시스템에서 즉시 적용 가능한 최선은 <strong>선분 최단거리 방식</strong>이다. 이것만으로 가장 큰 비대칭 오차를 제거할 수 있다. 이후 시스템 요구 수준에 따라 YOLOv8-seg → UWB 보완 → 지게차 탑재 카메라 순으로 단계적 고도화를 검토한다. 보조 경보 시스템 용도라면 선분 방식 + 보수적 임계값 운용으로 충분하며, 법적 안전 기준 충족이 필요한 메인 시스템이라면 UWB 또는 탑재 카메라 구성이 필요하다.</p>
+  </div>
+</section>
+
+<!-- 11. 리스크 -->
+<section id="risk">
+  <h2><span class="num">11</span> 리스크 및 대응 방안</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>리스크</th><th>내용</th><th>대응 방안</th></tr></thead>
+      <tbody>
+        <tr><td><strong>앙각 잔류 오차</strong></td><td>선분 방식 적용 후에도 카메라 앙각에 의한 10~20% 오차 잔류. 실거리 2m 경보 시 실제 1.6~2.4m 편차 발생 가능.</td><td>경보 임계값을 보수적으로 설정 (실측 경보거리를 요구거리보다 20~30% 크게). 현장 실측으로 앙각 추정 후 보정 계수 적용.</td></tr>
+        <tr><td><strong>H 행렬 시간 경과 오차</strong></td><td>카메라 진동·이동, 건물 변형으로 H 행렬 점진적 오차 누적.</td><td>분기 1회 정기 검증(기준점 실측 vs 계산값 비교). 카메라 고정 브래킷 진동 방지 처리. 오차 10% 초과 시 재캘리브레이션.</td></tr>
+        <tr><td><strong>지게차 포크 상승 미반영</strong></td><td>포크가 올라간 상태에서 bbox 하단 y2는 여전히 바퀴 기준이지만 실제 위험 영역은 포크 높이까지 확장됨.</td><td>현 단계에서는 바닥 충돌 위험에 집중. 포크 높이 감지는 별도 모듈(포크 keypoint 추적) 검토.</td></tr>
+        <tr><td><strong>YOLO 지게차 미탐지</strong></td><td>COCO 모델에 forklift 클래스 없음. truck/car로 대체하면 오탐·미탐 혼재.</td><td>지게차 전용 파인튜닝 데이터셋 구축 우선화. 단기에는 truck+car 복합 조건 + 면적 필터로 지게차 특정.</td></tr>
+        <tr><td><strong>처리 지연</strong></td><td>선분 변환 추가로 프레임당 연산량 미세 증가.</td><td>선분 변환은 픽셀→실좌표 변환 2회 추가이므로 실질 지연 1ms 미만. GPU 가속 환경에서 무시 가능.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 12. 로드맵 -->
+<section id="roadmap">
+  <h2><span class="num">12</span> 단계별 구현 로드맵</h2>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val" style="color:var(--teal)">10줄</div><div class="kpi-label">즉시 개선 코드 변경량</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--amber)">20%↓</div><div class="kpi-label">선분 방식 후 오차 감소</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--blue)">15cm</div><div class="kpi-label">UWB 측정 정밀도</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--red)">60%+</div><div class="kpi-label">탑재 카메라 사각 제거율</div></div>
+  </div>
+
+  <div class="arch-box">
+    <div class="arch-title">단계별 전환 구조</div>
+    <div class="arch-row">
+      <div class="arch-node" style="background:var(--teal-bg);border-color:var(--teal);">
+        <strong style="color:var(--teal)">즉시 — SW 개선</strong>
+        선분 최단거리 교체<br>보수적 임계값 설정<br>현장 오차 실측 검증
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node" style="background:var(--amber-bg);border-color:var(--amber);">
+        <strong style="color:var(--amber)">단기 — 모델 교체</strong>
+        YOLOv8-seg 전환<br>마스크 접지선 활용<br>파인튜닝 데이터 구축
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node" style="background:var(--blue-bg);border-color:var(--blue);">
+        <strong style="color:var(--blue)">중장기 — HW 보완</strong>
+        고위험 구역 UWB 추가<br>또는 지게차 탑재 카메라<br>업계 표준 구성 수렴
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">상위 문서와의 연계</div>
+    <div class="info-body">
+      본 문서에서 검토한 거리 측정 개선 방안(선분 방식, YOLOv8-seg, UWB)은 상위 문서 "작업자 이상행동 감지 시스템 Rev.1.1"의 시나리오 B(지게차-작업자 직접 충돌) 모듈에 해당한다. 개선된 거리 측정값은 동일하게 TTC 계산 엔진으로 전달되며, 관심·경고·긴급 3단계 경보 체계와 연동된다. 시나리오 A(쓰러짐), C(시야차단), D(사각지대) 모듈은 본 문서 검토 범위 외이며 Rev.1.1에서 별도 처리한다.
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+<script>
+(function(){
+  var sections=document.querySelectorAll('section[id]');
+  var navLinks=document.querySelectorAll('nav a[href^="#"]');
+  navLinks.forEach(function(a){
+    a.addEventListener('click',function(e){
+      e.preventDefault();
+      var t=document.querySelector(this.getAttribute('href'));
+      if(t){
+        t.scrollIntoView({behavior:'smooth',block:'start'});
+        navLinks.forEach(function(l){l.classList.remove('active');});
+        this.classList.add('active');
+      }
+    });
+  });
+  var observer=new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        navLinks.forEach(function(a){
+          a.classList.toggle('active',a.getAttribute('href')==='#'+entry.target.id);
+        });
+      }
+    });
+  },{rootMargin:'-20% 0px -70% 0px',threshold:0});
+  sections.forEach(function(s){observer.observe(s);});
+})();
+</script>
+</body>
+</html>
