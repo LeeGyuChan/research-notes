@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기술 검토 노트 — 후크 적재 상태 연동을 통한 회전 판단 신뢰 보완</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --bg2: #ffffff; --bg3: #eeecea;
+    --text: #1a1a18; --text2: #5a5955; --text3: #9c9a92;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --blue: #185FA5; --blue-bg: #E6F1FB;
+    --teal: #0F6E56; --teal-bg: #E1F5EE;
+    --amber: #854F0B; --amber-bg: #FAEEDA; --amber-mid: #EF9F27;
+    --coral: #993C1D; --coral-bg: #FAECE7;
+    --green: #3B6D11; --green-bg: #EAF3DE;
+    --purple: #534AB7; --purple-bg: #EEEDFE;
+    --red: #A32D2D; --red-bg: #FCEBEB;
+    --gray: #5F5E5A; --gray-bg: #F1EFE8;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18; --bg2: #242422; --bg3: #2e2e2b;
+      --text: #e8e6de; --text2: #a8a69e; --text3: #6e6c65;
+      --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
+      --blue: #85B7EB; --blue-bg: #042C53;
+      --teal: #5DCAA5; --teal-bg: #04342C;
+      --amber: #FAC775; --amber-bg: #412402; --amber-mid: #EF9F27;
+      --coral: #F0997B; --coral-bg: #4A1B0C;
+      --green: #97C459; --green-bg: #173404;
+      --purple: #AFA9EC; --purple-bg: #26215C;
+      --red: #F09595; --red-bg: #501313;
+      --gray: #B4B2A9; --gray-bg: #2C2C2A;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.7; }
+  .layout { display: flex; min-height: 100vh; }
+
+  nav { width: 240px; flex-shrink: 0; background: var(--bg2); border-right: 0.5px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 0 40px; }
+  nav .logo { padding: 0 20px 20px; border-bottom: 0.5px solid var(--border); margin-bottom: 16px; }
+  nav .logo .tag { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  nav .logo .title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  nav ul { list-style: none; padding: 0 8px; }
+  nav ul li a { display: block; padding: 7px 12px; border-radius: 6px; font-size: 13px; color: var(--text2); text-decoration: none; transition: background .15s, color .15s; }
+  nav ul li a:hover { background: var(--bg3); color: var(--text); }
+  nav ul li a.active { background: var(--teal-bg); color: var(--teal); font-weight: 500; }
+  nav ul li .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; padding: 12px 12px 4px; }
+
+  main { flex: 1; max-width: 860px; padding: 48px 40px 80px; }
+
+  .doc-header { margin-bottom: 40px; padding-bottom: 32px; border-bottom: 0.5px solid var(--border); }
+  .doc-header .eyebrow { font-size: 12px; font-weight: 500; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .doc-header h1 { font-size: 26px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
+  .doc-header .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 20px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .meta-item { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .meta-item .label { font-size: 11px; color: var(--text3); margin-bottom: 3px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .meta-item .value { font-size: 13px; font-weight: 500; color: var(--text); }
+
+  .case-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--teal-bg); border: 1px solid var(--teal); border-radius: 20px; padding: 4px 14px 4px 10px; font-size: 12px; font-weight: 500; color: var(--teal); margin-bottom: 16px; }
+  .case-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section h2 { font-size: 20px; font-weight: 500; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  section h2 .num { font-size: 12px; font-weight: 500; background: var(--teal-bg); color: var(--teal); border-radius: 20px; padding: 2px 9px; }
+  section h3 { font-size: 16px; font-weight: 500; margin: 28px 0 10px; color: var(--text); }
+  p { color: var(--text2); margin-bottom: 12px; }
+
+  .q-block { border-left: 3px solid var(--teal); background: var(--teal-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .q-block .q-label { font-size: 10px; font-weight: 500; color: var(--teal); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .q-block .q-text { font-size: 14px; color: var(--text); font-weight: 500; line-height: 1.5; }
+
+  .a-block { border-left: 3px solid var(--blue); background: var(--blue-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .a-block .a-label { font-size: 10px; font-weight: 500; color: var(--blue); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .a-block .a-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .a-block .a-text strong { color: var(--text); }
+
+  .wrong-block { border-left: 3px solid var(--red); background: var(--red-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .wrong-block .w-label { font-size: 10px; font-weight: 500; color: var(--red); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .wrong-block .w-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  .conclusion { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 20px 24px; margin: 20px 0; }
+  .conclusion .c-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px; }
+  .conclusion .c-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 10px; }
+  .conclusion .c-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .conclusion .c-body strong { color: var(--text); }
+
+  .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card-grid .card { margin-bottom: 0; }
+  .card .card-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .card .card-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .card .card-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  .callout { border-left: 3px solid var(--amber-mid); background: var(--amber-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .callout p { margin: 0; font-size: 13px; color: var(--text2); }
+  .callout strong { color: var(--text); }
+
+  .info-box { background: var(--blue-bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; }
+  .info-box .info-title { font-size: 13px; font-weight: 500; color: var(--blue); margin-bottom: 6px; }
+  .info-box .info-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; border-radius: 20px; padding: 2px 9px; }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-teal { background: var(--teal-bg); color: var(--teal); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-gray { background: var(--gray-bg); color: var(--gray); }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); }
+  .badge-coral { background: var(--coral-bg); color: var(--coral); }
+
+  .table-wrap { overflow-x: auto; margin-bottom: 16px; border: 0.5px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--bg3); }
+  th { padding: 10px 14px; text-align: left; font-weight: 500; color: var(--text2); font-size: 12px; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+  .cmp-good { color: var(--teal); font-weight: 500; }
+  .cmp-bad { color: var(--red); font-weight: 500; }
+  .cmp-mid { color: var(--amber); font-weight: 500; }
+
+  .pipeline { display: flex; align-items: stretch; gap: 0; margin: 16px 0; overflow-x: auto; }
+  .pipe-step { flex: 1; min-width: 110px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; position: relative; font-size: 12px; color: var(--text2); }
+  .pipe-step .ps-label { font-weight: 500; font-size: 13px; color: var(--text); margin-bottom: 4px; }
+  .pipe-step.highlight { border-color: var(--teal); background: var(--teal-bg); }
+  .pipe-step.highlight .ps-label { color: var(--teal); }
+  .pipe-step.gate { border-color: var(--amber-mid); background: var(--amber-bg); }
+  .pipe-step.gate .ps-label { color: var(--amber); }
+  .pipe-step::after { content: '→'; position: absolute; right: -14px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; z-index: 1; }
+  .pipe-step:last-child::after { display: none; }
+  .pipe-sep { width: 28px; flex-shrink: 0; }
+
+  .new-tag { display: inline-block; font-size: 10px; font-weight: 600; background: var(--teal); color: #fff; border-radius: 4px; padding: 1px 5px; margin-left: 5px; letter-spacing: 0.04em; vertical-align: middle; }
+
+  /* 판정 매트릭스 */
+  .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .matrix-cell { border-radius: var(--radius-sm); padding: 16px 18px; border: 0.5px solid var(--border); }
+  .matrix-cell .mc-label { font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .matrix-cell .mc-result { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .matrix-cell .mc-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .mc-pass { background: var(--green-bg); border-color: var(--green); }
+  .mc-pass .mc-label { color: var(--green); }
+  .mc-pass .mc-result { color: var(--green); }
+  .mc-alarm { background: var(--red-bg); border-color: var(--red); }
+  .mc-alarm .mc-label { color: var(--red); }
+  .mc-alarm .mc-result { color: var(--red); }
+  .mc-skip { background: var(--gray-bg); border-color: var(--gray); }
+  .mc-skip .mc-label { color: var(--gray); }
+  .mc-skip .mc-result { color: var(--gray); }
+  .mc-warn { background: var(--amber-bg); border-color: var(--amber-mid); }
+  .mc-warn .mc-label { color: var(--amber); }
+  .mc-warn .mc-result { color: var(--amber); }
+
+  /* 코드 블록 */
+  .code-block { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 16px 18px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; overflow-x: auto; }
+  .code-block .kw { color: var(--purple); font-weight: 500; }
+  .code-block .cm { color: var(--text3); }
+  .code-block .st { color: var(--teal); }
+  .code-block .nm { color: var(--blue); }
+
+  /* 체크리스트 */
+  ul.checklist { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  ul.checklist li { display: flex; gap: 12px; align-items: flex-start; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; color: var(--text2); }
+  .chk { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border2); flex-shrink: 0; margin-top: 2px; }
+  .chk-label { font-weight: 500; color: var(--text); display: block; margin-bottom: 2px; }
+  .chk-desc { font-size: 12px; color: var(--text3); }
+
+  @media (max-width: 720px) {
+    nav { display: none; }
+    main { padding: 24px 20px 60px; }
+    .matrix-grid { grid-template-columns: 1fr; }
+    .pipeline { flex-direction: column; }
+    .pipe-step::after { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav>
+  <div class="logo">
+    <div class="tag">기술연구소 · 검토 노트</div>
+    <div class="title">후크 적재 상태 연동<br>회전 판단 신뢰 보완</div>
+  </div>
+  <ul>
+    <li><div class="section-label">배경 · 목적</div></li>
+    <li><a href="#background">검토 배경</a></li>
+    <li><a href="#roles">카메라 역할 분리</a></li>
+    <li><div class="section-label">설계</div></li>
+    <li><a href="#relay">상태 전달 메커니즘</a></li>
+    <li><a href="#logic">판정 로직 설계</a></li>
+    <li><a href="#method">구현 방법 비교</a></li>
+    <li><div class="section-label">운영 · 검토</div></li>
+    <li><a href="#pipeline">전체 파이프라인</a></li>
+    <li><a href="#risk">리스크 및 대응</a></li>
+    <li><a href="#checklist">구현 체크리스트</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<div class="doc-header">
+  <div class="eyebrow">기술 검토 노트 · 스마트 도장라인 AI 시스템</div>
+  <div class="case-badge"><span class="dot"></span>신규 설계 검토</div>
+  <h1>후크 적재 상태 연동을 통한 회전 판단 신뢰 보완</h1>
+  <p class="subtitle">카메라 1(후크 감지) → 카메라 2(톱니 회전 감지) 상태 전달 구조 설계 검토</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">주관 기관</div><div class="value">주식회사 뎁스</div></div>
+    <div class="meta-item"><div class="label">수요 기관</div><div class="value">대원공업(주)</div></div>
+    <div class="meta-item"><div class="label">작성 부서</div><div class="value">기술연구소</div></div>
+    <div class="meta-item"><div class="label">문서 버전</div><div class="value">v1.0 · 초안</div></div>
+    <div class="meta-item"><div class="label">관련 문서</div><div class="value">AI 개발검토보고서 Rev 7.0</div></div>
+    <div class="meta-item"><div class="label">관련 연구노트</div><div class="value">비전 전처리 연구노트 Case B v1</div></div>
+  </div>
+</div>
+
+<!-- 1. 검토 배경 -->
+<section id="background">
+  <h2><span class="num">1</span> 검토 배경 및 문제 제기</h2>
+
+  <p>기존 설계에서 카메라는 톱니바퀴 회전 상태 감지에 집중하도록 구성되어 있다. 그러나 분체 도장 라인의 실제 운용 구조를 보면, 후크에 도장 대상이 걸려 있지 않은 상태에서도 톱니는 컨베이어 벨트에 의해 이송되며 회전 유도장치를 통과한다. 이 경우 카메라 2가 톱니의 정지 상태를 감지하면 <strong>회전 불량으로 오판정</strong>할 위험이 구조적으로 존재한다.</p>
+
+  <div class="wrong-block">
+    <div class="w-label">문제 상황</div>
+    <div class="w-text">도장 대상이 걸리지 않은 빈 후크의 톱니가 회전하지 않는 것은 <strong>정상 상태</strong>임에도 불구하고, 카메라 2가 이를 단독으로 판정할 경우 "회전 불량"으로 잘못 분류할 수 있다. 이는 오경보(False Alarm)를 발생시키고 판정 신뢰도를 훼손한다.</div>
+  </div>
+
+  <div class="q-block">
+    <div class="q-label">핵심 검토 질문</div>
+    <div class="q-text">카메라 1이 판단한 "후크 적재 여부"를 카메라 2의 회전 판정에 어떻게 연동하면, 빈 후크로 인한 오경보 없이 실제 회전 불량만을 정확히 감지할 수 있는가?</div>
+  </div>
+
+  <div class="a-block">
+    <div class="a-label">검토 결론 (선요약)</div>
+    <div class="a-text"><strong>구조적으로 완전히 가능하며, 두 카메라가 서로 다른 객체를 독립적으로 탐지하되 판정 단계에서 상태값을 결합하는 방식이 가장 안정적이다.</strong> 카메라 1은 "후크에 도장 대상이 걸려 있는가"를 판단하고, 카메라 2는 "톱니가 정상 회전하고 있는가"를 판단한다. 두 판단값을 컨베이어 속도 기반 큐(Queue)로 연결하면, 빈 후크 상태에서 카메라 2의 회전 판정 결과를 무시(스킵)하거나 아예 추론을 건너뛸 수 있다.</div>
+  </div>
+</section>
+
+<!-- 2. 카메라 역할 분리 -->
+<section id="roles">
+  <h2><span class="num">2</span> 카메라별 역할 분리 설계</h2>
+
+  <p>두 카메라는 설치 위치, 감지 대상, 출력 구조가 완전히 분리된다. 각자의 모델(YOLO 또는 분류기)은 독립적으로 학습되고, 공유하는 것은 판정 단계에서 사용하는 상태값 하나뿐이다.</p>
+
+  <div class="card-grid">
+    <div class="card" style="border-top: 3px solid var(--blue);">
+      <div class="card-label"><span class="badge badge-blue">카메라 1</span></div>
+      <div class="card-title">후크 구간 — 적재 상태 판단</div>
+      <div class="card-body">
+        <strong>감지 대상:</strong> 후크 본체, 도장 대상물(피도장체)<br>
+        <strong>판정 내용:</strong> 후크에 도장 대상이 걸려 있는가 (LOADED / EMPTY)<br>
+        <strong>출력값:</strong> 후크 ID + 상태 + 감지 타임스탬프<br>
+        <strong>탐지 방식:</strong> YOLO 커스텀 모델 (hook, object 2-class)
+      </div>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--teal);">
+      <div class="card-label"><span class="badge badge-teal">카메라 2</span></div>
+      <div class="card-title">회전 유도 구간 — 톱니 회전 판단</div>
+      <div class="card-body">
+        <strong>감지 대상:</strong> 톱니(기어) 부위<br>
+        <strong>판정 내용:</strong> 톱니가 정속으로 정상 회전하고 있는가 (OK / FAIL)<br>
+        <strong>출력값:</strong> 회전 상태 + 판정 타임스탬프<br>
+        <strong>탐지 방식:</strong> Optical Flow → GRU 분류기 (기존 파이프라인 유지)
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th>카메라 1</th>
+          <th>카메라 2</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>설치 위치</strong></td>
+          <td>후크 이송 구간 (회전 유도장치 진입 전)</td>
+          <td>회전 유도장치 구간 (톱니 맞물림 지점)</td>
+        </tr>
+        <tr>
+          <td><strong>주요 감지 객체</strong></td>
+          <td>후크, 도장 대상물</td>
+          <td>톱니(기어)</td>
+        </tr>
+        <tr>
+          <td><strong>모델 구조</strong></td>
+          <td>YOLO 검출 (2-class: hook / object)</td>
+          <td>Optical Flow + GRU (기존 유지)</td>
+        </tr>
+        <tr>
+          <td><strong>출력 상태값</strong></td>
+          <td><span class="badge badge-green">LOADED</span> / <span class="badge badge-gray">EMPTY</span></td>
+          <td><span class="badge badge-teal">OK</span> / <span class="badge badge-red">FAIL</span></td>
+        </tr>
+        <tr>
+          <td><strong>판정 독립성</strong></td>
+          <td>완전 독립 (단독 판정)</td>
+          <td>카메라 1 상태값 참조 후 최종 판정</td>
+        </tr>
+        <tr>
+          <td><strong>다른 카메라 의존도</strong></td>
+          <td>없음</td>
+          <td>카메라 1 결과를 보조 조건으로 사용</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>서로 다른 객체를 탐지하는 것이 가능한가:</strong> 완전히 가능하다. 두 카메라는 각각 독립된 YOLO/Flow 모델을 구동하며, 물리적 설치 위치도 다르다. 공유되는 것은 상태값(LOADED/EMPTY)을 담는 소프트웨어 큐 하나뿐이다. 이는 기존 분산 비전 시스템에서 흔히 사용되는 구조다.</p>
+  </div>
+</section>
+
+<!-- 3. 상태 전달 메커니즘 -->
+<section id="relay">
+  <h2><span class="num">3</span> 상태 전달 메커니즘 — 후크 상태 큐</h2>
+
+  <p>카메라 1이 생성한 후크 상태값을 카메라 2가 사용하려면, 두 카메라 사이의 <strong>물리적 거리 + 컨베이어 이동 시간</strong>을 고려한 동기화가 필요하다. 이를 위해 "후크 상태 큐(Hook State Queue)"를 중간 레이어로 운용한다.</p>
+
+  <h3>동작 원리</h3>
+
+  <div style="margin-bottom: 16px;">
+    <svg width="100%" viewBox="0 0 680 310" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- 컨베이어 벨트 라인 -->
+      <line x1="40" y1="60" x2="640" y2="60" stroke="#B4B2A9" stroke-width="2.5"/>
+      <text x="340" y="24" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">컨베이어 이동 방향 →</text>
+      <line x1="580" y1="48" x2="630" y2="60" stroke="#B4B2A9" stroke-width="1.5" marker-end="url(#arr1)"/>
+
+      <!-- 후크들 (이동 중) -->
+      <!-- 빈 후크 -->
+      <line x1="100" y1="60" x2="100" y2="85" stroke="#B4B2A9" stroke-width="2"/>
+      <path d="M94 85 Q100 93 106 85" fill="none" stroke="#B4B2A9" stroke-width="2"/>
+      <text x="100" y="108" text-anchor="middle" font-size="9" fill="#9c9a92">빈</text>
+
+      <!-- 도장대상 있는 후크 -->
+      <line x1="200" y1="60" x2="200" y2="82" stroke="#888780" stroke-width="2"/>
+      <path d="M194 82 Q200 90 206 82" fill="none" stroke="#888780" stroke-width="2"/>
+      <rect x="190" y="90" width="20" height="14" rx="2" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="200" y="113" text-anchor="middle" font-size="9" fill="#0F6E56">적재</text>
+
+      <!-- 빈 후크 2 -->
+      <line x1="310" y1="60" x2="310" y2="85" stroke="#B4B2A9" stroke-width="2"/>
+      <path d="M304 85 Q310 93 316 85" fill="none" stroke="#B4B2A9" stroke-width="2"/>
+      <text x="310" y="108" text-anchor="middle" font-size="9" fill="#9c9a92">빈</text>
+
+      <!-- 도장대상 있는 후크 2 -->
+      <line x1="440" y1="60" x2="440" y2="82" stroke="#888780" stroke-width="2"/>
+      <path d="M434 82 Q440 90 446 82" fill="none" stroke="#888780" stroke-width="2"/>
+      <rect x="430" y="90" width="20" height="14" rx="2" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="440" y="113" text-anchor="middle" font-size="9" fill="#0F6E56">적재</text>
+
+      <!-- 카메라 1 구역 -->
+      <rect x="60" y="130" width="160" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+      <text x="140" y="152" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">카메라 1</text>
+      <text x="140" y="168" text-anchor="middle" font-size="10" fill="#185FA5">후크 적재 여부 판정</text>
+      <text x="140" y="180" text-anchor="middle" font-size="9" fill="#185FA5">→ LOADED / EMPTY</text>
+
+      <!-- 엔코더 -->
+      <rect x="280" y="138" width="120" height="40" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="340" y="155" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">컨베이어 엔코더</text>
+      <text x="340" y="170" text-anchor="middle" font-size="10" fill="#888780">속도 실시간 측정</text>
+
+      <!-- 후크 상태 큐 -->
+      <rect x="220" y="228" width="240" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+      <text x="340" y="250" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">후크 상태 큐</text>
+      <text x="340" y="265" text-anchor="middle" font-size="10" fill="#534AB7">{hook_id, status, detected_at, eta_cam2}</text>
+      <text x="340" y="277" text-anchor="middle" font-size="9" fill="#9c9a92">FIFO · TTL: 컨베이어 거리 / 속도</text>
+
+      <!-- 카메라 2 구역 -->
+      <rect x="460" y="130" width="160" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+      <text x="540" y="152" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">카메라 2</text>
+      <text x="540" y="168" text-anchor="middle" font-size="10" fill="#0F6E56">톱니 회전 상태 판정</text>
+      <text x="540" y="180" text-anchor="middle" font-size="9" fill="#0F6E56">→ 큐 조회 후 최종 판정</text>
+
+      <!-- 화살표: 카메라 1 → 큐 -->
+      <line x1="140" y1="186" x2="280" y2="244" stroke="#185FA5" stroke-width="1.5" marker-end="url(#arr1)"/>
+      <text x="185" y="228" text-anchor="middle" font-size="9" fill="#185FA5">상태 push</text>
+
+      <!-- 화살표: 엔코더 → 큐 -->
+      <line x1="340" y1="178" x2="340" y2="228" stroke="#B4B2A9" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr1)"/>
+      <text x="355" y="210" text-anchor="start" font-size="9" fill="#888780">속도값</text>
+
+      <!-- 화살표: 큐 → 카메라 2 -->
+      <line x1="460" y1="244" x2="540" y2="186" stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arr1)"/>
+      <text x="520" y="228" text-anchor="middle" font-size="9" fill="#0F6E56">상태 pop</text>
+
+      <!-- 거리 표시 -->
+      <line x1="140" y1="122" x2="540" y2="122" stroke="#EF9F27" stroke-width="1" stroke-dasharray="4 2"/>
+      <text x="340" y="118" text-anchor="middle" font-size="9" fill="#854F0B">두 카메라 간 물리적 거리 d</text>
+      <text x="140" y="122" text-anchor="middle" font-size="8" fill="#854F0B">|</text>
+      <text x="540" y="122" text-anchor="middle" font-size="8" fill="#854F0B">|</text>
+    </svg>
+  </div>
+
+  <h3>큐 항목 구조 및 동작 흐름</h3>
+
+  <div class="code-block">
+<span class="cm"># 카메라 1: 후크 감지 시 큐에 push</span>
+hook_queue.put({
+    <span class="st">"hook_id"</span>:      <span class="nm">generate_id()</span>,           <span class="cm"># 후크 고유 식별자</span>
+    <span class="st">"status"</span>:       <span class="st">"LOADED"</span> | <span class="st">"EMPTY"</span>,      <span class="cm"># 도장 대상 적재 여부</span>
+    <span class="st">"detected_at"</span>:  <span class="nm">time.time()</span>,            <span class="cm"># 감지 타임스탬프</span>
+    <span class="st">"eta_cam2"</span>:     <span class="nm">time.time()</span> + d / v,     <span class="cm"># 예측 도달 시간 (d: 거리, v: 속도)</span>
+})
+
+<span class="cm"># 카메라 2: 톱니 감지 시 큐에서 매칭 pop</span>
+<span class="kw">def</span> <span class="nm">find_matching_hook</span>(queue, now, tolerance=<span class="nm">0.5</span>):
+    <span class="kw">return</span> min(queue, key=<span class="kw">lambda</span> h: abs(h[<span class="st">"eta_cam2"</span>] - now),
+               default=<span class="kw">None</span>)
+  </div>
+
+  <div class="callout">
+    <p><strong>엔코더 없이 속도 추정:</strong> 컨베이어 엔코더 연동이 어려운 경우, 카메라 1이 연속으로 감지하는 동일 후크의 프레임 간 위치 이동량(bbox 중심 차분)으로 속도를 간접 산출할 수 있다. 단, 정밀도가 낮으므로 허용 오차(tolerance) 범위를 넉넉히 설정해야 한다.</p>
+  </div>
+</section>
+
+<!-- 4. 판정 로직 설계 -->
+<section id="logic">
+  <h2><span class="num">4</span> 최종 판정 로직 설계</h2>
+
+  <p>카메라 1의 후크 상태값(LOADED / EMPTY)과 카메라 2의 회전 판정값(OK / FAIL)을 조합하면 4가지 경우의 수가 생긴다. 이 조합이 최종 판정의 전부다.</p>
+
+  <div class="matrix-grid">
+    <div class="matrix-cell mc-pass">
+      <div class="mc-label">케이스 A · 정상</div>
+      <div class="mc-result">LOADED + OK → PASS</div>
+      <div class="mc-desc">도장 대상 있음 + 톱니 정상 회전. 정상 통과. 별도 조치 불필요.</div>
+    </div>
+    <div class="matrix-cell mc-alarm">
+      <div class="mc-label">케이스 B · 경보</div>
+      <div class="mc-result">LOADED + FAIL → ALARM</div>
+      <div class="mc-desc">도장 대상 있음 + 회전 불량. 핵심 감지 대상. 즉시 인터락 신호 발생.</div>
+    </div>
+    <div class="matrix-cell mc-skip">
+      <div class="mc-label">케이스 C · 무시</div>
+      <div class="mc-result">EMPTY + FAIL → SKIP</div>
+      <div class="mc-desc">빈 후크 + 회전 없음. 이는 정상이다. 카메라 2 판정 결과를 무시하고 로그만 기록.</div>
+    </div>
+    <div class="matrix-cell mc-warn">
+      <div class="mc-label">케이스 D · 데이터 검토</div>
+      <div class="mc-result">EMPTY + OK → LOG</div>
+      <div class="mc-desc">빈 후크인데 회전이 감지됨. 발생 빈도가 낮아야 정상. 높으면 카메라 1 오탐 가능성 검토.</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+<span class="kw">def</span> <span class="nm">final_judgment</span>(hook_status, rotation_ok):
+    <span class="kw">if</span> hook_status == <span class="st">"LOADED"</span> <span class="kw">and</span> rotation_ok:
+        <span class="kw">return</span> <span class="st">"PASS"</span>        <span class="cm"># 정상</span>
+    <span class="kw">elif</span> hook_status == <span class="st">"LOADED"</span> <span class="kw">and not</span> rotation_ok:
+        <span class="kw">return</span> <span class="st">"ALARM"</span>       <span class="cm"># 회전 불량 — 인터락 신호 발생</span>
+    <span class="kw">elif</span> hook_status == <span class="st">"EMPTY"</span>:
+        log_skip(rotation_ok)    <span class="cm"># 회전 결과 무관하게 스킵 (로그만)</span>
+        <span class="kw">return</span> <span class="st">"SKIP"</span>
+  </div>
+
+  <div class="conclusion">
+    <div class="c-label">판정 설계 핵심 원칙</div>
+    <div class="c-title">회전 판정은 LOADED 상태에서만 유효하다</div>
+    <div class="c-body">빈 후크(EMPTY)에서 회전 불량이 감지되는 것은 <strong>물리적으로 당연한 현상</strong>이며 불량이 아니다. 이를 무시하지 않으면 오경보율이 급증하고 운용자 신뢰도가 떨어진다. 따라서 후크 상태값은 단순한 참고 데이터가 아니라, <strong>회전 판정의 전제 조건(Gate)</strong>으로 설계해야 한다.</div>
+  </div>
+</section>
+
+<!-- 5. 구현 방법 비교 -->
+<section id="method">
+  <h2><span class="num">5</span> 구현 방법 비교 — 방법 A vs 방법 B</h2>
+
+  <p>카메라 2가 빈 후크의 회전 판정을 무시하는 방식은 두 가지로 구현할 수 있다. 두 방법은 "언제 무시할 것인가"의 타이밍이 다르다.</p>
+
+  <div class="card-grid">
+    <div class="card" style="border-left: 3px solid var(--teal);">
+      <div class="card-label"><span class="badge badge-teal">방법 A (권장)</span> — 판정 후 무시</div>
+      <div class="card-title">탐지는 하되, 판정 단계에서 조건 분기</div>
+      <div class="card-body">
+        카메라 2는 항상 톱니를 감지하고 회전 상태를 판정한다. 단, 최종 판정 함수에서 후크 상태값이 EMPTY이면 결과를 무시(SKIP)하고 로그만 남긴다.<br><br>
+        <strong>장점:</strong> 구조 단순, 빈 후크 회전 데이터도 별도 수집 가능, 타이밍 오류 시 안전 측에서 동작<br>
+        <strong>단점:</strong> GPU 추론이 항상 수행됨 (연산 낭비 소폭 발생)
+      </div>
+    </div>
+    <div class="card" style="border-left: 3px solid var(--gray);">
+      <div class="card-label"><span class="badge badge-gray">방법 B</span> — 추론 자체 스킵</div>
+      <div class="card-title">프레임 수신 시 큐 선조회, EMPTY면 추론 생략</div>
+      <div class="card-body">
+        카메라 2가 프레임을 받기 전에 큐를 조회하여 해당 후크가 EMPTY이면 모델 추론 자체를 건너뛴다.<br><br>
+        <strong>장점:</strong> Edge 연산 부하 절감 (특히 빈 후크 비율이 높은 라인에서 유리)<br>
+        <strong>단점:</strong> 큐 조회 타이밍이 빠를 경우 LOADED 후크를 스킵하는 사고 위험. 타이밍 정밀도 요구 수준이 높음
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>비교 항목</th>
+          <th>방법 A (판정 후 무시)</th>
+          <th>방법 B (추론 스킵)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>무시 타이밍</strong></td>
+          <td>추론 완료 후 판정 함수에서 분기</td>
+          <td>프레임 수신 시 선조회 후 추론 전 분기</td>
+        </tr>
+        <tr>
+          <td><strong>GPU 연산</strong></td>
+          <td><span class="cmp-mid">항상 수행</span></td>
+          <td><span class="cmp-good">LOADED 후크만 수행</span></td>
+        </tr>
+        <tr>
+          <td><strong>오탐 안전성</strong></td>
+          <td><span class="cmp-good">높음</span> (추론 후 조건 분기이므로 안전)</td>
+          <td><span class="cmp-mid">중간</span> (타이밍 오류 시 LOADED 스킵 위험)</td>
+        </tr>
+        <tr>
+          <td><strong>빈 후크 데이터 수집</strong></td>
+          <td><span class="cmp-good">가능</span> (로그 기록)</td>
+          <td><span class="cmp-bad">불가</span> (추론 미수행)</td>
+        </tr>
+        <tr>
+          <td><strong>구현 복잡도</strong></td>
+          <td><span class="cmp-good">낮음</span></td>
+          <td><span class="cmp-mid">중간</span> (큐 선조회 타이밍 정밀 설계 필요)</td>
+        </tr>
+        <tr>
+          <td><strong>권장 적용 조건</strong></td>
+          <td>초기 도입 / 라인 속도 변동 큰 환경</td>
+          <td>Edge 리소스 제약 심하고 빈 후크 비율이 높은 환경</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. 전체 파이프라인 -->
+<section id="pipeline">
+  <h2><span class="num">6</span> 전체 판정 파이프라인</h2>
+
+  <p>기존 AI 개발검토보고서(Rev 7.0)에 정의된 Optical Flow → GRU 파이프라인은 그대로 유지하고, 앞단에 카메라 1 후크 감지 모듈과 큐 연동 레이어만 추가한다.</p>
+
+  <h3>카메라 1 파이프라인</h3>
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="ps-label">프레임 입력</div>
+      카메라 1<br>고정 설치
+    </div>
+    <div class="pipe-sep"></div>
+    <div class="pipe-step highlight">
+      <div class="ps-label">YOLO 검출</div>
+      hook / object<br>2-class
+    </div>
+    <div class="pipe-sep"></div>
+    <div class="pipe-step highlight">
+      <div class="ps-label">적재 판정</div>
+      LOADED<br>EMPTY
+    </div>
+    <div class="pipe-sep"></div>
+    <div class="pipe-step gate">
+      <div class="ps-label">큐 Push</div>
+      hook_id<br>eta_cam2
+    </div>
+  </div>
+
+  <h3>카메라 2 파이프라인 (방법 A 기준)</h3>
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="ps-label">프레임 입력</div>
+      카메라 2<br>회전 구간
+    </div>
+    <div class="pipe-sep"></div>
+    <div class="pipe-step">
+      <div class="ps-label">고정 ROI</div>
+      톱니 영역<br>지정
+    </div>
+    <div class="pipe-sep"></div>
+    <div class="pipe-step">
+      <div class="ps-label">Optical Flow</div>
+      Farneback<br>속도 맵
+    </div>
+    <div class="pipe-sep"></div>
+    <div class="pipe-step">
+      <div class="ps-label">GRU 판정</div>
+      OK / FAIL<br>시계열 분류
+    </div>
+    <div class="pipe-sep"></div>
+    <div class="pipe-step gate">
+      <div class="ps-label">큐 Pop + 분기</div>
+      LOADED?<br>EMPTY?
+    </div>
+    <div class="pipe-sep"></div>
+    <div class="pipe-step highlight">
+      <div class="ps-label">최종 출력</div>
+      PASS / ALARM<br>SKIP
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">기존 파이프라인과의 호환성</div>
+    <div class="info-body">
+      카메라 2의 Optical Flow → GRU 판정 흐름은 기존 Rev 7.0 설계와 완전히 동일하다. 신규 추가되는 요소는 ① 카메라 1 YOLO 모듈, ② 후크 상태 큐(소프트웨어 레이어), ③ 판정 함수 내 조건 분기 3가지뿐이다. 기존 학습 데이터 및 GRU 모델은 재학습 없이 그대로 사용 가능하다.
+    </div>
+  </div>
+</section>
+
+<!-- 7. 리스크 -->
+<section id="risk">
+  <h2><span class="num">7</span> 리스크 및 대응 방안</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>리스크</th>
+          <th>발생 조건</th>
+          <th>영향</th>
+          <th>대응 방안</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>큐 매칭 실패</strong></td>
+          <td>컨베이어 속도 급변 또는 엔코더 미연동</td>
+          <td>후크 상태값이 틀린 후크에 매칭됨</td>
+          <td>허용 오차 창(tolerance window) 적절히 설정. 엔코더 연동 우선 검토.</td>
+        </tr>
+        <tr>
+          <td><strong>카메라 1 오탐 (EMPTY → LOADED 오판)</strong></td>
+          <td>분진, 역광, 부분 가림</td>
+          <td>LOADED 후크가 EMPTY로 판정 → 회전 불량 미감지</td>
+          <td>카메라 1 모델 정확도 목표 Recall ≥ 0.95 (LOADED 클래스). 분진 Augmentation 필수.</td>
+        </tr>
+        <tr>
+          <td><strong>카메라 1 오탐 (LOADED → EMPTY 오판)</strong></td>
+          <td>동일 환경</td>
+          <td>실제 불량이 SKIP 처리됨 — 미검출</td>
+          <td>위와 동일. LOADED → EMPTY 오판이 더 치명적이므로 Recall 최우선 최적화.</td>
+        </tr>
+        <tr>
+          <td><strong>큐 TTL 초과 (항목 만료)</strong></td>
+          <td>카메라 2 처리 지연이 예측보다 큰 경우</td>
+          <td>큐 항목이 만료되어 매칭 불가</td>
+          <td>TTL을 예측 도달 시간의 1.5배로 설정. 만료 시 기본값을 LOADED로 설정(안전 측).</td>
+        </tr>
+        <tr>
+          <td><strong>후크 간격 불규칙</strong></td>
+          <td>수동 걸기 작업으로 간격 편차 발생</td>
+          <td>큐 순서 불일치</td>
+          <td>타임스탬프 기반 매칭 사용. 순서 인덱스보다 시간 기반 ETA 매칭이 안정적.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>안전 측 원칙:</strong> 큐 매칭에 실패하거나 TTL 초과로 후크 상태값을 확인할 수 없는 경우, 기본값을 <strong>LOADED(적재 있음)</strong>으로 처리한다. 이렇게 하면 불필요한 경보가 소폭 증가할 수 있으나, 실제 회전 불량을 미감지하는 치명적 실패는 방지된다.</p>
+  </div>
+</section>
+
+<!-- 8. 체크리스트 -->
+<section id="checklist">
+  <h2><span class="num">8</span> 구현 전제 조건 체크리스트</h2>
+  <p>본 설계를 현장에 투입하기 전 반드시 완료해야 할 항목이다.</p>
+
+  <ul class="checklist">
+    <li>
+      <div class="chk"></div>
+      <div>
+        <span class="chk-label">① 카메라 1 설치 위치 확정</span>
+        <span class="chk-desc">회전 유도장치 진입 전 구간에서 후크와 도장 대상물이 동시에 프레임 내에 포착되는 위치 실측. 최소 조도 조건 및 분진 환경 하 시인성 확인.</span>
+      </div>
+    </li>
+    <li>
+      <div class="chk"></div>
+      <div>
+        <span class="chk-label">② 카메라 1 YOLO 학습 데이터 구축</span>
+        <span class="chk-desc">hook / object 2-class 라벨링. 빈 후크 / 적재 후크 / 부분 가림 / 분진 환경 포함. 현장 실촬영 이미지 최소 수백 장 이상 확보. Augmentation: 분진, 역광, 명암 변화.</span>
+      </div>
+    </li>
+    <li>
+      <div class="chk"></div>
+      <div>
+        <span class="chk-label">③ 카메라 1 YOLO 정확도 검증</span>
+        <span class="chk-desc">LOADED 클래스 Recall ≥ 0.95 (미감지가 오경보보다 치명적). EMPTY 클래스 Precision ≥ 0.90. 분진 환경 별도 테스트셋으로 검증 필수.</span>
+      </div>
+    </li>
+    <li>
+      <div class="chk"></div>
+      <div>
+        <span class="chk-label">④ 컨베이어 엔코더 연동 또는 속도 추정 방식 확정</span>
+        <span class="chk-desc">엔코더 신호 직접 연동이 최선. 불가 시 카메라 1의 bbox 이동량 기반 속도 추정 구현. 속도 추정 오차가 허용 오차 창(tolerance) 내에 들어오는지 현장 실측으로 검증.</span>
+      </div>
+    </li>
+    <li>
+      <div class="chk"></div>
+      <div>
+        <span class="chk-label">⑤ 두 카메라 간 물리적 거리 실측 및 ETA 산출 검증</span>
+        <span class="chk-desc">카메라 1 감지 지점 ~ 카메라 2 감지 지점 간 거리 정밀 측정. 실제 ETA 오차를 테스트 운전으로 측정하고 tolerance 범위 설정.</span>
+      </div>
+    </li>
+    <li>
+      <div class="chk"></div>
+      <div>
+        <span class="chk-label">⑥ 후크 상태 큐 소프트웨어 구현 및 단위 테스트</span>
+        <span class="chk-desc">FIFO 큐 push/pop, TTL 관리, 타임스탬프 기반 매칭, 만료 시 LOADED 기본값 처리 로직 구현. 실제 컨베이어 속도 범위에서 매칭 성공률 ≥ 99% 목표.</span>
+      </div>
+    </li>
+    <li>
+      <div class="chk"></div>
+      <div>
+        <span class="chk-label">⑦ 통합 판정 함수 검증 (4-case 매트릭스)</span>
+        <span class="chk-desc">LOADED+OK, LOADED+FAIL, EMPTY+FAIL, EMPTY+OK 4가지 케이스 각각에 대해 의도된 출력(PASS, ALARM, SKIP, LOG)이 정확히 생성되는지 테스트 케이스 작성 후 검증.</span>
+      </div>
+    </li>
+    <li>
+      <div class="chk"></div>
+      <div>
+        <span class="chk-label">⑧ Edge 전체 파이프라인 레이턴시 재측정</span>
+        <span class="chk-desc">카메라 1 YOLO 추론이 추가되었으므로 Jetson Orin Nano 8G에서 전체 레이턴시 재측정. 0.5초 인터락 기준 유지 여부 확인. 필요 시 TensorRT FP16 변환 적용.</span>
+      </div>
+    </li>
+  </ul>
+</section>
+
+</main>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav ul li a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const link = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
