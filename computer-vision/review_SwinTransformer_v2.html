@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swin Transformer 논문 리뷰</title>
+<style>
+:root {
+  --bg:#f5f4f0; --bg2:#ffffff; --bg3:#eeecea;
+  --text:#1a1a18; --text2:#5a5955; --text3:#9c9a92;
+  --border:rgba(0,0,0,0.1); --border2:rgba(0,0,0,0.18);
+  --blue:#185FA5; --blue-bg:#E6F1FB;
+  --teal:#0F6E56; --teal-bg:#E1F5EE;
+  --amber:#854F0B; --amber-bg:#FAEEDA; --amber-mid:#EF9F27;
+  --coral:#993C1D; --coral-bg:#FAECE7;
+  --green:#3B6D11; --green-bg:#EAF3DE;
+  --purple:#534AB7; --purple-bg:#EEEDFE;
+  --red:#A32D2D; --red-bg:#FCEBEB;
+  --gray:#5F5E5A; --gray-bg:#F1EFE8;
+  --radius:12px; --radius-sm:8px;
+}
+@media (prefers-color-scheme:dark) {
+  :root {
+    --bg:#1a1a18; --bg2:#242422; --bg3:#2e2e2b;
+    --text:#e8e6de; --text2:#a8a69e; --text3:#6e6c65;
+    --border:rgba(255,255,255,0.09); --border2:rgba(255,255,255,0.16);
+    --blue:#85B7EB; --blue-bg:#042C53;
+    --teal:#5DCAA5; --teal-bg:#04342C;
+    --amber:#FAC775; --amber-bg:#412402; --amber-mid:#EF9F27;
+    --coral:#F0997B; --coral-bg:#4A1B0C;
+    --green:#97C459; --green-bg:#173404;
+    --purple:#AFA9EC; --purple-bg:#26215C;
+    --red:#F09595; --red-bg:#501313;
+    --gray:#B4B2A9; --gray-bg:#2C2C2A;
+  }
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',sans-serif; background:var(--bg); color:var(--text); font-size:15px; line-height:1.7; }
+.layout { display:flex; min-height:100vh; }
+
+/* NAV */
+nav { width:240px; flex-shrink:0; background:var(--bg2); border-right:0.5px solid var(--border); position:sticky; top:0; height:100vh; overflow-y:auto; padding:24px 0 40px; }
+nav .logo { padding:0 20px 20px; border-bottom:0.5px solid var(--border); margin-bottom:16px; }
+nav .logo .tag { font-size:10px; font-weight:500; letter-spacing:.08em; color:var(--text3); text-transform:uppercase; margin-bottom:4px; }
+nav .logo .title { font-size:13px; font-weight:500; color:var(--text); line-height:1.4; }
+nav ul { list-style:none; padding:0 8px; }
+nav ul li a { display:block; padding:7px 12px; border-radius:6px; font-size:13px; color:var(--text2); text-decoration:none; transition:background .15s,color .15s; }
+nav ul li a:hover { background:var(--bg3); color:var(--text); }
+nav ul li a.active { background:var(--blue-bg); color:var(--blue); font-weight:500; }
+nav ul li .sl { font-size:10px; font-weight:500; letter-spacing:.08em; color:var(--text3); text-transform:uppercase; padding:12px 12px 4px; display:block; }
+
+/* MAIN */
+main { flex:1; min-width:0; max-width:860px; padding:48px 40px 80px; }
+
+/* HEADER */
+.doc-header { margin-bottom:40px; padding-bottom:32px; border-bottom:0.5px solid var(--border); }
+.doc-header .eyebrow { font-size:12px; font-weight:500; color:var(--text3); letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
+.doc-header h1 { font-size:26px; font-weight:500; line-height:1.3; margin-bottom:6px; }
+.doc-header .subtitle { font-size:15px; color:var(--text2); margin-bottom:20px; }
+.meta-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+.meta-item { background:var(--bg2); border:0.5px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; }
+.meta-item .label { font-size:11px; color:var(--text3); margin-bottom:3px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; }
+.meta-item .value { font-size:13px; font-weight:500; color:var(--text); }
+.meta-item a { color:var(--blue); font-size:12px; text-decoration:none; }
+.case-badge { display:inline-flex; align-items:center; gap:8px; background:var(--purple-bg); border:1px solid var(--purple); border-radius:20px; padding:4px 14px 4px 10px; font-size:12px; font-weight:500; color:var(--purple); margin-bottom:16px; }
+.case-badge .dot { width:8px; height:8px; border-radius:50%; background:var(--purple); }
+
+/* SECTION */
+section { margin-bottom:56px; scroll-margin-top:24px; }
+section h2 { font-size:20px; font-weight:500; margin-bottom:16px; padding-bottom:10px; border-bottom:0.5px solid var(--border); display:flex; align-items:center; gap:10px; }
+section h2 .num { font-size:12px; font-weight:500; background:var(--blue-bg); color:var(--blue); border-radius:20px; padding:2px 9px; }
+section h3 { font-size:16px; font-weight:500; margin:28px 0 10px; }
+p { color:var(--text2); margin-bottom:12px; }
+code { font-family:'Menlo','Monaco','Courier New',monospace; font-size:12px; background:var(--bg3); padding:2px 6px; border-radius:4px; color:var(--text); }
+a { color:var(--blue); text-decoration:none; }
+a:hover { text-decoration:underline; }
+
+/* BLOCKS */
+.q-block { border-left:3px solid var(--blue); background:var(--blue-bg); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:14px 18px; margin-bottom:8px; }
+.q-block .q-label { font-size:10px; font-weight:500; color:var(--blue); letter-spacing:.07em; text-transform:uppercase; margin-bottom:4px; }
+.q-block .q-text { font-size:14px; color:var(--text); font-weight:500; line-height:1.5; }
+.a-block { border-left:3px solid var(--teal); background:var(--teal-bg); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:14px 18px; margin-bottom:16px; }
+.a-block .a-label { font-size:10px; font-weight:500; color:var(--teal); letter-spacing:.07em; text-transform:uppercase; margin-bottom:4px; }
+.a-block .a-text { font-size:13px; color:var(--text2); line-height:1.6; }
+.a-block .a-text strong { color:var(--text); }
+.insight-block { border-left:3px solid var(--amber-mid); background:var(--amber-bg); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:14px 18px; margin-bottom:8px; }
+.insight-block .i-label { font-size:10px; font-weight:500; color:var(--amber); letter-spacing:.07em; text-transform:uppercase; margin-bottom:4px; }
+.insight-block .i-text { font-size:13px; color:var(--text2); line-height:1.6; }
+.insight-block .i-text strong { color:var(--text); }
+.wrong-block { border-left:3px solid var(--red); background:var(--red-bg); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:14px 18px; margin-bottom:8px; }
+.wrong-block .w-label { font-size:10px; font-weight:500; color:var(--red); letter-spacing:.07em; text-transform:uppercase; margin-bottom:4px; }
+.wrong-block .w-text { font-size:13px; color:var(--text2); line-height:1.6; }
+.wrong-block .w-text strong { color:var(--text); }
+.callout { border-left:3px solid var(--amber-mid); background:var(--amber-bg); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:14px 18px; margin-bottom:16px; }
+.callout p { margin:0; font-size:13px; color:var(--text2); }
+.callout strong { color:var(--text); }
+.conclusion { background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius); padding:20px 24px; margin:20px 0; }
+.conclusion .c-label { font-size:10px; font-weight:500; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:8px; }
+.conclusion .c-title { font-size:16px; font-weight:500; color:var(--text); margin-bottom:10px; }
+.conclusion .c-body { font-size:13px; color:var(--text2); line-height:1.7; }
+.conclusion .c-body strong { color:var(--text); }
+
+/* CARD */
+.card { background:var(--bg2); border:0.5px solid var(--border); border-radius:var(--radius); padding:20px 24px; margin-bottom:16px; }
+.card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:16px; }
+.card-grid .card { margin-bottom:0; }
+.card .card-label { font-size:11px; color:var(--text3); font-weight:500; letter-spacing:.05em; text-transform:uppercase; margin-bottom:6px; }
+.card .card-title { font-size:15px; font-weight:500; margin-bottom:6px; color:var(--text); }
+.card .card-body { font-size:13px; color:var(--text2); line-height:1.6; }
+
+/* INFO BOX */
+.info-box { background:var(--bg2); border:0.5px solid var(--border2); border-radius:var(--radius); padding:20px 24px; margin-bottom:20px; }
+.info-box .info-title { font-size:13px; font-weight:500; color:var(--text3); letter-spacing:.05em; text-transform:uppercase; margin-bottom:10px; }
+.info-box .info-body { font-size:13px; color:var(--text2); line-height:1.7; }
+.info-box .info-body strong { color:var(--text); }
+
+/* TABLE */
+.table-wrap { overflow-x:auto; margin-bottom:16px; border:0.5px solid var(--border); border-radius:var(--radius); }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead tr { background:var(--bg3); }
+th { padding:10px 14px; text-align:left; font-weight:500; color:var(--text2); font-size:12px; letter-spacing:.04em; border-bottom:0.5px solid var(--border); white-space:nowrap; }
+td { padding:10px 14px; color:var(--text2); border-bottom:0.5px solid var(--border); vertical-align:top; line-height:1.5; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--bg3); }
+.cmp-good { color:var(--teal); font-weight:500; }
+.cmp-bad { color:var(--red); font-weight:500; }
+.cmp-mid { color:var(--amber); font-weight:500; }
+
+/* SVG */
+.svg-wrap { margin:16px 0 20px; overflow-x:auto; background:var(--bg2); border:0.5px solid var(--border); border-radius:var(--radius); padding:16px 12px; }
+
+/* STEP LIST */
+.step-list { list-style:none; padding:0; }
+.step-list li { display:flex; gap:14px; padding:12px 0; border-bottom:0.5px solid var(--border); font-size:13px; color:var(--text2); }
+.step-list li:last-child { border-bottom:none; }
+.step-num { width:24px; height:24px; border-radius:50%; background:var(--blue-bg); color:var(--blue); font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.step-list li .step-title { font-weight:500; color:var(--text); display:block; margin-bottom:2px; }
+.step-list li .step-desc { font-size:12px; color:var(--text3); display:block; margin-top:2px; }
+
+/* REF / FORMULA */
+.ref-box { background:var(--bg3); border:0.5px solid var(--border); border-radius:var(--radius-sm); padding:14px 18px; margin-top:12px; }
+.ref-box .ref-label { font-size:10px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px; }
+.ref-box a { font-size:12px; color:var(--blue); text-decoration:none; display:block; margin-bottom:4px; }
+.ref-box a:hover { text-decoration:underline; }
+.formula-box { background:var(--bg3); border:0.5px solid var(--border); border-radius:var(--radius-sm); padding:16px 20px; margin:12px 0 16px; text-align:center; font-family:'Menlo','Monaco',monospace; font-size:13px; color:var(--text); line-height:2; }
+
+/* BADGE */
+.badge { display:inline-block; font-size:11px; font-weight:500; border-radius:20px; padding:2px 9px; }
+.badge-blue { background:var(--blue-bg); color:var(--blue); }
+.badge-teal { background:var(--teal-bg); color:var(--teal); }
+.badge-amber { background:var(--amber-bg); color:var(--amber); }
+.badge-red { background:var(--red-bg); color:var(--red); }
+.badge-purple { background:var(--purple-bg); color:var(--purple); }
+
+/* WIDGET */
+.widget-wrap { background:var(--bg2); border:0.5px solid var(--border); border-radius:var(--radius); padding:20px; margin:16px 0 20px; }
+.widget-btns { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+.wbtn { padding:5px 14px; font-size:12px; border:0.5px solid var(--border2); border-radius:6px; background:var(--bg); color:var(--text2); cursor:pointer; font-family:inherit; transition:background .15s,color .15s; }
+.wbtn.on { background:#185FA5; color:#E6F1FB; border-color:#185FA5; }
+.wbtn:hover:not(.on) { background:var(--bg3); color:var(--text); }
+.widget-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.widget-cv-label { font-size:12px; color:var(--text3); font-weight:500; margin-bottom:6px; min-height:18px; }
+.widget-cv { display:block; border:0.5px solid var(--border); border-radius:4px; width:100%; height:auto; }
+.widget-desc { background:var(--bg3); border-radius:var(--radius-sm); border:0.5px solid var(--border); padding:12px 14px; font-size:13px; line-height:1.65; color:var(--text2); margin-top:12px; }
+.widget-desc strong { color:var(--text); }
+.widget-legend { display:flex; gap:12px; flex-wrap:wrap; margin:8px 0 4px; }
+.wleg { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text2); }
+.wleg-dot { width:12px; height:12px; border-radius:2px; flex-shrink:0; }
+.row-strip { margin-top:14px; }
+.row-strip-label { font-size:11px; color:var(--text3); font-weight:500; margin-bottom:6px; }
+.row-strip-row { display:flex; gap:3px; align-items:center; margin-bottom:4px; }
+.row-strip-tag { font-size:10px; color:var(--text3); width:52px; flex-shrink:0; }
+.row-cell { width:26px; height:24px; border-radius:3px; font-size:10px; font-weight:500; display:flex; align-items:center; justify-content:center; border:1px solid transparent; }
+
+/* GELU canvas full width */
+.gelu-canvas-wrap { width:100%; overflow-x:auto; }
+.gelu-canvas-wrap canvas { display:block; border:0.5px solid var(--border); border-radius:4px; }
+.probe-row { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+.probe-out { display:flex; gap:8px; flex-wrap:wrap; }
+.probe-card { background:var(--bg3); border-radius:4px; padding:4px 10px; font-size:12px; color:var(--text2); }
+.probe-card strong { font-weight:500; }
+
+@media (max-width:720px) {
+  nav { display:none; }
+  main { padding:24px 20px 60px; }
+  .widget-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav>
+  <div class="logo">
+    <div class="tag">논문 리뷰 노트</div>
+    <div class="title">Swin Transformer<br>리뷰 v2</div>
+  </div>
+  <ul>
+    <li><span class="sl">개요</span></li>
+    <li><a href="#overview">논문 기본 정보</a></li>
+    <li><a href="#problem">핵심 문제 정의</a></li>
+    <li><span class="sl">핵심 개념</span></li>
+    <li><a href="#hierarchical">Hierarchical Feature Map</a></li>
+    <li><a href="#window-attn">Window Self-Attention</a></li>
+    <li><a href="#complexity">계산 복잡도</a></li>
+    <li><span class="sl">아키텍처</span></li>
+    <li><a href="#architecture">전체 구조 (3.1)</a></li>
+    <li><a href="#patch-merging">Patch Merging</a></li>
+    <li><a href="#shifted-window">Shifted Window (3.2)</a></li>
+    <li><a href="#cyclic-shift">Cyclic Shift 상세</a></li>
+    <li><a href="#cyclic-detail">Shift 전체 흐름 시각화</a></li>
+    <li><a href="#rel-pos">Relative Position Bias</a></li>
+    <li><a href="#gelu">GELU 활성화 함수</a></li>
+    <li><span class="sl">활용 & 호환성</span></li>
+    <li><a href="#cnn-compat">CNN 파이프라인 호환성</a></li>
+    <li><a href="#variants">모델 변형 (3.3)</a></li>
+    <li><span class="sl">결과 & 요약</span></li>
+    <li><a href="#results">실험 결과 (4)</a></li>
+    <li><a href="#summary">핵심 요약</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<!-- HEADER -->
+<div class="doc-header">
+  <div class="eyebrow">논문 리뷰 노트</div>
+  <div class="case-badge"><span class="dot"></span>ICCV 2021 Best Paper — Vision Transformer</div>
+  <h1>Swin Transformer 논문 리뷰</h1>
+  <p class="subtitle">Hierarchical Vision Transformer using Shifted Windows — 논문 원문 기반 정리 + 대화식 부가 설명</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">논문</div><div class="value">Swin Transformer: Hierarchical Vision Transformer using Shifted Windows</div></div>
+    <div class="meta-item"><div class="label">발표</div><div class="value">ICCV 2021 Best Paper</div></div>
+    <div class="meta-item"><div class="label">저자</div><div class="value">Ze Liu 외 (Microsoft Research Asia)</div></div>
+    <div class="meta-item"><div class="label">원문 PDF</div><div class="value"><a href="https://arxiv.org/pdf/2103.14030">arxiv.org/pdf/2103.14030</a></div></div>
+    <div class="meta-item"><div class="label">공식 코드</div><div class="value"><a href="https://github.com/microsoft/Swin-Transformer">github.com/microsoft/Swin-Transformer</a></div></div>
+    <div class="meta-item"><div class="label">참고 블로그</div><div class="value"><a href="https://rahites.tistory.com/180">rahites.tistory.com/180</a></div></div>
+  </div>
+</div>
+
+
+<!-- ======================== 1. 개요 ======================== -->
+<section id="overview">
+  <h2><span class="num">개요</span> 논문 기본 정보 — Abstract & Introduction</h2>
+
+  <p>Swin Transformer는 Microsoft Research Asia에서 2021년 발표한 논문으로 ICCV 2021 Best Paper Award를 수상했다. 논문 제목의 <strong>Swin</strong>은 <strong>S</strong>hifted <strong>Win</strong>dows의 약자다.</p>
+
+  <div class="info-box">
+    <div class="info-title">논문 한 줄 요약 (Abstract)</div>
+    <div class="info-body">
+      Visual Entity의 크기 다양성과 픽셀 해상도 문제를 극복하기 위해 <strong>Shifted Windows 기반의 Hierarchical Transformer</strong>를 제안한다. Self-Attention을 비중첩 로컬 Window 내부로 제한해 <strong>이미지 크기에 선형인 계산 복잡도</strong>를 달성하면서도 Cross-Window 연결을 허용한다.
+    </div>
+  </div>
+
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 130" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="a0" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="a0p" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="14" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1. Swin Transformer 전체 파이프라인 (Swin-T 기준)</text>
+      <rect x="8" y="24" width="76" height="56" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="46" y="47" text-anchor="middle" font-size="10" font-weight="500" fill="#444441">입력 이미지</text>
+      <text x="46" y="61" text-anchor="middle" font-size="9" fill="#5F5E5A">H×W×3</text>
+      <text x="46" y="74" text-anchor="middle" font-size="9" fill="#9c9a92">RGB</text>
+      <line x1="84" y1="52" x2="100" y2="52" stroke="#888780" stroke-width="1" marker-end="url(#a0)"/>
+
+      <rect x="102" y="24" width="88" height="56" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="146" y="45" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">Patch Partition</text>
+      <text x="146" y="59" text-anchor="middle" font-size="9" fill="#534AB7">4×4 패치</text>
+      <text x="146" y="72" text-anchor="middle" font-size="9" fill="#AFA9EC">48차원 벡터</text>
+      <line x1="190" y1="52" x2="206" y2="52" stroke="#534AB7" stroke-width="1" marker-end="url(#a0p)"/>
+
+      <rect x="208" y="18" width="96" height="68" rx="6" fill="#dbeafe" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="256" y="38" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">Stage 1</text>
+      <text x="256" y="51" text-anchor="middle" font-size="9" fill="#185FA5">H/4×W/4×C</text>
+      <text x="256" y="63" text-anchor="middle" font-size="9" fill="#185FA5">Linear Emb.</text>
+      <text x="256" y="75" text-anchor="middle" font-size="9" fill="#85B7EB">W-MSA+SW-MSA ×2</text>
+      <line x1="304" y1="52" x2="320" y2="52" stroke="#888780" stroke-width="1" marker-end="url(#a0)"/>
+
+      <rect x="322" y="18" width="96" height="68" rx="6" fill="#d1fae5" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="370" y="38" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">Stage 2</text>
+      <text x="370" y="51" text-anchor="middle" font-size="9" fill="#0F6E56">H/8×W/8×2C</text>
+      <text x="370" y="63" text-anchor="middle" font-size="9" fill="#0F6E56">Patch Merging</text>
+      <text x="370" y="75" text-anchor="middle" font-size="9" fill="#5DCAA5">+Swin Block ×2</text>
+      <line x1="418" y1="52" x2="434" y2="52" stroke="#888780" stroke-width="1" marker-end="url(#a0)"/>
+
+      <rect x="436" y="18" width="96" height="68" rx="6" fill="#fce7f3" stroke="#993556" stroke-width="1.5"/>
+      <text x="484" y="38" text-anchor="middle" font-size="10" font-weight="500" fill="#72243E">Stage 3</text>
+      <text x="484" y="51" text-anchor="middle" font-size="9" fill="#993556">H/16×W/16×4C</text>
+      <text x="484" y="63" text-anchor="middle" font-size="9" fill="#993556">Patch Merging</text>
+      <text x="484" y="75" text-anchor="middle" font-size="9" fill="#ED93B1">+Swin Block ×6</text>
+      <line x1="532" y1="52" x2="548" y2="52" stroke="#888780" stroke-width="1" marker-end="url(#a0)"/>
+
+      <rect x="550" y="18" width="96" height="68" rx="6" fill="#fef9c3" stroke="#854F0B" stroke-width="1.5"/>
+      <text x="598" y="38" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">Stage 4</text>
+      <text x="598" y="51" text-anchor="middle" font-size="9" fill="#854F0B">H/32×W/32×8C</text>
+      <text x="598" y="63" text-anchor="middle" font-size="9" fill="#854F0B">Patch Merging</text>
+      <text x="598" y="75" text-anchor="middle" font-size="9" fill="#EF9F27">+Swin Block ×2</text>
+
+      <text x="350" y="112" text-anchor="middle" font-size="10" fill="#9c9a92">각 Stage 출력이 Hierarchical Feature Map — FPN/U-Net에 그대로 연결 가능 (CNN 백본과 동일한 구조)</text>
+      <text x="350" y="126" text-anchor="middle" font-size="10" fill="#9c9a92">논문 Figure 3 원본: <a href="https://rahites.tistory.com/180">rahites.tistory.com/180</a></text>
+    </svg>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--purple)">핵심 기여 ①</div>
+      <div class="card-title">Hierarchical Feature Map</div>
+      <div class="card-body">4개 Stage에서 H/4·H/8·H/16·H/32 해상도의 Feature Map을 생성. CNN 백본(ResNet 등)과 동일한 구조로 FPN, U-Net과 직접 연결 가능.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">핵심 기여 ②</div>
+      <div class="card-title">Window Self-Attention</div>
+      <div class="card-body">M×M Window 내부에서만 Attention 수행. 이미지 크기에 O(N) 선형 복잡도 달성. M=7 고정 시 Window 내 연산량은 이미지 크기와 무관.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">핵심 기여 ③</div>
+      <div class="card-title">Shifted Window</div>
+      <div class="card-body">Cyclic Shift + Masking으로 Window 경계 정보 단절 문제 해결. 계산량 증가 없이 Cross-Window 정보 교환. Sliding Window 대비 Latency 낮음.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================== 2. 문제 정의 ======================== -->
+<section id="problem">
+  <h2><span class="num">배경</span> 핵심 문제 정의 — ViT의 한계 (Introduction)</h2>
+
+  <p>논문은 Transformer를 Vision에 적용할 때 두 가지 근본적인 어려움이 있다고 지적한다.</p>
+
+  <div class="wrong-block">
+    <div class="w-label">문제 1 — Visual Entity의 크기 다양성</div>
+    <div class="w-text">언어 Transformer의 단어 Token과 달리 <strong>이미지의 객체 크기는 천차만별이다.</strong> Object Detection처럼 다양한 크기의 예측이 필요한 태스크에서 ViT의 단일 해상도는 치명적 약점이 된다.</div>
+  </div>
+
+  <div class="wrong-block">
+    <div class="w-label">문제 2 — 픽셀 해상도의 Quadratic 복잡도</div>
+    <div class="w-text">ViT는 모든 Patch 쌍에 대해 Self-Attention을 수행해 <strong>계산량이 이미지 크기의 제곱에 비례</strong>한다. 픽셀 수준 Dense Prediction(Semantic Segmentation)에는 사실상 적용 불가능하다.</div>
+  </div>
+
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <text x="350" y="14" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 2. ViT vs Swin — 64×64 입력 기준 Attention 구조 비교</text>
+
+      <!-- ViT -->
+      <rect x="20" y="22" width="290" height="148" rx="8" fill="#FCEBEB" stroke="#E24B4A" stroke-width="0.5"/>
+      <text x="165" y="40" text-anchor="middle" font-size="11" fill="#A32D2D" font-weight="500">ViT (16×16 Patch)</text>
+      <rect x="34" y="50" width="34" height="34" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="0.8"/>
+      <rect x="72" y="50" width="34" height="34" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="0.8"/>
+      <rect x="110" y="50" width="34" height="34" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="0.8"/>
+      <rect x="148" y="50" width="34" height="34" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="0.8"/>
+      <rect x="34" y="88" width="34" height="34" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="0.8"/>
+      <rect x="72" y="88" width="34" height="34" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="0.8"/>
+      <rect x="110" y="88" width="34" height="34" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="0.8"/>
+      <rect x="148" y="88" width="34" height="34" rx="3" fill="#F5C4B3" stroke="#993C1D" stroke-width="0.8"/>
+      <line x1="51" y1="67" x2="89" y2="67" stroke="#E24B4A" stroke-width="0.8" opacity="0.7"/>
+      <line x1="51" y1="67" x2="127" y2="67" stroke="#E24B4A" stroke-width="0.8" opacity="0.7"/>
+      <line x1="51" y1="67" x2="165" y2="67" stroke="#E24B4A" stroke-width="0.8" opacity="0.7"/>
+      <line x1="51" y1="67" x2="51" y2="105" stroke="#E24B4A" stroke-width="0.8" opacity="0.6"/>
+      <line x1="51" y1="67" x2="89" y2="105" stroke="#E24B4A" stroke-width="0.8" opacity="0.5"/>
+      <line x1="51" y1="67" x2="127" y2="105" stroke="#E24B4A" stroke-width="0.8" opacity="0.5"/>
+      <line x1="51" y1="67" x2="165" y2="105" stroke="#E24B4A" stroke-width="0.8" opacity="0.4"/>
+      <text x="205" y="67" font-size="10" fill="#A32D2D" font-weight="500">전체 16개</text>
+      <text x="205" y="80" font-size="10" fill="#A32D2D">Patch 모두</text>
+      <text x="205" y="93" font-size="10" fill="#A32D2D">상호 연결</text>
+      <text x="165" y="142" text-anchor="middle" font-size="11" fill="#A32D2D" font-weight="500">복잡도: O(N²) = 16² = 256</text>
+      <text x="165" y="158" text-anchor="middle" font-size="10" fill="#791F1F">N 커질수록 폭발적 증가</text>
+
+      <!-- Swin -->
+      <rect x="390" y="22" width="290" height="148" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+      <text x="535" y="40" text-anchor="middle" font-size="11" fill="#085041" font-weight="500">Swin (4×4 Patch, Window 내부만)</text>
+      <!-- Win A -->
+      <rect x="406" y="50" width="34" height="34" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="0.8"/>
+      <rect x="444" y="50" width="34" height="34" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="0.8"/>
+      <rect x="406" y="88" width="34" height="34" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="0.8"/>
+      <rect x="444" y="88" width="34" height="34" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="0.8"/>
+      <rect x="404" y="48" width="78" height="78" rx="4" fill="none" stroke="#185FA5" stroke-width="2"/>
+      <!-- Win B -->
+      <rect x="490" y="50" width="34" height="34" rx="3" fill="#9FE1CB" stroke="#0F6E56" stroke-width="0.8"/>
+      <rect x="528" y="50" width="34" height="34" rx="3" fill="#9FE1CB" stroke="#0F6E56" stroke-width="0.8"/>
+      <rect x="490" y="88" width="34" height="34" rx="3" fill="#9FE1CB" stroke="#0F6E56" stroke-width="0.8"/>
+      <rect x="528" y="88" width="34" height="34" rx="3" fill="#9FE1CB" stroke="#0F6E56" stroke-width="0.8"/>
+      <rect x="488" y="48" width="78" height="78" rx="4" fill="none" stroke="#0F6E56" stroke-width="2"/>
+      <!-- Attention within Win A only -->
+      <line x1="423" y1="67" x2="461" y2="67" stroke="#185FA5" stroke-width="1.2" opacity="0.8"/>
+      <line x1="423" y1="67" x2="423" y2="105" stroke="#185FA5" stroke-width="1.2" opacity="0.8"/>
+      <line x1="423" y1="67" x2="461" y2="105" stroke="#185FA5" stroke-width="1.2" opacity="0.5"/>
+      <text x="535" y="142" text-anchor="middle" font-size="11" fill="#085041" font-weight="500">복잡도: O(N) — Window 수 × M²</text>
+      <text x="535" y="158" text-anchor="middle" font-size="10" fill="#0F6E56">이미지 커져도 선형 증가만</text>
+    </svg>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">핵심 통찰</div>
+    <div class="i-text">Window 크기 M이 고정되면 Window 내부 Attention 연산량은 이미지 크기와 무관하게 일정하다. 이미지가 커지면 <strong>Window 수만 선형으로 늘어날 뿐</strong>이라 전체 계산량이 이미지 크기에 선형 비례한다.</div>
+  </div>
+</section>
+
+
+<!-- ======================== 3. Hierarchical ======================== -->
+<section id="hierarchical">
+  <h2><span class="num">개념 1</span> Hierarchical Feature Map — 다해상도 피라미드</h2>
+
+  <p>Hierarchical Feature Map이란 <strong>같은 이미지를 4가지 해상도로 동시에 표현한 Feature Map 피라미드</strong>다. 작은 물체는 고해상도에서, 큰 물체는 저해상도에서 잘 감지된다. 논문(Figure 1)에서는 이를 CNN의 FPN, U-Net처럼 활용할 수 있다고 설명한다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">Stage 1 — H/4×W/4</div>
+      <div class="card-title">가장 세밀한 Feature Map</div>
+      <div class="card-body">56×56 Token (224 입력 기준). 작은 물체(표지판, 새 등) 감지 핵심. 픽셀 디테일 보존. W-MSA + SW-MSA Block ×2 적용.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">Stage 2~3</div>
+      <div class="card-title">중간 크기 물체 대응</div>
+      <div class="card-body">28×28, 14×14 Token. Receptive Field 확대로 더 큰 물체 감지. 채널이 깊어지며 고수준 의미(semantic) 정보를 담는다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">Stage 4 — H/32×W/32</div>
+      <div class="card-title">전체 맥락 요약</div>
+      <div class="card-body">7×7 Token. 이미지 전체 맥락(context) 압축. 분류 헤드(Classification Head)가 여기에 연결. ViT와 동일한 해상도.</div>
+    </div>
+  </div>
+
+  <h3>Stage별 패치 그리드 시각화</h3>
+  <p>버튼을 눌러 각 Stage의 해상도 변화를 확인해보자. 색상은 Window 구분을 나타낸다.</p>
+
+  <div class="widget-wrap">
+    <div class="widget-btns" id="hfm-btns"></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;">
+      <div>
+        <div class="widget-cv-label" id="hfm-cv-label">—</div>
+        <canvas id="hfm-cv" width="240" height="240" class="widget-cv"></canvas>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);font-weight:500;margin-bottom:8px;">Stage 정보</div>
+        <div id="hfm-dim" style="background:var(--bg3);border-radius:8px;border:0.5px solid var(--border);padding:10px 12px;"></div>
+      </div>
+    </div>
+    <div class="widget-desc" id="hfm-desc">Stage 버튼을 눌러보세요.</div>
+  </div>
+
+  <script>
+  (function(){
+    var STAGES=[
+      {label:'입력 이미지',n:0,
+       dims:{'입력 크기':'H×W×3','채널':'RGB (3채널)','패치':'—'},hlDim:null,
+       desc:'원본 RGB 이미지. 224×224 기준. Patch Partition 단계에서 4×4 패치로 분할된다.'},
+      {label:'Stage 1 — H/4×W/4',n:56,
+       dims:{'Token 수':'56×56 = 3,136개','채널 C':'96 (Linear Embedding 후)','Window':'M=7, 각 Window = 7×7 패치','Block':'W-MSA + SW-MSA ×2'},hlDim:'채널 C',
+       desc:'가장 세밀한 Feature Map. 작은 물체 감지 핵심. Linear Embedding Layer로 48→C(=96) 투영 후 Swin Block 통과.'},
+      {label:'Stage 2 — H/8×W/8',n:28,
+       dims:{'Token 수':'28×28 = 784개 (÷4)','채널':'2C = 192','Patch Merging':'2×2 Concat(4C)→Linear(2C)','Block':'W-MSA + SW-MSA ×2'},hlDim:'Token 수',
+       desc:'Patch Merging으로 해상도 절반. Token ÷4, 채널 ×2. 중간 크기 물체 대응. Receptive Field 확대.'},
+      {label:'Stage 3 — H/16×W/16',n:14,
+       dims:{'Token 수':'14×14 = 196개','채널':'4C = 384','특이사항':'ViT와 동일 해상도','Block':'W-MSA + SW-MSA ×6 (Swin-T)'},hlDim:'채널',
+       desc:'ViT와 동일한 해상도. 큰 물체 감지. Block이 가장 많이 반복(6회). 의미론적(Semantic) 정보 풍부.'},
+      {label:'Stage 4 — H/32×W/32',n:7,
+       dims:{'Token 수':'7×7 = 49개','채널':'8C = 768','활용':'분류 헤드 연결 / FPN 최하층','Block':'W-MSA + SW-MSA ×2'},hlDim:'Token 수',
+       desc:'가장 압축된 Feature Map. 이미지 전체 맥락 담음. 4개 Stage를 FPN처럼 활용하면 완전한 Hierarchical Feature Map.'}
+    ];
+    var WF=['#dbeafe','#d1fae5','#fce7f3','#fef9c3'];
+    var WS=['#185FA5','#0F6E56','#993556','#854F0B'];
+    var WT=['#0C447C','#085041','#72243E','#633806'];
+
+    function drawStage(s){
+      var cv=document.getElementById('hfm-cv');
+      var dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+      var DPR=window.devicePixelRatio||1;
+      var LOGICAL=280;
+      cv.width=LOGICAL*DPR; cv.height=LOGICAL*DPR;
+      cv.style.width=LOGICAL+'px'; cv.style.height=LOGICAL+'px';
+      var ctx=cv.getContext('2d');
+      ctx.scale(DPR,DPR);
+      var SZ=LOGICAL;
+      var n=s.n;
+      if(n===0){
+        var bg=dark?['#1e3a5f','#0a2e22','#3d1a0c','#2e0f23']:['#dbeafe','#d1fae5','#fce7f3','#fef9c3'];
+        var bs=SZ/2;
+        for(var r=0;r<2;r++) for(var c=0;c<2;c++){ctx.fillStyle=bg[r*2+c];ctx.fillRect(c*bs,r*bs,bs,bs);}
+        ctx.strokeStyle=dark?'rgba(255,255,255,0.15)':'rgba(0,0,0,0.1)';
+        ctx.lineWidth=0.5;ctx.strokeRect(0,0,SZ,SZ);
+        ctx.fillStyle=dark?'rgba(255,255,255,0.7)':'rgba(0,0,0,0.55)';
+        ctx.font='500 14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText('H × W × 3',SZ/2,SZ/2);
+        return;
+      }
+      var cell=SZ/n;
+      /* Window 크기: 전체를 4등분 */
+      var ws=Math.round(n/4);
+      if(ws<1)ws=1;
+      /* 패치 채우기 */
+      for(var pr=0;pr<n;pr++){
+        for(var pc=0;pc<n;pc++){
+          var wi=(Math.floor(pr/ws)*2+Math.floor(pc/ws))%4;
+          ctx.fillStyle=WF[wi];
+          ctx.fillRect(pc*cell,pr*cell,cell,cell);
+          /* 패치 내부 격자 */
+          ctx.strokeStyle=dark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)';
+          ctx.lineWidth=0.5;
+          ctx.strokeRect(pc*cell+0.25,pr*cell+0.25,cell-0.5,cell-0.5);
+        }
+      }
+      /* Window 테두리 */
+      var numW=Math.round(n/ws);
+      for(var wr=0;wr<numW;wr++) for(var wc=0;wc<numW;wc++){
+        var wi2=(wr*numW+wc)%4;
+        var lw=Math.max(1.5, Math.min(3, cell*0.4));
+        ctx.strokeStyle=WS[wi2];
+        ctx.lineWidth=lw;
+        ctx.strokeRect(wc*ws*cell+lw/2, wr*ws*cell+lw/2, ws*cell-lw, ws*cell-lw);
+      }
+      /* 라벨 */
+      ctx.fillStyle=dark?'rgba(255,255,255,0.65)':'rgba(0,0,0,0.55)';
+      var fs=Math.max(10,Math.min(14,cell*1.1));
+      ctx.font=fs+'px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='alphabetic';
+      ctx.fillText(n+'×'+n+' 그리드',SZ/2,SZ-6);
+    }
+
+    function buildDim(s){
+      var el=document.getElementById('hfm-dim');el.innerHTML='';
+      Object.entries(s.dims).forEach(function(kv){
+        var k=kv[0],v=kv[1],isHL=(k===s.hlDim);
+        var d=document.createElement('div');
+        d.style.cssText='display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:12px;';
+        d.innerHTML='<span style="color:var(--text3)">'+k+'</span><span style="font-weight:500;font-family:monospace;'+(isHL?'color:var(--blue)':'')+'">'+(v)+'</span>';
+        el.appendChild(d);
+      });
+      if(el.lastChild)el.lastChild.style.borderBottom='none';
+    }
+
+    function setStage(i){
+      var s=STAGES[i];
+      document.getElementById('hfm-cv-label').textContent=s.label;
+      document.getElementById('hfm-desc').textContent=s.desc;
+      drawStage(s);buildDim(s);
+      document.querySelectorAll('#hfm-btns .wbtn').forEach(function(b,j){b.classList.toggle('on',j===i);});
+    }
+
+    var be=document.getElementById('hfm-btns');
+    ['입력','Stage 1','Stage 2','Stage 3','Stage 4'].forEach(function(t,i){
+      var b=document.createElement('button');b.className='wbtn';b.textContent=t;
+      b.onclick=function(){setStage(i);};be.appendChild(b);
+    });
+    setStage(0);
+  })();
+  </script>
+</section>
+
+
+<!-- ======================== 4. Window Attention ======================== -->
+<section id="window-attn">
+  <h2><span class="num">개념 2</span> Window Self-Attention — 지역 Attention</h2>
+
+  <p>Swin Transformer는 전체 이미지가 아닌 <strong>M×M 크기의 Window 내부에서만 Self-Attention</strong>을 수행한다(W-MSA). 각 Window는 독립적으로 계산되므로 복잡도가 선형이 된다.</p>
+
+  <div class="formula-box">
+    Ω(MSA) = 4hwC² + 2(hw)²C &nbsp;&nbsp;← 이미지 크기 제곱에 비례<br>
+    Ω(W-MSA) = 4hwC² + 2M²hwC &nbsp;&nbsp;← M 고정 시 이미지 크기에 선형<br><br>
+    h, w: 패치 수 | C: 채널 수 | M: Window 크기 (기본값 7)<br>
+    출처: 논문 Eq.(1), Eq.(2) — Section 3.2
+  </div>
+
+  <div class="callout">
+    <p><strong>CNN의 Locality Inductive Bias와 같은 원리:</strong> 이미지에서 인접한 픽셀들은 서로 높은 상관관계를 갖는다. Window 내부의 지역적 Attention으로도 충분한 시각 특징을 추출할 수 있으며, Cross-Window 정보 교환은 Shifted Window로 보완한다.</p>
+  </div>
+</section>
+
+
+<!-- ======================== 5. 계산 복잡도 ======================== -->
+<section id="complexity">
+  <h2><span class="num">개념 3</span> 계산 복잡도 비교 — 왜 Linear인가</h2>
+
+  <div class="q-block">
+    <div class="q-label">이해 확인 질문</div>
+    <div class="q-text">Swin은 패치를 더 잘게 쪼개서 더 많은 패치를 가지는데, 왜 계산량이 줄었다고 하는가?</div>
+  </div>
+
+  <div class="a-block">
+    <div class="a-label">답변</div>
+    <div class="a-text">계산량 절감은 "작은 Patch" 때문이 아니라 <strong>"Window 내부에서만 Self-Attention"</strong>하기 때문이다. Window 크기(M=7)가 고정되므로 이미지가 커져도 각 Window 내부 연산량은 변하지 않는다. 이미지가 커지면 Window 수만 선형으로 늘어날 뿐이다.</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>이미지 크기</th><th>ViT 계산량 O(N²)</th><th>Swin 계산량 O(N)</th><th>차이</th></tr></thead>
+      <tbody>
+        <tr><td>64×64 (N=16 patches)</td><td>16² = 256</td><td>4 windows × 16 = 64</td><td><span class="cmp-mid">유사 수준</span></td></tr>
+        <tr><td>256×256 (N=256)</td><td>256² = 65,536</td><td>64 windows × 49 ≈ 3,136</td><td><span class="cmp-good">~20× 감소</span></td></tr>
+        <tr><td>1024×1024 (N=4096)</td><td>4096² ≈ 1,677만</td><td>1024 windows × 49 ≈ 50,176</td><td><span class="cmp-good">~330× 감소</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">직관적 비유</div>
+    <div class="i-text"><strong>ViT</strong>: 반 전체 학생이 모두 서로 대화 → 학생 수 늘면 기하급수적으로 복잡<br>
+    <strong>Swin</strong>: 반을 여러 모둠으로 나누고 모둠 안에서만 대화 → 모둠 크기(M) 고정이므로 반이 커져도 선형적으로만 복잡해짐</div>
+  </div>
+</section>
+
+
+<!-- ======================== 6. 전체 아키텍처 ======================== -->
+<section id="architecture">
+  <h2><span class="num">3.1</span> Overall Architecture — 전체 구조</h2>
+
+  <p>논문 Figure 3은 Swin Transformer의 전체 구조를 보여준다. Tiny 버전(Swin-T) 기준으로 4개의 Stage로 구성된다.</p>
+
+  <div class="ref-box">
+    <div class="ref-label">논문 Figure 3 — Overall Architecture 다이어그램 원본</div>
+    <a href="https://rahites.tistory.com/180">블로그 이미지 참조 (Figure 3 전체 구조도 포함)</a>
+    <a href="https://arxiv.org/pdf/2103.14030">논문 원문 PDF Section 3.1</a>
+  </div>
+
+  <ol class="step-list">
+    <li>
+      <div class="step-num">1</div>
+      <div>
+        <span class="step-title">Patch Partition</span>
+        입력 RGB 이미지를 4×4 크기의 Patch로 분할한다. 하나의 Patch = 하나의 Token. 각 Patch는 <strong>4×4×3 = 48차원 벡터</strong>로 표현.
+        <span class="step-desc">Non-overlapping 분할. 224×224 이미지 → 56×56 = 3,136개 패치</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div>
+        <span class="step-title">Stage 1 — Linear Embedding + Swin Block</span>
+        Linear Embedding Layer로 48 → C(=96)차원 투영. 이후 W-MSA → MLP → SW-MSA → MLP 순서의 Swin Transformer Block을 2회 통과. Activation Function으로 GELU 사용.
+        <span class="step-desc">출력: H/4×W/4×C. Token 수 유지.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div>
+        <span class="step-title">Stage 2 — Patch Merging + Swin Block</span>
+        인접한 2×2 패치를 Concat → 4C 차원 → Linear Layer로 2C로 축소. Token 수 ÷4, 채널 ×2.
+        <span class="step-desc">출력: H/8×W/8×2C(=192). Block ×2.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div>
+        <span class="step-title">Stage 3, 4 — 반복</span>
+        동일한 Patch Merging + Swin Block 반복. Stage 3: H/16×W/16×4C(=384), Block ×6. Stage 4: H/32×W/32×8C(=768), Block ×2.
+        <span class="step-desc">4개 Stage 출력 → Hierarchical Feature Map → FPN/U-Net 연결 가능</span>
+      </div>
+    </li>
+  </ol>
+
+  <div class="insight-block">
+    <div class="i-label">Swin Transformer Block 내부 구조</div>
+    <div class="i-text">하나의 Block은 LN → (S)W-MSA → 잔차 연결 → LN → MLP(GELU) → 잔차 연결 순서로 구성된다. 표준 Transformer Block과 동일하되 MSA를 Window 기반 MSA로 교체했다. <strong>두 Block이 항상 쌍으로 구성</strong>되어 첫 번째는 W-MSA, 두 번째는 SW-MSA를 사용한다 (논문 Eq.3).</div>
+  </div>
+</section>
+
+
+<!-- ======================== 7. Patch Merging ======================== -->
+<section id="patch-merging">
+  <h2><span class="num">기법</span> Patch Merging — Hierarchical 구조 만들기</h2>
+
+  <p>Patch Merging은 CNN의 Stride-2 Pooling에 대응하는 연산이다. 인접한 2×2 패치를 합쳐 해상도를 줄이고 채널을 늘린다.</p>
+
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="aPM" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="14" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 3. Patch Merging — 2×2 Concat → Linear 축소</text>
+
+      <text x="100" y="36" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">입력: 2×2 인접 패치 (각 C차원)</text>
+      <rect x="42" y="46" width="52" height="52" rx="6" fill="#dbeafe" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="68" y="76" text-anchor="middle" font-size="10" fill="#0C447C">P1 (C)</text>
+      <rect x="100" y="46" width="52" height="52" rx="6" fill="#d1fae5" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="126" y="76" text-anchor="middle" font-size="10" fill="#085041">P2 (C)</text>
+      <rect x="42" y="106" width="52" height="52" rx="6" fill="#fce7f3" stroke="#993556" stroke-width="1.5"/>
+      <text x="68" y="136" text-anchor="middle" font-size="10" fill="#72243E">P3 (C)</text>
+      <rect x="100" y="106" width="52" height="52" rx="6" fill="#fef9c3" stroke="#854F0B" stroke-width="1.5"/>
+      <text x="126" y="136" text-anchor="middle" font-size="10" fill="#633806">P4 (C)</text>
+
+      <text x="276" y="36" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">① Concat → 4C 차원</text>
+      <rect x="220" y="46" width="112" height="112" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="276" y="96" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">P1+P2+P3+P4</text>
+      <text x="276" y="112" text-anchor="middle" font-size="10" fill="#534AB7">= 4C 차원</text>
+      <text x="276" y="128" text-anchor="middle" font-size="9" fill="#AFA9EC">예: 96×4 = 384</text>
+      <line x1="154" y1="102" x2="218" y2="102" stroke="#534AB7" stroke-width="1.5" marker-end="url(#aPM)"/>
+      <text x="186" y="96" text-anchor="middle" font-size="9" fill="#534AB7">Concat</text>
+
+      <text x="476" y="36" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">② Linear Layer → 2C 차원</text>
+      <rect x="380" y="66" width="192" height="72" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="476" y="96" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">2C 차원</text>
+      <text x="476" y="112" text-anchor="middle" font-size="10" fill="#0F6E56">Token 1개로 병합 완료</text>
+      <text x="476" y="128" text-anchor="middle" font-size="9" fill="#5DCAA5">예: C=96 → 2C=192</text>
+      <line x1="332" y1="102" x2="378" y2="102" stroke="#0F6E56" stroke-width="1.5" marker-end="url(#aPM)"/>
+      <text x="355" y="96" text-anchor="middle" font-size="9" fill="#0F6E56">Linear</text>
+
+      <text x="350" y="174" text-anchor="middle" font-size="11" fill="#444441" font-weight="500">결과: Token 수 ÷4 (2×2 → 1개), 채널 ×2 (C → 2C)</text>
+      <text x="350" y="188" text-anchor="middle" font-size="10" fill="#9c9a92">CNN Stride-2 Convolution과 유사한 효과 — 해상도 ↓, 추상성 ↑</text>
+    </svg>
+  </div>
+</section>
+
+
+<!-- ======================== 8. Shifted Window ======================== -->
+<section id="shifted-window">
+  <h2><span class="num">3.2</span> Shifted Window — 경계를 넘는 Attention</h2>
+
+  <p>W-MSA만 사용하면 Window 경계에 있는 패치들은 물리적으로 인접해도 서로 다른 Window에 속해 Attention을 수행할 수 없다. 논문은 이 문제를 <strong>Shifted Window Partitioning</strong>으로 해결한다.</p>
+
+  <div class="wrong-block">
+    <div class="w-label">W-MSA의 한계 (논문 Section 3.2)</div>
+    <div class="w-text">Window 경계 패치들은 인접해도 서로 다른 Window에 속해 Attention 불가. 레이어가 쌓여도 Window 경계 너머 정보는 전파되지 않는다. <strong>"window-based self-attention module lacks connections across windows, which limits its modeling power"</strong> — 논문 원문</div>
+  </div>
+
+  <div class="a-block">
+    <div class="a-label">해결책 — Shifted Window (SW-MSA)</div>
+    <div class="a-text">짝수 레이어는 W-MSA, 홀수 레이어는 SW-MSA를 번갈아 사용한다. SW-MSA에서는 Window를 (⌊M/2⌋, ⌊M/2⌋)만큼 이동(Shift)시킨 뒤 Attention을 수행한다. <strong>두 레이어를 합치면 모든 패치가 인접 Window의 패치와 Attention할 기회를 갖는다.</strong></div>
+  </div>
+
+  <div class="formula-box">
+    l번째 Block (W-MSA):  &nbsp;z̃ˡ = W-MSA(LN(zˡ⁻¹)) + zˡ⁻¹ &nbsp;→&nbsp; zˡ = MLP(LN(z̃ˡ)) + z̃ˡ<br>
+    l+1번째 Block (SW-MSA): z̃ˡ⁺¹ = SW-MSA(LN(zˡ)) + zˡ &nbsp;→&nbsp; zˡ⁺¹ = MLP(LN(z̃ˡ⁺¹)) + z̃ˡ⁺¹<br><br>
+    출처: 논문 Eq.(3) — Section 3.2
+  </div>
+
+  <div class="ref-box">
+    <div class="ref-label">논문 Figure 2 — Shifted Window 기법 다이어그램 원본</div>
+    <a href="https://rahites.tistory.com/180">블로그 이미지 참조 (W-MSA/SW-MSA 구조 비교)</a>
+    <a href="https://arxiv.org/pdf/2103.14030">논문 원문 PDF Section 3.2</a>
+  </div>
+</section>
+
+
+<!-- ======================== 9. Cyclic Shift 개요 ======================== -->
+<section id="cyclic-shift">
+  <h2><span class="num">심화</span> Cyclic Shift — 구현 방법 (논문 Figure 4)</h2>
+
+  <p>Window를 단순 이동하면 이미지 경계 밖으로 나가는 패치가 생기고 Window 수도 늘어난다. 논문은 <strong>Cyclic Shift(순환 이동) + Masking</strong>으로 이를 해결한다. 논문 Figure 4에 해당한다.</p>
+
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="aCS" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#E24B4A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="14" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 4. Cyclic Shift 행 순환 이동 원리 (8×8 패치, Shift=2)</text>
+
+      <!-- Before -->
+      <text x="240" y="34" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">이동 전 행 순서</text>
+      <text x="46" y="56" font-size="10" fill="#5F5E5A">r0</text>
+      <text x="46" y="78" font-size="10" fill="#5F5E5A">r1</text>
+      <text x="46" y="100" font-size="10" fill="#5F5E5A">r2~5</text>
+      <text x="46" y="130" font-size="10" fill="#993C1D" font-weight="500">r6</text>
+      <text x="46" y="152" font-size="10" fill="#993C1D" font-weight="500">r7</text>
+
+      <rect x="66" y="44" width="28" height="22" rx="3" fill="#dbeafe" stroke="#185FA5" stroke-width="1"/>
+      <text x="80" y="59" text-anchor="middle" font-size="9" fill="#0C447C">r0</text>
+      <rect x="66" y="66" width="28" height="22" rx="3" fill="#dbeafe" stroke="#185FA5" stroke-width="1"/>
+      <text x="80" y="81" text-anchor="middle" font-size="9" fill="#0C447C">r1</text>
+      <rect x="66" y="88" width="28" height="88" rx="3" fill="#F1EFE8" stroke="#888780" stroke-width="0.8"/>
+      <text x="80" y="136" text-anchor="middle" font-size="9" fill="#5F5E5A">r2~5</text>
+      <rect x="66" y="176" width="28" height="22" rx="3" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+      <text x="80" y="191" text-anchor="middle" font-size="9" fill="#712B13">r6</text>
+      <rect x="66" y="198" width="28" height="22" rx="3" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+      <text x="80" y="213" text-anchor="middle" font-size="9" fill="#712B13">r7</text>
+
+      <!-- wrap-around arrow -->
+      <path d="M 80 176 Q 80 230 350 230 Q 120 230 120 54" fill="none" stroke="#E24B4A" stroke-width="1.3" stroke-dasharray="5 3" marker-end="url(#aCS)"/>
+      <text x="220" y="246" text-anchor="middle" font-size="9" fill="#E24B4A">wrap-around: 맨 아래 행이 맨 위로 순환</text>
+
+      <!-- After -->
+      <text x="500" y="34" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">이동 후 행 순서 (아래로 2칸)</text>
+      <rect x="380" y="44" width="28" height="22" rx="3" fill="#FAECE7" stroke="#E24B4A" stroke-width="1.5"/>
+      <text x="394" y="59" text-anchor="middle" font-size="9" fill="#A32D2D">r6</text>
+      <rect x="380" y="66" width="28" height="22" rx="3" fill="#FAECE7" stroke="#E24B4A" stroke-width="1.5"/>
+      <text x="394" y="81" text-anchor="middle" font-size="9" fill="#A32D2D">r7</text>
+      <rect x="380" y="88" width="28" height="22" rx="3" fill="#dbeafe" stroke="#185FA5" stroke-width="1"/>
+      <text x="394" y="103" text-anchor="middle" font-size="9" fill="#0C447C">r0</text>
+      <rect x="380" y="110" width="28" height="22" rx="3" fill="#dbeafe" stroke="#185FA5" stroke-width="1"/>
+      <text x="394" y="125" text-anchor="middle" font-size="9" fill="#0C447C">r1</text>
+      <rect x="380" y="132" width="28" height="88" rx="3" fill="#F1EFE8" stroke="#888780" stroke-width="0.8"/>
+      <text x="394" y="180" text-anchor="middle" font-size="9" fill="#5F5E5A">r2~5</text>
+
+      <text x="426" y="56" font-size="10" fill="#A32D2D" font-weight="500">← 원래 맨 아래</text>
+      <text x="426" y="78" font-size="10" fill="#A32D2D" font-weight="500">← 원래 맨 아래</text>
+      <text x="426" y="100" font-size="10" fill="#0C447C">← 원래 맨 위</text>
+      <text x="426" y="122" font-size="10" fill="#0C447C">← 원래 맨 위</text>
+
+      <!-- 3 steps summary -->
+      <rect x="44" y="234" width="612" height="0" rx="0" fill="none"/>
+    </svg>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--purple)">① Cyclic Shift</div>
+      <div class="card-title">행·열 방향 순환 이동</div>
+      <div class="card-body">전체 이미지를 M/2(=3, M=7 기준)만큼 오른쪽·아래로 순환 이동. 잘려나가는 게 아니라 반대편으로 wrap-around됨.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">② Masking + Attention</div>
+      <div class="card-title">유효한 쌍만 Attention</div>
+      <div class="card-body">Shift로 섞인 "원래 멀리 있던 패치"끼리는 Masking(−∞ 추가)으로 차단. Window 수를 늘리지 않아 배치 연산 효율 유지.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">③ Reverse Shift</div>
+      <div class="card-title">원래 위치 복원</div>
+      <div class="card-body">Attention 완료 후 반대 방향으로 다시 Shift해 원래 좌표계로 복원. 출력은 원본 이미지 좌표와 동일하게 정렬됨.</div>
+    </div>
+  </div>
+
+  <div class="conclusion">
+    <div class="c-label">Cyclic Shift의 핵심 이점 (논문 Section 3.2)</div>
+    <div class="c-title">Window 수 유지 + 경계 Attention 가능 = 낮은 Latency</div>
+    <div class="c-body">
+      단순 Padding 방식은 Window 수가 2×2 → 3×3으로 늘어나 2.25배 연산 증가. Cyclic Shift는 <strong>Window 수를 그대로 유지</strong>하며 Masking으로 잘못된 Attention을 차단한다. 논문 실험(Table 5, 6)에서 Sliding Window 대비 낮은 Latency와 유사한 성능을 입증.
+    </div>
+  </div>
+
+  <div class="ref-box">
+    <div class="ref-label">논문 Figure 4 — Efficient batch computation 원본</div>
+    <a href="https://rahites.tistory.com/180">블로그 이미지 참조 (Cyclic Shift + Masking 다이어그램)</a>
+    <a href="https://arxiv.org/pdf/2103.14030">논문 원문 PDF Section 3.2 — Efficient batch computation for shifted configuration</a>
+  </div>
+</section>
+
+
+<!-- ======================== 10. Cyclic Shift 통합 시각화 ======================== -->
+<section id="cyclic-detail">
+  <h2><span class="num">시각화</span> Cyclic Shift — 왜 필요한가부터 Masking까지</h2>
+
+  <p>경계 문제 발생 → Cyclic Shift로 경계 패치를 같은 Window에 모음 → Masking으로 불필요한 연결 차단 → 원위치 복원. 이 전체 흐름을 단계별로 따라가보자.</p>
+
+  <div class="widget-wrap">
+    <div class="widget-btns" id="cs-btns"></div>
+
+    <!-- 단계 제목 배지 -->
+    <div id="cs-phase-badge" style="margin-bottom:10px;"></div>
+
+    <div class="widget-grid">
+      <div>
+        <div class="widget-cv-label" id="cs-label-a">—</div>
+        <canvas id="cs-cv-a" class="widget-cv" style="width:100%;height:auto;"></canvas>
+      </div>
+      <div>
+        <div class="widget-cv-label" id="cs-label-b">—</div>
+        <canvas id="cs-cv-b" class="widget-cv" style="width:100%;height:auto;"></canvas>
+      </div>
+    </div>
+
+    <!-- 범례 -->
+    <div class="widget-legend" style="margin-top:10px;">
+      <div class="wleg"><div class="wleg-dot" style="background:#dbeafe;border:1.5px solid #2563eb;"></div>Window TL (r0~3, c0~3)</div>
+      <div class="wleg"><div class="wleg-dot" style="background:#d1fae5;border:1.5px solid #16a34a;"></div>Window TR (r0~3, c4~7)</div>
+      <div class="wleg"><div class="wleg-dot" style="background:#FAECE7;border:1.5px solid #dc2626;"></div>Window BL (r4~7, c0~3)</div>
+      <div class="wleg"><div class="wleg-dot" style="background:#fce7f3;border:1.5px solid #9333ea;"></div>Window BR (r4~7, c4~7)</div>
+      <div class="wleg"><div class="wleg-dot" style="background:rgba(100,100,100,0.4);border:1px dashed #888;"></div>마스킹 영역</div>
+      <div class="wleg"><div class="wleg-dot" style="background:rgba(251,191,36,0.5);border:2px solid #d97706;"></div>경계 접합 패치</div>
+    </div>
+
+    <!-- 행 번호 strip (이동 관련 단계에서만 표시) -->
+    <div class="row-strip" id="cs-strip-wrap" style="margin-top:14px;display:none;">
+      <div class="row-strip-label">행 번호로 보기 (각 칸 = 원본의 몇 번째 행?)</div>
+      <div id="cs-row-strip"></div>
+    </div>
+
+    <div class="widget-desc" id="cs-desc">Step 버튼을 순서대로 눌러보세요.</div>
+  </div>
+
+  <script>
+  (function(){
+    /* ──────────────────────────────────────────
+       상수 & 색상
+    ────────────────────────────────────────── */
+    var N=8, S=2;
+    var DPR=window.devicePixelRatio||1;
+    var LOGICAL=300;
+    var CELL=LOGICAL/N;
+
+    /* 원본 좌표(r,c) → Window 인덱스
+       TL=0(파랑), TR=1(초록), BL=2(빨강), BR=3(분홍) */
+    function origWin(r,c){ return (r<4?0:2)+(c<4?0:1); }
+
+    var FILLS=['#dbeafe','#d1fae5','#FAECE7','#fce7f3'];
+    var FILLS_D=['rgba(30,58,138,0.72)','rgba(20,83,45,0.72)','rgba(127,29,29,0.72)','rgba(88,28,135,0.72)'];
+    var TEXTS=['#1e3a8a','#14532d','#7f1d1d','#581c87'];
+    var TEXTS_D=['#93c5fd','#6ee7b7','#fca5a5','#d8b4fe'];
+    var BORDERS=['#2563eb','#16a34a','#dc2626','#9333ea'];
+    var BORDERS_D=['rgba(96,165,250,0.9)','rgba(74,222,128,0.9)','rgba(248,113,113,0.9)','rgba(192,132,252,0.9)'];
+
+    /* ── 고해상도 캔버스 초기화 ── */
+    function initCv(id){
+      var cv=document.getElementById(id);
+      cv.width=LOGICAL*DPR; cv.height=LOGICAL*DPR;
+      cv.style.width=LOGICAL+'px'; cv.style.height=LOGICAL+'px';
+      var ctx=cv.getContext('2d'); ctx.scale(DPR,DPR);
+      return ctx;
+    }
+    var ctxA=initCv('cs-cv-a');
+    var ctxB=initCv('cs-cv-b');
+
+    /* ──────────────────────────────────────────
+       6단계 정의
+    ────────────────────────────────────────── */
+    var STEPS=[
+
+      /* ── Step 1: W-MSA — 일반 Window 분할 ── */
+      {
+        badge:'Step 1',badgeColor:'var(--blue-bg)',badgeText:'var(--blue)',
+        labelA:'W-MSA — 일반 Window 분할',
+        labelB:'경계 문제: 인접하지만 다른 Window',
+        showB:true, showStrip:false,
+        rowA:[0,1,2,3,4,5,6,7], colA:[0,1,2,3,4,5,6,7],
+        rowB:[0,1,2,3,4,5,6,7], colB:[0,1,2,3,4,5,6,7],
+        maskB:null, highlightB:'boundary',
+        text:'<strong>Step 1: W-MSA (일반 Window Self-Attention)</strong><br>이미지를 4×4 블록(Window)으로 나누고 각 Window 내부에서만 Attention을 수행한다.<br><br>오른쪽 그림의 <span style="background:rgba(251,191,36,0.4);padding:1px 5px;border-radius:3px;color:#92400e;font-weight:500;">노란 테두리</span> 패치들을 보자. 이들은 서로 바로 옆에 붙어있지만 <strong>서로 다른 Window에 속해 Attention이 불가능</strong>하다. 이것이 W-MSA의 경계 문제다.'
+      },
+
+      /* ── Step 2: 행 Cyclic Shift ── */
+      {
+        badge:'Step 2',badgeColor:'var(--amber-bg)',badgeText:'var(--amber)',
+        labelA:'원본',
+        labelB:'행 Shift 후 (위→아래 2칸)',
+        showB:true, showStrip:true,
+        rowA:[0,1,2,3,4,5,6,7], colA:[0,1,2,3,4,5,6,7],
+        rowB:[6,7,0,1,2,3,4,5], colB:[0,1,2,3,4,5,6,7],
+        maskB:null, highlightB:null,
+        stripA:[0,1,2,3,4,5,6,7], stripB:[6,7,0,1,2,3,4,5],
+        text:'<strong>Step 2: 행(row) 방향 Cyclic Shift</strong><br>전체 이미지를 <strong>아래로 2칸</strong> 순환 이동한다. 잘려나가는 게 아니라 맨 아래 행이 맨 위로 wrap-around된다.<br><br>· r0 → 표시 행 2 &nbsp;· r6 → 표시 행 0 (wrap-around)<br>· r1 → 표시 행 3 &nbsp;· r7 → 표시 행 1 (wrap-around)<br><br>맨 위에 올라온 <strong style="color:#dc2626">r6, r7</strong>은 원래 이미지의 가장 아래에 있던 행이다.'
+      },
+
+      /* ── Step 3: 열 Cyclic Shift ── */
+      {
+        badge:'Step 3',badgeColor:'var(--amber-bg)',badgeText:'var(--amber)',
+        labelA:'행 Shift 완료',
+        labelB:'열 Shift 후 (왼→오른 2칸)',
+        showB:true, showStrip:true,
+        rowA:[6,7,0,1,2,3,4,5], colA:[0,1,2,3,4,5,6,7],
+        rowB:[6,7,0,1,2,3,4,5], colB:[6,7,0,1,2,3,4,5],
+        maskB:null, highlightB:null,
+        stripA:[6,7,0,1,2,3,4,5], stripB:[6,7,0,1,2,3,4,5],
+        text:'<strong>Step 3: 열(column) 방향 Cyclic Shift</strong><br>행 Shift된 상태에서 추가로 <strong>오른쪽으로 2칸</strong> 순환 이동한다.<br><br>· c0 → 표시 열 2 &nbsp;· c6 → 표시 열 0 (wrap-around)<br>· c1 → 표시 열 3 &nbsp;· c7 → 표시 열 1 (wrap-around)<br><br>왼쪽 2열에 나타난 것은 원래 이미지의 가장 오른쪽 열(c6, c7)이었다.'
+      },
+
+      /* ── Step 4: Shift 후 Window 재분할 ── */
+      {
+        badge:'Step 4',badgeColor:'var(--teal-bg)',badgeText:'var(--teal)',
+        labelA:'원본 (Shift 전)',
+        labelB:'Shift 후 — 경계 패치가 같은 Window로!',
+        showB:true, showStrip:false,
+        rowA:[0,1,2,3,4,5,6,7], colA:[0,1,2,3,4,5,6,7],
+        rowB:[6,7,0,1,2,3,4,5], colB:[6,7,0,1,2,3,4,5],
+        maskB:null, highlightB:'corner',
+        text:'<strong>Step 4: Shift 후 동일한 4개 Window로 재분할</strong><br>Shift 결과를 같은 크기의 4개 Window로 나누면 놀라운 일이 생긴다.<br><br>오른쪽의 <span style="background:rgba(251,191,36,0.4);padding:1px 5px;border-radius:3px;color:#92400e;font-weight:500;">왼쪽 위 Window</span>에 주목하자. 여기엔 원본의 r6c6, r6c7, r7c6, r7c7, r0c6, r0c7, r1c6, r1c7 등 <strong>원래 4개 Window의 경계 패치들이 한자리에 모였다.</strong> 이들은 원본에서 서로 인접했지만 Attention이 불가능했던 바로 그 패치들이다.<br>단, 원래 멀리 있던 패치도 함께 섞여 있으므로 다음 단계에서 구분해야 한다.'
+      },
+
+      /* ── Step 5: Masking ── */
+      {
+        badge:'Step 5',badgeColor:'var(--gray-bg)',badgeText:'var(--gray)',
+        labelA:'Shift 후 Window (마스킹 전)',
+        labelB:'Masking 적용 — 유효한 Attention만 허용',
+        showB:true, showStrip:false,
+        rowA:[6,7,0,1,2,3,4,5], colA:[6,7,0,1,2,3,4,5],
+        rowB:[6,7,0,1,2,3,4,5], colB:[6,7,0,1,2,3,4,5],
+        maskB:'mask', highlightB:null,
+        text:'<strong>Step 5: Masking — 원래 멀리 있던 패치끼리는 차단</strong><br>Shift로 같은 Window에 섞인 패치들 중, <strong>원래 이미지에서 서로 멀리 있었던 패치끼리의 Attention은 차단</strong>해야 한다.<br><br><span style="background:rgba(100,100,100,0.3);padding:1px 5px;border-radius:3px;font-size:12px;">회색 마스킹 영역</span>에 해당하는 패치 쌍은 Softmax 계산 전에 −∞를 더해 Attention 가중치를 0으로 만든다. 추가 연산 비용이 거의 없이 Window 수도 그대로 유지된다.<br>마스킹되지 않은 구역, 즉 원래 인접했던 패치끼리는 <strong>정상적으로 Attention이 수행</strong>된다.'
+      },
+
+      /* ── Step 6: Reverse Shift & 최종 비교 ── */
+      {
+        badge:'Step 6',badgeColor:'var(--teal-bg)',badgeText:'var(--teal)',
+        labelA:'W-MSA (경계 단절)',
+        labelB:'SW-MSA 완료 후 (경계 연결)',
+        showB:true, showStrip:false,
+        rowA:[0,1,2,3,4,5,6,7], colA:[0,1,2,3,4,5,6,7],
+        rowB:[0,1,2,3,4,5,6,7], colB:[0,1,2,3,4,5,6,7],
+        maskB:null, highlightB:'boundary_solved',
+        text:'<strong>Step 6: Reverse Shift → 최종 비교</strong><br>Masking Attention이 끝나면 반대 방향으로 다시 Shift해 <strong>원래 좌표로 복원</strong>한다.<br><br>왼쪽(W-MSA)에서 노란 패치들은 인접해도 Attention 불가였다. 오른쪽(SW-MSA 완료)에서는 <span style="background:rgba(29,158,117,0.3);padding:1px 5px;border-radius:3px;color:#085041;font-weight:500;">초록 하이라이트</span> 패치들이 이번 레이어에서 경계 너머 Attention에 참여했다.<br><br>W-MSA와 SW-MSA를 번갈아 사용하면 <strong>계산량은 선형으로 유지</strong>하면서 <strong>전체 이미지의 Cross-Window 정보가 점진적으로 교환</strong>된다.'
+      }
+    ];
+
+    /* ──────────────────────────────────────────
+       캔버스 그리기
+    ────────────────────────────────────────── */
+    function drawGrid(ctx, rowMap, colMap, maskMode, highlightMode){
+      var dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+      ctx.clearRect(0,0,LOGICAL,LOGICAL);
+
+      for(var dr=0;dr<N;dr++){
+        for(var dc=0;dc<N;dc++){
+          var sr=rowMap[dr], sc=colMap[dc];
+          var wi=origWin(sr,sc);
+
+          /* 기본 셀 색 */
+          ctx.fillStyle=dark?FILLS_D[wi]:FILLS[wi];
+          ctx.fillRect(dc*CELL,dr*CELL,CELL,CELL);
+
+          /* ─ 마스킹 오버레이 ─
+             Shift 후 그리드에서 왼쪽 S열 또는 위쪽 S행은
+             원래 wrap-around된 영역 → 다른 쪽과 섞임 → 마스킹 */
+          if(maskMode==='mask'&&(dr<S||dc<S)&&!(dr<S&&dc<S)){
+            /* 가장자리만: 위쪽 S행(dc>=S) 또는 왼쪽 S열(dr>=S) */
+            ctx.fillStyle='rgba(80,80,80,0.45)';
+            ctx.fillRect(dc*CELL,dr*CELL,CELL,CELL);
+          }
+          /* 코너(dr<S && dc<S)는 원래부터 같은 윈도우였던 r6c6류 — 마스킹 안 함 */
+
+          /* ─ 경계 문제 하이라이트 ─ */
+          if(highlightMode==='boundary'){
+            /* 경계선 바로 옆 패치들 강조: 원본 r3/r4 행, c3/c4 열 패치 */
+            var isBoundaryR=(dr===3||dr===4);
+            var isBoundaryC=(dc===3||dc===4);
+            if(isBoundaryR||isBoundaryC){
+              ctx.fillStyle='rgba(251,191,36,0.4)';
+              ctx.fillRect(dc*CELL,dr*CELL,CELL,CELL);
+            }
+          }
+
+          /* ─ Shift 후 경계 패치가 모인 Window 강조 ─ */
+          if(highlightMode==='corner'&&dr<S&&dc<S){
+            ctx.fillStyle='rgba(251,191,36,0.45)';
+            ctx.fillRect(dc*CELL,dr*CELL,CELL,CELL);
+          }
+
+          /* ─ SW-MSA 완료: 경계 패치가 연결됐음을 녹색으로 ─ */
+          if(highlightMode==='boundary_solved'){
+            var isBR=(dr===3||dr===4);
+            var iBC=(dc===3||dc===4);
+            if(isBR||iBC){
+              ctx.fillStyle='rgba(16,185,129,0.35)';
+              ctx.fillRect(dc*CELL,dr*CELL,CELL,CELL);
+            }
+          }
+
+          /* 패치 격자선 */
+          ctx.strokeStyle=dark?'rgba(255,255,255,0.11)':'rgba(0,0,0,0.11)';
+          ctx.lineWidth=0.5;
+          ctx.strokeRect(dc*CELL+0.25,dr*CELL+0.25,CELL-0.5,CELL-0.5);
+
+          /* 텍스트 */
+          var tc=dark?TEXTS_D[wi]:TEXTS[wi];
+          if(maskMode==='mask'&&(dr<S||dc<S)&&!(dr<S&&dc<S)) tc=dark?'rgba(200,200,200,0.5)':'rgba(80,80,80,0.5)';
+          if((highlightMode==='boundary'||highlightMode==='boundary_solved')&&(dr===3||dr===4||dc===3||dc===4)) tc='#92400e';
+          if(highlightMode==='corner'&&dr<S&&dc<S) tc='#92400e';
+          ctx.fillStyle=tc;
+          ctx.font='bold '+(CELL*0.30)+'px sans-serif';
+          ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText('r'+sr+'c'+sc, dc*CELL+CELL/2, dr*CELL+CELL/2);
+        }
+      }
+
+      /* Window 경계 테두리 */
+      var bColors=dark?BORDERS_D:BORDERS;
+      for(var wr=0;wr<2;wr++) for(var wc=0;wc<2;wc++){
+        var wi2=wr*2+wc;
+        var lw=2.5;
+        ctx.strokeStyle=bColors[wi2]; ctx.lineWidth=lw;
+        /* 경계 모인 Window(왼쪽 위)는 강조 */
+        if(highlightMode==='corner'&&wr===0&&wc===0){
+          ctx.strokeStyle='#d97706'; ctx.lineWidth=3;
+        }
+        ctx.strokeRect(wc*4*CELL+lw/2, wr*4*CELL+lw/2, 4*CELL-lw, 4*CELL-lw);
+      }
+
+      /* 마스킹 구역 경계 표시 */
+      if(maskMode==='mask'){
+        ctx.strokeStyle='rgba(120,120,120,0.6)'; ctx.lineWidth=1.5;
+        ctx.setLineDash([4,3]);
+        /* 위쪽 S행 경계 */
+        ctx.beginPath(); ctx.moveTo(S*CELL,0); ctx.lineTo(N*CELL,S*CELL); ctx.moveTo(0,S*CELL); ctx.lineTo(S*CELL,S*CELL); ctx.stroke();
+        /* 왼쪽 S열 경계 */
+        ctx.beginPath(); ctx.moveTo(S*CELL,0); ctx.lineTo(S*CELL,N*CELL); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    /* ── 행 번호 strip ── */
+    function drawStrip(stripA, stripB){
+      var el=document.getElementById('cs-row-strip'); el.innerHTML='';
+      var rows=stripB
+        ?[{label:'이동 전',map:stripA},{label:'이동 후',map:stripB}]
+        :[{label:'현재',map:stripA}];
+      rows.forEach(function(rr){
+        var row=document.createElement('div');
+        row.className='row-strip-row';
+        var lbl=document.createElement('span');
+        lbl.className='row-strip-tag'; lbl.textContent=rr.label; row.appendChild(lbl);
+        rr.map.forEach(function(v,i){
+          var wi=origWin(v,0);
+          var isWrap=stripB&&rr.label==='이동 후'&&i<S;
+          var cell=document.createElement('div');
+          cell.className='row-cell';
+          cell.style.background=isWrap?'#fef3c7':FILLS[wi];
+          cell.style.color=isWrap?'#92400e':TEXTS[wi];
+          cell.style.borderColor=isWrap?'#d97706':'transparent';
+          cell.textContent='r'+v;
+          row.appendChild(cell);
+        });
+        el.appendChild(row);
+      });
+    }
+
+    /* ── 단계 배지 ── */
+    function setBadge(step){
+      var el=document.getElementById('cs-phase-badge');
+      el.innerHTML='<span style="display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:500;background:'+step.badgeColor+';color:'+step.badgeText+'">'+step.badge+'</span>';
+    }
+
+    /* ── 렌더 ── */
+    function render(i){
+      var s=STEPS[i];
+      setBadge(s);
+      document.getElementById('cs-label-a').textContent=s.labelA;
+      document.getElementById('cs-label-b').textContent=s.showB?s.labelB:'';
+      document.getElementById('cs-desc').innerHTML=s.text;
+
+      drawGrid(ctxA, s.rowA, s.colA, null, null);
+      if(s.showB){
+        drawGrid(ctxB, s.rowB, s.colB, s.maskB, s.highlightB);
+      } else {
+        ctxB.clearRect(0,0,LOGICAL,LOGICAL);
+      }
+
+      /* strip */
+      var stripWrap=document.getElementById('cs-strip-wrap');
+      if(s.showStrip){
+        stripWrap.style.display='block';
+        drawStrip(s.stripA, s.stripB);
+      } else {
+        stripWrap.style.display='none';
+      }
+
+      document.querySelectorAll('#cs-btns .wbtn').forEach(function(b,j){
+        b.classList.toggle('on',j===i);
+      });
+    }
+
+    /* ── 버튼 생성 ── */
+    var be=document.getElementById('cs-btns');
+    STEPS.forEach(function(s,i){
+      var b=document.createElement('button'); b.className='wbtn';
+      b.textContent=s.badge;
+      b.onclick=function(){render(i);}; be.appendChild(b);
+    });
+    render(0);
+  })();
+  </script>
+</section>
+
+
+<!-- ======================== 11. Relative Position Bias ======================== -->
+<section id="rel-pos">
+  <h2><span class="num">3.2</span> Relative Position Bias</h2>
+
+  <p>Swin Transformer는 절대 위치 임베딩 대신 <strong>Relative Position Bias</strong>를 Self-Attention 계산에 더해준다.</p>
+
+  <div class="formula-box">
+    Attention(Q, K, V) = SoftMax(QKᵀ / √d + B) V<br><br>
+    B ∈ ℝ^(M²×M²) : 상대 위치 편향 행렬<br>
+    각 축 방향 상대 위치 범위 [−M+1, M−1] → 작은 편향 행렬 B̂ ∈ ℝ^(2M-1)×(2M-1)에서 참조<br>
+    출처: 논문 Eq.(4) — Section 3.2
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">기존 절대 위치 임베딩</div>
+      <div class="card-title">입력에 위치 좌표를 더함</div>
+      <div class="card-body">ViT처럼 각 패치의 절대 좌표를 임베딩 벡터로 변환해 더한다. 학습 해상도와 다른 해상도에 적용 시 성능 저하.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">Relative Position Bias</div>
+      <div class="card-title">Attention 계산 시 상대 거리를 더함</div>
+      <div class="card-body">두 패치 간 <strong>상대적 거리</strong>를 Attention 점수에 직접 더한다. 논문 Table 4 Ablation 실험에서 절대 위치 임베딩 대비 일관되게 우수한 성능.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">전이 학습 장점</div>
+      <div class="card-title">Bi-cubic 보간으로 해상도 조정</div>
+      <div class="card-body">사전학습된 상대 위치 편향을 파인튜닝 시 다른 Window 크기에도 Bi-cubic 보간으로 적용 가능. 유연한 전이 학습 지원.</div>
+    </div>
+  </div>
+
+  <div class="ref-box">
+    <div class="ref-label">논문 Figure (Ablation) — Relative Position Bias 효과</div>
+    <a href="https://rahites.tistory.com/180">블로그 이미지 참조 (Table 4 Ablation Study)</a>
+  </div>
+</section>
+
+
+<!-- ======================== 12. GELU ======================== -->
+<section id="gelu">
+  <h2><span class="num">부록</span> GELU 활성화 함수</h2>
+
+  <p>Swin Transformer Block의 MLP에는 ReLU 대신 <strong>GELU(Gaussian Error Linear Unit)</strong>를 사용한다. GPT, BERT, ViT 등 현대 Transformer 계열에서 표준으로 쓰이는 활성화 함수다.</p>
+
+  <div class="formula-box">
+    GELU 근사식: f(x) = 0.5x(1 + tanh(√(2/π) · (x + 0.044715x³)))<br>
+    ReLU: f(x) = max(0, x)<br><br>
+    핵심 차이: ReLU는 x=0에서 불연속 → GELU는 x≈−0.17 부근에서 부드럽게 꺾임
+  </div>
+
+  <div class="widget-wrap">
+    <div class="widget-btns" id="gelu-btns">
+      <button class="wbtn on" onclick="geluMode('compare')">ReLU vs GELU 비교</button>
+      <button class="wbtn" onclick="geluMode('gelu')">GELU 단독</button>
+      <button class="wbtn" onclick="geluMode('relu')">ReLU 단독</button>
+    </div>
+    <div class="gelu-canvas-wrap">
+      <canvas id="gelu-cv" width="720" height="280"></canvas>
+    </div>
+    <div class="probe-row">
+      <span style="font-size:12px;color:var(--text2);">x 값 조절:</span>
+      <input type="range" id="gelu-sl" min="-40" max="40" value="10" step="1" style="flex:1;min-width:100px;" oninput="geluProbe(this.value/10)">
+      <div class="probe-out" id="gelu-out"></div>
+    </div>
+    <div class="widget-desc" id="gelu-desc"></div>
+  </div>
+
+  <script>
+  (function(){
+    var W=720,H=280,xMin=-4,xMax=4,yMin=-1,yMax=4;
+    function tX(x){return (x-xMin)/(xMax-xMin)*W;}
+    function tY(y){return H-(y-yMin)/(yMax-yMin)*H;}
+    function relu(x){return Math.max(0,x);}
+    function gelu(x){return 0.5*x*(1+Math.tanh(Math.sqrt(2/Math.PI)*(x+0.044715*x*x*x)));}
+    var mode='compare',px=1.0;
+    var DESCS={
+      compare:'<strong>ReLU vs GELU 핵심 차이</strong><br>ReLU는 x&lt;0이면 무조건 0, x≥0이면 그대로. GELU는 "x가 활성화될 확률"로 부드럽게 통과. 음수 구간도 완전히 0으로 죽이지 않아 그래디언트 흐름이 더 안정적이고, 실험적으로 성능이 우수하다.',
+      relu:'<strong>ReLU (Rectified Linear Unit)</strong><br>f(x) = max(0, x). 가장 단순하고 빠른 활성화 함수. x&lt;0이면 뉴런이 완전히 꺼진다. 단점: 음수 입력에서 그래디언트=0이 되는 "Dead Neuron" 문제 발생 가능.',
+      gelu:'<strong>GELU (Gaussian Error Linear Unit)</strong><br>f(x) = x·Φ(x) (Φ=표준정규분포 누적분포함수). GPT, BERT, ViT, Swin Transformer 등 현대 Transformer 계열 표준. 음수를 완전히 죽이지 않아 더 부드러운 그래디언트.'
+    };
+
+    function draw(){
+      var cv=document.getElementById('gelu-cv'),ctx=cv.getContext('2d');
+      var dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+      ctx.clearRect(0,0,W,H);
+
+      // grid & axes
+      for(var x=Math.ceil(xMin);x<=Math.floor(xMax);x++){
+        ctx.strokeStyle=x===0?(dark?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.25)'):(dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)');
+        ctx.lineWidth=x===0?1:0.5;
+        ctx.beginPath();ctx.moveTo(tX(x),0);ctx.lineTo(tX(x),H);ctx.stroke();
+        if(x!==0){
+          ctx.fillStyle=dark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.35)';
+          ctx.font='11px sans-serif';ctx.textAlign='center';
+          ctx.fillText(x,tX(x),tY(0)+14);
+        }
+      }
+      for(var y=Math.ceil(yMin);y<=Math.floor(yMax);y++){
+        ctx.strokeStyle=y===0?(dark?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.25)'):(dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)');
+        ctx.lineWidth=y===0?1:0.5;
+        ctx.beginPath();ctx.moveTo(0,tY(y));ctx.lineTo(W,tY(y));ctx.stroke();
+        if(y!==0){
+          ctx.fillStyle=dark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.35)';
+          ctx.font='11px sans-serif';ctx.textAlign='right';
+          ctx.fillText(y,tX(0)-4,tY(y)+4);
+        }
+      }
+      ctx.fillStyle=dark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.35)';
+      ctx.font='11px sans-serif';
+      ctx.textAlign='right';ctx.fillText('0',tX(0)-5,tY(0)+14);
+      ctx.textAlign='center';ctx.fillText('x',W-10,tY(0)+4);
+      ctx.textAlign='left';ctx.fillText('y',tX(0)+4,12);
+
+      // y=x dashed
+      ctx.strokeStyle=dark?'rgba(255,255,255,0.13)':'rgba(0,0,0,0.1)';
+      ctx.lineWidth=1;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(tX(Math.max(xMin,yMin)),tY(Math.max(xMin,yMin)));
+      ctx.lineTo(tX(Math.min(xMax,yMax)),tY(Math.min(xMax,yMax)));ctx.stroke();
+      ctx.setLineDash([]);
+
+      function drawFn(fn,color){
+        ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.beginPath();
+        var first=true;
+        for(var i=0;i<W;i++){
+          var xi=xMin+(i/W)*(xMax-xMin),yi=fn(xi);
+          if(yi<yMin-0.5||yi>yMax+0.5){first=true;continue;}
+          if(first){ctx.moveTo(i,tY(yi));first=false;}else ctx.lineTo(i,tY(yi));
+        }
+        ctx.stroke();
+      }
+      if(mode==='compare'||mode==='relu') drawFn(relu,'#E24B4A');
+      if(mode==='compare'||mode==='gelu') drawFn(gelu,'#185FA5');
+
+      // probe
+      ctx.strokeStyle=dark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)';
+      ctx.lineWidth=0.8;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(tX(px),0);ctx.lineTo(tX(px),H);ctx.stroke();ctx.setLineDash([]);
+
+      if(mode==='compare'||mode==='relu'){
+        var ry=tY(relu(px));
+        if(ry>=0&&ry<=H){ctx.fillStyle='#E24B4A';ctx.beginPath();ctx.arc(tX(px),ry,5,0,2*Math.PI);ctx.fill();}
+      }
+      if(mode==='compare'||mode==='gelu'){
+        var gy=tY(gelu(px));
+        if(gy>=0&&gy<=H){ctx.fillStyle='#185FA5';ctx.beginPath();ctx.arc(tX(px),gy,5,0,2*Math.PI);ctx.fill();}
+      }
+
+      // legend
+      var lx=W-200,ly=20;
+      if(mode==='compare'||mode==='relu'){
+        ctx.fillStyle='#E24B4A';ctx.fillRect(lx,ly,20,3);
+        ctx.fillStyle=dark?'rgba(255,255,255,0.6)':'rgba(0,0,0,0.6)';
+        ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText('ReLU',lx+26,ly+5);
+      }
+      if(mode==='compare'||mode==='gelu'){
+        var gy2=(mode==='compare')?ly+18:ly;
+        ctx.fillStyle='#185FA5';ctx.fillRect(lx,gy2,20,3);
+        ctx.fillStyle=dark?'rgba(255,255,255,0.6)':'rgba(0,0,0,0.6)';
+        ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText('GELU',lx+26,gy2+5);
+      }
+    }
+
+    function updateProbe(v){
+      px=v;draw();
+      var el=document.getElementById('gelu-out'),r=relu(v).toFixed(3),g=gelu(v).toFixed(3);
+      var h='<div class="probe-card">x = <strong>'+v.toFixed(2)+'</strong></div>';
+      if(mode==='compare'||mode==='relu') h+='<div class="probe-card">ReLU = <strong style="color:#E24B4A">'+r+'</strong></div>';
+      if(mode==='compare'||mode==='gelu') h+='<div class="probe-card">GELU = <strong style="color:#185FA5">'+g+'</strong></div>';
+      el.innerHTML=h;
+    }
+
+    window.geluMode=function(m){
+      mode=m;
+      document.querySelectorAll('#gelu-btns .wbtn').forEach(function(b,i){b.classList.toggle('on',['compare','gelu','relu'][i]===m);});
+      document.getElementById('gelu-desc').innerHTML=DESCS[m];
+      updateProbe(px);
+    };
+    window.geluProbe=function(v){updateProbe(v);};
+    geluMode('compare');updateProbe(1.0);
+  })();
+  </script>
+
+  <div class="ref-box">
+    <div class="ref-label">GELU 관련 참고</div>
+    <a href="https://hongl.tistory.com/236">GELU 상세 설명 — hongl.tistory.com/236</a>
+    <a href="https://arxiv.org/abs/1606.08415">GELU 원논문 — arxiv.org/abs/1606.08415</a>
+  </div>
+</section>
+
+
+<!-- ======================== 13. CNN 호환성 ======================== -->
+<section id="cnn-compat">
+  <h2><span class="num">활용</span> CNN 파이프라인 호환성 — 드롭인 교체</h2>
+
+  <p>Swin Transformer의 실용적 핵심은 <strong>기존 CNN 백본을 그대로 교체(Drop-in replacement)</strong>할 수 있다는 점이다. 논문 Section 3.1에서 "proposed architecture can conveniently replace the backbone networks in existing methods"라고 명시하고 있다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--gray)">ResNet (CNN 백본)</div>
+      <div class="card-title">특징 추출 기반 네트워크</div>
+      <div class="card-body">입력 이미지에서 특징을 추출하는 기반 네트워크. Stage마다 해상도를 반씩 줄이고 채널을 2배로 늘린다. Swin도 동일한 패턴을 따르므로 교체 가능.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">FPN (Object Detection용)</div>
+      <div class="card-title">Feature Pyramid Network</div>
+      <div class="card-body">백본의 4개 Feature Map을 위아래로 연결해 다양한 크기의 물체를 동시 탐지. H/4~H/32의 4개 출력이 필요 — Swin이 정확히 이를 충족.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">U-Net (Segmentation용)</div>
+      <div class="card-title">인코더-디코더 구조</div>
+      <div class="card-body">인코더(백본) → Skip Connection → 디코더(업샘플링). 픽셀 단위 분류 수행. Swin의 4개 Stage 출력을 인코더로 그대로 활용 가능.</div>
+    </div>
+  </div>
+
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 180" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="aCC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="14" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 5. Drop-in 교체 — ResNet 대신 Swin을 그대로 사용</text>
+
+      <!-- Row 1: ResNet -->
+      <text x="350" y="36" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">기존 파이프라인</text>
+      <rect x="18" y="44" width="72" height="34" rx="5" fill="#F1EFE8" stroke="#888780" stroke-width="1"/>
+      <text x="54" y="62" text-anchor="middle" font-size="10" font-weight="500" fill="#444441">ResNet</text>
+      <text x="54" y="74" text-anchor="middle" font-size="9" fill="#5F5E5A">백본</text>
+      <line x1="90" y1="61" x2="104" y2="61" stroke="#888780" stroke-width="1" marker-end="url(#aCC)"/>
+      <rect x="106" y="44" width="42" height="34" rx="4" fill="#dbeafe" stroke="#185FA5" stroke-width="0.8"/>
+      <text x="127" y="65" text-anchor="middle" font-size="9" fill="#0C447C">H/4</text>
+      <rect x="152" y="44" width="42" height="34" rx="4" fill="#d1fae5" stroke="#0F6E56" stroke-width="0.8"/>
+      <text x="173" y="65" text-anchor="middle" font-size="9" fill="#085041">H/8</text>
+      <rect x="198" y="44" width="42" height="34" rx="4" fill="#fce7f3" stroke="#993556" stroke-width="0.8"/>
+      <text x="219" y="65" text-anchor="middle" font-size="9" fill="#72243E">H/16</text>
+      <rect x="244" y="44" width="42" height="34" rx="4" fill="#fef9c3" stroke="#854F0B" stroke-width="0.8"/>
+      <text x="265" y="65" text-anchor="middle" font-size="9" fill="#633806">H/32</text>
+      <line x1="286" y1="61" x2="300" y2="61" stroke="#888780" stroke-width="1" marker-end="url(#aCC)"/>
+      <rect x="302" y="44" width="90" height="34" rx="5" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="347" y="62" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">FPN / U-Net</text>
+      <text x="347" y="74" text-anchor="middle" font-size="9" fill="#534AB7">그대로 재사용</text>
+
+      <!-- exchange arrow -->
+      <text x="54" y="100" text-anchor="middle" font-size="16" fill="#E24B4A">↓</text>
+      <text x="88" y="103" font-size="10" fill="#E24B4A" font-weight="500">교체</text>
+      <line x1="110" y1="96" x2="290" y2="96" stroke="#0F6E56" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <text x="200" y="93" text-anchor="middle" font-size="10" fill="#0F6E56">← 동일 구조, 변경 없음 →</text>
+
+      <!-- Row 2: Swin -->
+      <text x="350" y="122" text-anchor="middle" font-size="10" fill="#5F5E5A" font-weight="500">교체 후 파이프라인</text>
+      <rect x="18" y="130" width="72" height="34" rx="5" fill="#E1F5EE" stroke="#0F6E56" stroke-width="2"/>
+      <text x="54" y="148" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">Swin</text>
+      <text x="54" y="160" text-anchor="middle" font-size="9" fill="#0F6E56">백본</text>
+      <line x1="90" y1="147" x2="104" y2="147" stroke="#888780" stroke-width="1" marker-end="url(#aCC)"/>
+      <rect x="106" y="130" width="42" height="34" rx="4" fill="#dbeafe" stroke="#185FA5" stroke-width="0.8"/>
+      <text x="127" y="151" text-anchor="middle" font-size="9" fill="#0C447C">H/4</text>
+      <rect x="152" y="130" width="42" height="34" rx="4" fill="#d1fae5" stroke="#0F6E56" stroke-width="0.8"/>
+      <text x="173" y="151" text-anchor="middle" font-size="9" fill="#085041">H/8</text>
+      <rect x="198" y="130" width="42" height="34" rx="4" fill="#fce7f3" stroke="#993556" stroke-width="0.8"/>
+      <text x="219" y="151" text-anchor="middle" font-size="9" fill="#72243E">H/16</text>
+      <rect x="244" y="130" width="42" height="34" rx="4" fill="#fef9c3" stroke="#854F0B" stroke-width="0.8"/>
+      <text x="265" y="151" text-anchor="middle" font-size="9" fill="#633806">H/32</text>
+      <line x1="286" y1="147" x2="300" y2="147" stroke="#888780" stroke-width="1" marker-end="url(#aCC)"/>
+      <rect x="302" y="130" width="90" height="34" rx="5" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="347" y="148" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">FPN / U-Net</text>
+      <text x="347" y="160" text-anchor="middle" font-size="9" fill="#534AB7">변경 없음</text>
+
+      <!-- ViT note -->
+      <rect x="408" y="44" width="278" height="120" rx="8" fill="#FCEBEB" stroke="#E24B4A" stroke-width="0.5"/>
+      <text x="547" y="66" text-anchor="middle" font-size="10" fill="#A32D2D" font-weight="500">ViT의 제약</text>
+      <text x="547" y="84" text-anchor="middle" font-size="9" fill="#791F1F">단일 해상도 H/16×W/16 고정</text>
+      <text x="547" y="100" text-anchor="middle" font-size="9" fill="#A32D2D">FPN은 4개 해상도를 요구</text>
+      <text x="547" y="116" text-anchor="middle" font-size="9" fill="#A32D2D">→ 직접 연결 불가</text>
+      <text x="547" y="134" text-anchor="middle" font-size="9" fill="#791F1F">억지 연결 시 구조 복잡 + 성능↓</text>
+      <text x="547" y="152" text-anchor="middle" font-size="9" fill="#791F1F">Swin 등장 전 Transformer의 한계</text>
+    </svg>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">왜 ViT는 FPN에 연결하기 어려운가</div>
+    <div class="i-text">FPN은 "4개의 서로 다른 해상도 Feature Map"을 받아야 작동한다. ViT는 처음부터 끝까지 <strong>H/16×W/16 단일 해상도</strong>이므로 FPN을 직접 연결할 수 없다. 억지로 연결하려면 중간 레이어를 뜯어내거나 업샘플링 모듈을 추가해야 해서 구조가 복잡해지고 성능도 떨어진다. <strong>Swin이 등장하기 전까지 Transformer가 Detection/Segmentation에서 CNN보다 실용적으로 약했던 핵심 이유</strong>다.</div>
+  </div>
+</section>
+
+
+<!-- ======================== 14. 모델 변형 ======================== -->
+<section id="variants">
+  <h2><span class="num">3.3</span> Architecture Variants — 모델 변형</h2>
+
+  <p>Swin-B를 기본 모델로 하여 약 0.25×, 0.5×, 2× 크기의 변형 모델을 제공한다. Window 크기 M=7, head별 query 차원 d=32, MLP expansion α=4는 모두 동일하다.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>모델</th><th>채널 C</th><th>Block 수 {1,2,3,4}단계</th><th>파라미터</th><th>대응 CNN</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Swin-T (Tiny)</strong></td><td>96</td><td>{2, 2, 6, 2}</td><td>28M</td><td>ResNet-50 / DeiT-S 수준</td></tr>
+        <tr><td><strong>Swin-S (Small)</strong></td><td>96</td><td>{2, 2, 18, 2}</td><td>50M</td><td>ResNet-101 수준</td></tr>
+        <tr><td><strong>Swin-B (Base)</strong></td><td>128</td><td>{2, 2, 18, 2}</td><td>88M</td><td>ViT-B / DeiT-B 수준</td></tr>
+        <tr><td><strong>Swin-L (Large)</strong></td><td>192</td><td>{2, 2, 18, 2}</td><td>197M</td><td>ViT-L 수준</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ref-box">
+    <div class="ref-label">논문 Table 1 — 모델별 파라미터·FLOPs·throughput 원본</div>
+    <a href="https://arxiv.org/pdf/2103.14030">논문 원문 PDF Table 1 (Section 3.3)</a>
+    <a href="https://rahites.tistory.com/180">블로그 이미지 참조</a>
+  </div>
+</section>
+
+
+<!-- ======================== 15. 실험 결과 ======================== -->
+<section id="results">
+  <h2><span class="num">4</span> Experiments — 실험 결과</h2>
+
+  <p>ImageNet-1K Image Classification, COCO Object Detection, ADE20K Semantic Segmentation 세 가지 태스크에서 당시 최고 성능을 기록했다.</p>
+
+  <h3>4.1 Image Classification — ImageNet-1K</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>모델</th><th>파라미터</th><th>FLOPs</th><th>Top-1 Acc</th></tr></thead>
+      <tbody>
+        <tr><td>DeiT-S</td><td>22M</td><td>4.6G</td><td>79.8%</td></tr>
+        <tr><td><strong>Swin-T</strong></td><td>28M</td><td>4.5G</td><td><span class="cmp-good">81.3%</span></td></tr>
+        <tr><td>ResNet-50</td><td>25M</td><td>4.1G</td><td>76.1%</td></tr>
+        <tr><td>ViT-B/16</td><td>86M</td><td>55.4G</td><td>81.8%</td></tr>
+        <tr><td><strong>Swin-B</strong></td><td>88M</td><td>15.4G</td><td><span class="cmp-good">83.5%</span></td></tr>
+        <tr><td><strong>Swin-B (ImageNet-22K pre-train)</strong></td><td>88M</td><td>15.4G</td><td><span class="cmp-good">86.4%</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>4.2 Object Detection — COCO</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>백본</th><th>검출 방법</th><th>box AP</th><th>mask AP</th></tr></thead>
+      <tbody>
+        <tr><td>ResNet-50</td><td>Cascade Mask R-CNN</td><td>46.3</td><td>40.1</td></tr>
+        <tr><td><strong>Swin-T</strong></td><td>Cascade Mask R-CNN</td><td><span class="cmp-good">50.4</span></td><td><span class="cmp-good">43.7</span></td></tr>
+        <tr><td><strong>Swin-B</strong></td><td>Cascade Mask R-CNN</td><td><span class="cmp-good">51.9</span></td><td><span class="cmp-good">45.0</span></td></tr>
+        <tr><td><strong>Swin-L (22K)</strong></td><td>HTC++</td><td><span class="cmp-good">58.7</span></td><td><span class="cmp-good">51.1</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>4.3 Semantic Segmentation — ADE20K</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>백본</th><th>방법</th><th>mIoU (val)</th></tr></thead>
+      <tbody>
+        <tr><td>ResNet-101</td><td>UperNet</td><td>44.9</td></tr>
+        <tr><td><strong>Swin-S</strong></td><td>UperNet</td><td><span class="cmp-good">47.6</span></td></tr>
+        <tr><td><strong>Swin-B</strong></td><td>UperNet</td><td><span class="cmp-good">48.1</span></td></tr>
+        <tr><td><strong>Swin-L (22K)</strong></td><td>UperNet</td><td><span class="cmp-good">53.5</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>4.4 Ablation Study — Shifted Window 효과</h3>
+  <div class="callout">
+    <p><strong>Shifted Window 유무 비교 (논문 Table 4):</strong> W-MSA만 사용한 경우 대비 SW-MSA를 추가하면 ImageNet Top-1 +0.5~1.0%p, COCO box AP도 일관되게 상승. Relative Position Bias를 더하면 추가 성능 향상. Shifted Window + Relative Position Bias 조합이 최적임을 실험적으로 입증.</p>
+  </div>
+
+  <div class="ref-box">
+    <div class="ref-label">논문 Table 2, 3, 4, 5, 6 원본 이미지</div>
+    <a href="https://rahites.tistory.com/180">블로그 이미지 참조 (Table 2~4 포함)</a>
+    <a href="https://arxiv.org/pdf/2103.14030">논문 원문 PDF Section 4</a>
+  </div>
+</section>
+
+
+<!-- ======================== 16. 요약 ======================== -->
+<section id="summary">
+  <h2><span class="num">요약</span> 핵심 요약 — 논문의 기여와 의의</h2>
+
+  <div class="info-box">
+    <div class="info-title">Swin Transformer 세 가지 핵심 기여</div>
+    <div class="info-body">
+      <strong>① Hierarchical Feature Map:</strong> ViT와 달리 4개의 서로 다른 해상도 Feature Map 제공. FPN, U-Net과 직접 연결 가능해 Detection/Segmentation에서 CNN 백본을 실질적으로 대체.<br><br>
+      <strong>② 선형 계산 복잡도 O(N):</strong> Window 내부에서만 Attention해 O(N²)를 O(N)으로 감소. 고해상도 이미지에도 실용적인 계산량 유지.<br><br>
+      <strong>③ Shifted Window로 경계 문제 해결:</strong> Cyclic Shift + Masking으로 계산량 증가 없이 Cross-Window 정보 교환. Sliding Window 대비 낮은 Latency.
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td><strong>발표</strong></td><td>ICCV 2021 Best Paper</td></tr>
+        <tr><td><strong>소속</strong></td><td>Microsoft Research Asia</td></tr>
+        <tr><td><strong>핵심 아이디어</strong></td><td>Window Self-Attention + Shifted Window + Hierarchical Patch Merging</td></tr>
+        <tr><td><strong>계산 복잡도</strong></td><td>O(N) 선형 (이미지 크기에 비례)</td></tr>
+        <tr><td><strong>기본 Patch 크기</strong></td><td>4×4 (48차원)</td></tr>
+        <tr><td><strong>Window 크기</strong></td><td>M=7 (기본값)</td></tr>
+        <tr><td><strong>활성화 함수</strong></td><td>GELU</td></tr>
+        <tr><td><strong>위치 임베딩</strong></td><td>Relative Position Bias (절대 좌표 아님)</td></tr>
+        <tr><td><strong>ImageNet Top-1 (Swin-T)</strong></td><td>81.3%</td></tr>
+        <tr><td><strong>COCO box AP (Swin-L)</strong></td><td>58.7 (당시 SOTA)</td></tr>
+        <tr><td><strong>ADE20K mIoU (Swin-L)</strong></td><td>53.5 (당시 SOTA)</td></tr>
+        <tr><td><strong>CNN 호환성</strong></td><td>ResNet 드롭인 교체 가능 (동일한 4단계 Feature Map)</td></tr>
+        <tr><td><strong>공식 코드</strong></td><td><a href="https://github.com/microsoft/Swin-Transformer">github.com/microsoft/Swin-Transformer</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="a-block">
+    <div class="a-label">이 논문에서 얻어야 할 한 가지</div>
+    <div class="a-text">Swin Transformer의 진짜 기여는 "Transformer를 이미지에 쓸 수 있다"는 데서 나아가 <strong>"기존 CNN 파이프라인을 그대로 유지하면서 Transformer로 교체할 수 있다"</strong>는 실용성에 있다. Window 분할이라는 단순한 아이디어가 계산 복잡도와 Hierarchical 구조 두 문제를 동시에 해결했고, Shifted Window가 그로 인한 경계 단절을 추가 비용 없이 보완했다. 이 세 아이디어의 조합이 Vision Transformer의 실용화를 앞당겼다.</div>
+  </div>
+
+  <div class="ref-box">
+    <div class="ref-label">참고 자료 전체 목록</div>
+    <a href="https://arxiv.org/pdf/2103.14030">논문 원문 PDF — arxiv.org/pdf/2103.14030</a>
+    <a href="https://arxiv.org/abs/2103.14030">논문 arXiv 페이지 — arxiv.org/abs/2103.14030</a>
+    <a href="https://github.com/microsoft/Swin-Transformer">공식 구현 코드 — github.com/microsoft/Swin-Transformer</a>
+    <a href="https://rahites.tistory.com/180">참고 블로그 — rahites.tistory.com/180</a>
+    <a href="https://greeksharifa.github.io/computer%20vision/2021/12/14/Swin-Transformer/">상세 해설 — greeksharifa.github.io</a>
+    <a href="https://deep-learning-study.tistory.com/728">논문 읽기 — deep-learning-study.tistory.com/728</a>
+    <a href="https://arxiv.org/abs/2111.09883">Swin Transformer V2 — arxiv.org/abs/2111.09883</a>
+    <a href="https://hongl.tistory.com/236">GELU 설명 — hongl.tistory.com/236</a>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var sections=document.querySelectorAll('section[id]');
+  var links=document.querySelectorAll('nav ul li a');
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        var id=e.target.id;
+        links.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')==='#'+id);});
+      }
+    });
+  },{rootMargin:'-30% 0px -60% 0px'});
+  sections.forEach(function(s){obs.observe(s);});
+})();
+</script>
+</body>
+</html>
