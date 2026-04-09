@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 모델 개발 검토 보고서 — 중소 제조현장 사고 실시간 탐지 시스템</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --bg2: #ffffff;
+    --bg3: #eeecea;
+    --text: #1a1a18;
+    --text2: #5a5955;
+    --text3: #9c9a92;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --teal: #0F6E56;
+    --teal-bg: #E1F5EE;
+    --amber: #854F0B;
+    --amber-bg: #FAEEDA;
+    --amber-mid: #EF9F27;
+    --coral: #993C1D;
+    --coral-bg: #FAECE7;
+    --green: #3B6D11;
+    --green-bg: #EAF3DE;
+    --purple: #534AB7;
+    --purple-bg: #EEEDFE;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --gray: #5F5E5A;
+    --gray-bg: #F1EFE8;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18;
+      --bg2: #242422;
+      --bg3: #2e2e2b;
+      --text: #e8e6de;
+      --text2: #a8a69e;
+      --text3: #6e6c65;
+      --border: rgba(255,255,255,0.09);
+      --border2: rgba(255,255,255,0.16);
+      --blue: #85B7EB;
+      --blue-bg: #042C53;
+      --teal: #5DCAA5;
+      --teal-bg: #04342C;
+      --amber: #FAC775;
+      --amber-bg: #412402;
+      --amber-mid: #EF9F27;
+      --coral: #F0997B;
+      --coral-bg: #4A1B0C;
+      --green: #97C459;
+      --green-bg: #173404;
+      --purple: #AFA9EC;
+      --purple-bg: #26215C;
+      --red: #F09595;
+      --red-bg: #501313;
+      --gray: #B4B2A9;
+      --gray-bg: #2C2C2A;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .layout { display: flex; min-height: 100vh; }
+  nav {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 0.5px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 24px 0 40px;
+  }
+  nav .logo { padding: 0 20px 20px; border-bottom: 0.5px solid var(--border); margin-bottom: 16px; }
+  nav .logo .tag { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  nav .logo .title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  nav ul { list-style: none; padding: 0 8px; }
+  nav ul li a { display: block; padding: 7px 12px; border-radius: 6px; font-size: 13px; color: var(--text2); text-decoration: none; transition: background .15s, color .15s; }
+  nav ul li a:hover { background: var(--bg3); color: var(--text); }
+  nav ul li a.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  nav ul li .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; padding: 12px 12px 4px; }
+  main { flex: 1; max-width: 860px; padding: 48px 40px 80px; }
+  .doc-header { margin-bottom: 40px; padding-bottom: 32px; border-bottom: 0.5px solid var(--border); }
+  .doc-header .eyebrow { font-size: 12px; font-weight: 500; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .doc-header h1 { font-size: 26px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
+  .doc-header .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 20px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .meta-item { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .meta-item .label { font-size: 11px; color: var(--text3); margin-bottom: 3px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .meta-item .value { font-size: 13px; font-weight: 500; color: var(--text); }
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section h2 { font-size: 20px; font-weight: 500; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  section h2 .num { font-size: 12px; font-weight: 500; background: var(--blue-bg); color: var(--blue); border-radius: 20px; padding: 2px 9px; }
+  section h3 { font-size: 16px; font-weight: 500; margin: 24px 0 10px; color: var(--text); }
+  p { color: var(--text2); margin-bottom: 12px; }
+  .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card-grid .card { margin-bottom: 0; }
+  .card .card-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .card .card-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .card .card-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .info-box { background: var(--blue-bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; }
+  .info-box .info-title { font-size: 13px; font-weight: 500; color: var(--blue); margin-bottom: 6px; }
+  .info-box .info-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .callout { border-left: 3px solid var(--amber-mid); background: var(--amber-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .callout p { margin: 0; font-size: 13px; color: var(--text2); }
+  .callout strong { color: var(--text); }
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; border-radius: 20px; padding: 2px 9px; }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-teal { background: var(--teal-bg); color: var(--teal); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-gray { background: var(--gray-bg); color: var(--gray); }
+  .badge-coral { background: var(--coral-bg); color: var(--coral); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); }
+  .table-wrap { overflow-x: auto; margin-bottom: 16px; border: 0.5px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--bg3); }
+  th { padding: 10px 14px; text-align: left; font-weight: 500; color: var(--text2); font-size: 12px; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+  .timeline { display: flex; flex-direction: column; gap: 0; margin-bottom: 16px; }
+  .tl-item { display: flex; gap: 16px; align-items: flex-start; }
+  .tl-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .tl-line { width: 1px; flex: 1; background: var(--border2); min-height: 28px; }
+  .tl-content { padding: 0 0 24px; flex: 1; }
+  .tl-date { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 2px; letter-spacing: 0.04em; }
+  .tl-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .tl-desc { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .class-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .class-card { border-radius: var(--radius); padding: 18px; border: 0.5px solid var(--border); text-align: center; }
+  .class-card .class-num { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+  .class-card .class-name { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+  .class-card .class-desc { font-size: 12px; line-height: 1.5; }
+  .class-card .class-action { font-size: 11px; font-weight: 500; margin-top: 10px; padding: 4px 10px; border-radius: 20px; display: inline-block; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .kpi .kpi-val { font-size: 24px; font-weight: 500; margin-bottom: 4px; }
+  .kpi .kpi-label { font-size: 12px; color: var(--text3); }
+  .risk-row td:first-child { font-weight: 500; color: var(--text); width: 30%; }
+  .arch-box { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .arch-box .arch-title { font-size: 13px; font-weight: 500; color: var(--text3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 12px; }
+  .arch-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+  .arch-node { flex: 1; border-radius: var(--radius-sm); padding: 12px 14px; font-size: 12px; line-height: 1.5; border: 0.5px solid var(--border); background: var(--bg3); }
+  .arch-node strong { display: block; font-size: 13px; margin-bottom: 3px; font-weight: 500; }
+  .arch-arrow { width: 28px; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 14px; flex-shrink: 0; }
+  .arch-merge { text-align: center; padding: 10px; font-size: 12px; color: var(--text3); font-weight: 500; }
+  .fusion-box { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
+  .fusion-box strong { color: var(--purple); }
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--bg3); border-radius: var(--radius-sm); padding: 4px; }
+  .tab-btn { flex: 1; padding: 7px 12px; border: none; border-radius: 6px; background: transparent; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s, color .15s; font-family: inherit; }
+  .tab-btn.active { background: var(--bg2); color: var(--text); box-shadow: 0 0.5px 2px rgba(0,0,0,0.1); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .ref-list { list-style: none; counter-reset: ref; }
+  .ref-list li { counter-increment: ref; display: flex; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .ref-list li::before { content: '[' counter(ref) ']'; flex-shrink: 0; font-weight: 500; color: var(--text3); width: 28px; }
+  .ref-list li:last-child { border-bottom: none; }
+  .status { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+  .status-done { background: var(--green-bg); color: var(--green); }
+  .status-going { background: var(--blue-bg); color: var(--blue); }
+  .status-plan { background: var(--gray-bg); color: var(--gray); }
+  @media (max-width: 720px) {
+    nav { display: none; }
+    main { padding: 24px 20px 60px; }
+    .class-cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- 사이드 내비 -->
+<nav>
+  <div class="logo">
+    <div class="tag">기술연구소</div>
+    <div class="title">AI 개발검토보고서<br>Rev 1.0 (초안)</div>
+  </div>
+  <ul>
+    <li><div class="section-label">개요</div></li>
+    <li><a href="#overview" onclick="setActive(this)">과제 개요</a></li>
+    <li><a href="#problem" onclick="setActive(this)">현장 문제 재정의</a></li>
+    <li><div class="section-label">기술 설계</div></li>
+    <li><a href="#sensor" onclick="setActive(this)">감지 장치 구성</a></li>
+    <li><a href="#arch" onclick="setActive(this)">모델 아키텍처</a></li>
+    <li><a href="#compare" onclick="setActive(this)">아키텍처 비교</a></li>
+    <li><a href="#learning" onclick="setActive(this)">학습 전략</a></li>
+    <li><div class="section-label">운영 · 성과</div></li>
+    <li><a href="#infra" onclick="setActive(this)">Edge-서버-관제 아키텍처</a></li>
+    <li><a href="#output" onclick="setActive(this)">위험 등급 정의</a></li>
+    <li><a href="#control" onclick="setActive(this)">행동 통제 체계</a></li>
+    <li><a href="#schedule" onclick="setActive(this)">추진 계획</a></li>
+    <li><a href="#risk" onclick="setActive(this)">리스크 &amp; 대응</a></li>
+    <li><a href="#kpi" onclick="setActive(this)">기대 성과</a></li>
+  </ul>
+</nav>
+
+<!-- 메인 -->
+<main>
+
+<!-- 문서 헤더 -->
+<div class="doc-header">
+  <div class="eyebrow">AI 모델 개발 검토 보고서</div>
+  <h1>중소 제조현장 사고 실시간 탐지 시스템</h1>
+  <p class="subtitle">물류·생산 혼재 사업장 대상 AI 비전 기반 위험 감지 및 사고 예방 시스템 구축</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">작성 부서</div><div class="value">기술연구소</div></div>
+    <div class="meta-item"><div class="label">작성일</div><div class="value">2026. 03. 25.</div></div>
+    <div class="meta-item"><div class="label">문서 버전</div><div class="value">Rev. 1.0 (초안)</div></div>
+    <div class="meta-item"><div class="label">적용 사업장</div><div class="value">물류·생산 혼재형 제조현장</div></div>
+    <div class="meta-item"><div class="label">핵심 기술</div><div class="value">Edge AI · 비전 · 인터락 연동</div></div>
+    <div class="meta-item"><div class="label">목표 대응 시간</div><div class="value">0.5초 이내</div></div>
+  </div>
+</div>
+
+<!-- 1. 검토 배경 -->
+<section id="overview">
+  <h2><span class="num">1</span> 검토 배경 및 목적</h2>
+  <p>본 과제는 물류 및 생산 공정이 혼재된 사업장에서 지게차·작업자 충돌, 작업자 쓰러짐, 위험구역 무단 진입, 공정 이상 등 다양한 위험 상황을 AI 비전 기술 기반으로 실시간 감지·예방하는 시스템 개발을 목적으로 한다.</p>
+  <div class="info-box">
+    <div class="info-title">과제 추진 배경 요약</div>
+    <div class="info-body">
+      기존 CCTV 기반 사후 대응 체계는 위험 발생 시 즉각적 대응이 불가능한 구조적 한계를 가진다.<br>
+      기술연구소는 현장 위험 유형을 재분석하여 구현 가능한 AI 모델 구성과 Edge 기반 운영 아키텍처를 확정한다.<br>
+      자동 감시 체계 전환을 통해 골든타임 확보 및 Near-miss 데이터 기반 예방 중심 안전관리 체계를 수립한다.
+    </div>
+  </div>
+</section>
+
+<!-- 2. 현장 문제 재정의 -->
+<section id="problem">
+  <h2><span class="num">2</span> 현장 문제 재정의</h2>
+  <p>물류·생산 혼재 사업장에서는 작업자, 지게차, 중량물 이동이 동시에 이루어지며 아래 네 가지 위험 상황이 상시 발생 가능한 환경이다. 기존 수동 모니터링 체계로는 발생 즉시 식별·대응이 사실상 불가능하다.</p>
+  <div class="callout">
+    <p><strong>현 상황:</strong> 관리자가 CCTV 화면을 직접 모니터링하는 수동 체계에 의존. 다수 카메라 동시 주시 불가 및 인지 지연으로 위험 발생 후 사후 확인에 그침. AI 자동 감지 체계로의 전환이 시급하다.</p>
+  </div>
+  <h3>핵심 감지 대상</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-blue">AI CCTV</span></div>
+      <div class="card-title">지게차·작업자 충돌 위험</div>
+      <div class="card-body">이동 중인 지게차와 작업자의 근접 거리를 실시간 감지하여 충돌 전 경고 발령</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-teal">AI CCTV</span></div>
+      <div class="card-title">작업자 쓰러짐·이상 행동</div>
+      <div class="card-body">작업자 자세 및 움직임 이상을 감지하여 쓰러짐·응급 상황 즉시 알림</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-amber">AI CCTV</span></div>
+      <div class="card-title">위험구역 무단 진입</div>
+      <div class="card-body">사전 정의된 위험구역 경계 침입을 실시간 감지하여 즉시 경고</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-purple">비전센서</span></div>
+      <div class="card-title">U-Bolt 삽입 상태 이상</div>
+      <div class="card-body">벤딩 공정 삽입부 상태를 비전센서로 판정, NG 시 즉시 작업 진행 억제</div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 감지 장치 구성 -->
+<section id="sensor">
+  <h2><span class="num">3</span> 감지 장치 구성 확정</h2>
+  <p>현장 설치 장치는 AI CCTV와 스마트 비전센서 두 종류로 확정한다. AI CCTV는 동선·행동 감지를 담당하고, 비전센서는 공정 판정에 특화하여 역할을 분리한다.</p>
+
+  <div class="card">
+    <div class="card-label"><span class="badge badge-blue">AI CCTV — 현장 전역</span></div>
+    <div class="card-title">동선·행동·구역 감지 전담</div>
+    <div class="card-body">
+      작업자·지게차 동선이 교차하는 주요 구역 및 위험구역 경계에 설치.<br><br>
+      <strong>Edge AI 장치와 직결</strong> — 영상 데이터를 네트워크를 통해 Edge AI 장치로 실시간 전송하여 지연 없는 분석 수행.<br><br>
+      ROI는 위험구역 경계선, 지게차-작업자 교차 구간으로 한정하여 처리 부하 최소화.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label"><span class="badge badge-purple">스마트 비전센서 — 공정 전용</span></div>
+    <div class="card-title">U-Bolt 삽입 상태 판정 전담</div>
+    <div class="card-body">
+      U-Bolt 벤딩 공정 삽입 지점에 특화 설치.<br><br>
+      삽입부 ROI에 집중한 이진(OK/NG) 판정으로 경량 추론 구현.<br><br>
+      <strong>PLC 인터락 직결</strong> — NG 판정 시 적색 신호등 점등 및 부저 출력으로 작업자의 물리적 작업 진행을 즉시 억제하는 구조적 통제 구현.<br><br>
+      AI CCTV 감지 영역과 독립적으로 운영하여 단일 장애가 전체 시스템에 영향을 주지 않도록 설계.
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">설치 전 선행 작업 — 현장 조사 필수 항목</div>
+    <div class="info-body">
+      위험구역 경계 좌표 정밀 측정 및 바닥 마킹 위치 확정<br>
+      지게차 동선 및 작업자 보행 통로 분리 구간 확인<br>
+      카메라 설치 높이·각도별 시야각 시뮬레이션 (사각지대 최소화)<br>
+      U-Bolt 공정 조도 환경 측정 및 조명 보완 계획 수립
+    </div>
+  </div>
+</section>
+
+<!-- 4. 모델 아키텍처 -->
+<section id="arch">
+  <h2><span class="num">4</span> 모델 아키텍처 설계</h2>
+  <p>위험 유형별로 객체 인식·행동 분석 파이프라인과 공정 판정 파이프라인이 독립적으로 운영되며, 위험 등급 판단 엔진이 두 파이프라인 출력을 종합하여 최종 대응을 결정하는 <strong>이중 파이프라인 구조</strong>로 설계한다.</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-vision')">객체·행동 파이프라인</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-process')">공정 판정 파이프라인</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-fusion')">위험 등급 판단 엔진</button>
+  </div>
+
+  <!-- 객체·행동 파이프라인 -->
+  <div id="tab-vision" class="tab-panel active">
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1. 객체 인식 및 행동 분석 파이프라인</text>
+
+        <rect x="20" y="36" width="100" height="52" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="70" y="58" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">AI CCTV</text>
+        <text x="70" y="74" text-anchor="middle" font-size="10" fill="#5F5E5A">영상 입력</text>
+        <text x="70" y="86" text-anchor="middle" font-size="10" fill="#5F5E5A">실시간 스트림</text>
+
+        <line x1="120" y1="62" x2="148" y2="62" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+        <rect x="150" y="36" width="120" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="210" y="56" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">전처리</text>
+        <text x="210" y="72" text-anchor="middle" font-size="10" fill="#185FA5">ROI 설정</text>
+        <text x="210" y="84" text-anchor="middle" font-size="10" fill="#185FA5">프레임 정규화</text>
+
+        <line x1="270" y1="62" x2="298" y2="62" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+        <rect x="300" y="36" width="130" height="52" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="365" y="56" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">객체 인식</text>
+        <text x="365" y="72" text-anchor="middle" font-size="10" fill="#0F6E56">YOLOv 경량 모델</text>
+        <text x="365" y="84" text-anchor="middle" font-size="10" fill="#0F6E56">작업자·지게차 탐지</text>
+
+        <line x1="430" y1="62" x2="458" y2="62" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+        <rect x="460" y="36" width="130" height="52" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="525" y="56" text-anchor="middle" font-size="12" font-weight="500" fill="#633806">행동 분석</text>
+        <text x="525" y="72" text-anchor="middle" font-size="10" fill="#854F0B">거리·벡터 계산</text>
+        <text x="525" y="84" text-anchor="middle" font-size="10" fill="#854F0B">Pose Estimation</text>
+
+        <path d="M525 88 L525 130" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+        <rect x="400" y="132" width="250" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+        <text x="525" y="154" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">위험 이벤트 출력</text>
+        <text x="525" y="170" text-anchor="middle" font-size="10" fill="#534AB7">충돌위험 / 쓰러짐 / 구역침입</text>
+        <text x="525" y="182" text-anchor="middle" font-size="10" fill="#534AB7">→ 위험 등급 판단 엔진으로 전달</text>
+
+        <rect x="20" y="120" width="360" height="80" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+        <text x="30" y="142" font-size="11" font-weight="500" fill="#444441">행동 분석 판단 기준</text>
+        <text x="30" y="159" font-size="10" fill="#5F5E5A">충돌 위험: 지게차-작업자 간 거리 임계값 이하 접근</text>
+        <text x="30" y="175" font-size="10" fill="#5F5E5A">쓰러짐: 작업자 바운딩박스 종횡비 급변 + Pose keypoint 소실</text>
+        <text x="30" y="191" font-size="10" fill="#5F5E5A">구역 침입: 객체 좌표가 사전 정의 위험구역 폴리곤 내 진입</text>
+      </svg>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">객체·행동 파이프라인 — 구성 요소</div>
+      <div class="arch-row">
+        <div class="arch-node" style="background: var(--blue-bg); border-color: var(--blue);">
+          <strong style="color:var(--blue)">전처리</strong>
+          ROI 영역 한정 크롭, 프레임 정규화, 카메라별 캘리브레이션
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--teal-bg); border-color: var(--teal);">
+          <strong style="color:var(--teal)">객체 인식 (YOLO 계열)</strong>
+          Edge 환경 최적화 경량 모델. 작업자·지게차 동시 탐지, 바운딩박스 + 클래스 출력
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--amber-bg); border-color: var(--amber);">
+          <strong style="color:var(--amber)">행동 분석</strong>
+          객체 간 거리·이동벡터 계산. Pose Estimation으로 자세 이상 판단
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--purple-bg); border-color: var(--purple);">
+          <strong style="color:var(--purple)">위험 이벤트 출력</strong>
+          이벤트 유형·신뢰도 스코어를 판단 엔진으로 전달
+        </div>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>경량화 설계 원칙:</strong> Edge AI 장치에서 0.5초 이내 추론을 보장하기 위해 YOLOv 계열 경량 모델과 TensorRT 최적화를 적용. 카메라 수 증가에 따른 처리 부하는 ROI 한정 추론으로 완화.</p>
+    </div>
+  </div>
+
+  <!-- 공정 판정 파이프라인 -->
+  <div id="tab-process" class="tab-panel">
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 2. U-Bolt 공정 판정 파이프라인 — 경량 CNN 이진 분류</text>
+
+        <rect x="20" y="36" width="100" height="52" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="70" y="58" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">비전센서</text>
+        <text x="70" y="74" text-anchor="middle" font-size="10" fill="#5F5E5A">삽입부 ROI</text>
+        <text x="70" y="86" text-anchor="middle" font-size="10" fill="#5F5E5A">고해상도 캡처</text>
+
+        <line x1="120" y1="62" x2="148" y2="62" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+        <rect x="150" y="36" width="120" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="210" y="56" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">전처리</text>
+        <text x="210" y="72" text-anchor="middle" font-size="10" fill="#185FA5">삽입부 ROI 크롭</text>
+        <text x="210" y="84" text-anchor="middle" font-size="10" fill="#185FA5">정규화·이진화</text>
+
+        <line x1="270" y1="62" x2="298" y2="62" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+        <rect x="300" y="36" width="140" height="52" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="370" y="56" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">CNN 분류기</text>
+        <text x="370" y="72" text-anchor="middle" font-size="10" fill="#0F6E56">경량 이진 분류</text>
+        <text x="370" y="84" text-anchor="middle" font-size="10" fill="#0F6E56">OK / NG 판정</text>
+
+        <line x1="440" y1="62" x2="468" y2="62" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+        <rect x="470" y="36" width="170" height="52" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="555" y="56" text-anchor="middle" font-size="12" font-weight="500" fill="#791F1F">인터락 출력</text>
+        <text x="555" y="72" text-anchor="middle" font-size="10" fill="#A32D2D">NG → 적색등 + 부저</text>
+        <text x="555" y="84" text-anchor="middle" font-size="10" fill="#A32D2D">작업 진행 물리 억제</text>
+
+        <rect x="20" y="112" width="620" height="80" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+        <text x="30" y="132" font-size="11" font-weight="500" fill="#444441">공정 판정 인터락 구조</text>
+        <text x="30" y="150" font-size="10" fill="#5F5E5A">OK 판정: 녹색 신호등 → 작업 계속 진행</text>
+        <text x="30" y="166" font-size="10" fill="#A32D2D" font-weight="500">NG 판정: 적색 신호등 + 부저 즉시 출력 → 작업자 동작 중단 유도 → 위험 등급 판단 엔진 전달</text>
+        <text x="30" y="182" font-size="10" fill="#5F5E5A">AI CCTV 파이프라인과 독립 운영 — 행동 감지 장애와 무관하게 공정 이상 판정 보장</text>
+      </svg>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">공정 판정 파이프라인 — 구성 요소</div>
+      <div class="arch-row">
+        <div class="arch-node" style="background: var(--blue-bg); border-color: var(--blue);">
+          <strong style="color:var(--blue)">전처리</strong>
+          삽입부 ROI 한정 크롭. 조도 변화 대응 정규화. 이진화 전처리.
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--teal-bg); border-color: var(--teal);">
+          <strong style="color:var(--teal)">경량 CNN 분류기</strong>
+          OK/NG 이진 분류. 작업 사이클당 1회 추론. 초기 데이터는 OK/NG 이미지 라벨링으로 수집.
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node" style="background: var(--red-bg); border-color: var(--red);">
+          <strong style="color:var(--red)">인터락 출력</strong>
+          NG 판정 즉시 PLC 신호 출력. 적색등·부저 작동. 0.5초 이내 응답 필수.
+        </div>
+      </div>
+    </div>
+    <p style="font-size:13px;">학습 데이터: <span class="badge badge-teal">정상(OK)</span> <span class="badge badge-red">불량(NG)</span> — 초기 수백 장 수집 후 Data Augmentation 병행. 운영 중 추가 누적.</p>
+  </div>
+
+  <!-- 위험 등급 판단 엔진 -->
+  <div id="tab-fusion" class="tab-panel">
+    <div style="margin-bottom:16px;">
+      <svg width="100%" viewBox="0 0 680 270" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+        <defs>
+          <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 3. 위험 등급 판단 엔진 — 이벤트 종합 및 등급 분류</text>
+
+        <rect x="30" y="36" width="170" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+        <text x="115" y="58" text-anchor="middle" font-size="13" font-weight="500" fill="#0C447C">객체·행동 파이프라인</text>
+        <text x="115" y="74" text-anchor="middle" font-size="10" fill="#185FA5">충돌위험 / 쓰러짐 / 구역침입</text>
+        <text x="115" y="86" text-anchor="middle" font-size="10" fill="#185FA5">이벤트 유형 + 신뢰도 스코어</text>
+
+        <rect x="480" y="36" width="170" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+        <text x="565" y="58" text-anchor="middle" font-size="13" font-weight="500" fill="#3C3489">공정 판정 파이프라인</text>
+        <text x="565" y="74" text-anchor="middle" font-size="10" fill="#534AB7">U-Bolt 삽입 NG 이벤트</text>
+        <text x="565" y="86" text-anchor="middle" font-size="10" fill="#534AB7">판정 결과 + 타임스탬프</text>
+
+        <path d="M200 64 L280 64 L280 140 L290 140" fill="none" stroke="#185FA5" stroke-width="1" marker-end="url(#arr3)"/>
+        <path d="M480 64 L400 64 L400 140 L390 140" fill="none" stroke="#534AB7" stroke-width="1" marker-end="url(#arr3)"/>
+
+        <rect x="240" y="122" width="200" height="46" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+        <text x="340" y="143" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">위험 등급 판단 엔진</text>
+        <text x="340" y="159" text-anchor="middle" font-size="10" fill="#5F5E5A">Rule 기반 가중 결합 → 3등급 분류</text>
+
+        <line x1="340" y1="168" x2="340" y2="186" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+        <line x1="160" y1="186" x2="520" y2="186" stroke="#888780" stroke-width="0.8"/>
+        <line x1="160" y1="186" x2="160" y2="200" stroke="#0F6E56" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="340" y1="186" x2="340" y2="200" stroke="#854F0B" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="520" y1="186" x2="520" y2="200" stroke="#A32D2D" stroke-width="1.2" marker-end="url(#arr3)"/>
+
+        <rect x="60" y="200" width="200" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+        <text x="160" y="220" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">관심 (Risk)</text>
+        <text x="160" y="236" text-anchor="middle" font-size="10" fill="#0F6E56">위험 접근 단계</text>
+        <text x="160" y="248" text-anchor="middle" font-size="10" fill="#0F6E56">대시보드 표시</text>
+
+        <rect x="240" y="200" width="200" height="50" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+        <text x="340" y="220" text-anchor="middle" font-size="12" font-weight="500" fill="#633806">경고 (Warning)</text>
+        <text x="340" y="236" text-anchor="middle" font-size="10" fill="#854F0B">위험 지속 단계</text>
+        <text x="340" y="248" text-anchor="middle" font-size="10" fill="#854F0B">경광등·경고음 출력</text>
+
+        <rect x="420" y="200" width="200" height="50" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+        <text x="520" y="220" text-anchor="middle" font-size="12" font-weight="500" fill="#791F1F">긴급 (Danger)</text>
+        <text x="520" y="236" text-anchor="middle" font-size="10" fill="#A32D2D">사고 발생 가능 단계</text>
+        <text x="520" y="248" text-anchor="middle" font-size="10" fill="#A32D2D">관리자 즉시 알림·작업중지</text>
+      </svg>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">위험 등급 판단 엔진 — 단계별 운영</div>
+      <div class="arch-row">
+        <div class="arch-node" style="background: var(--blue-bg); border-color: var(--blue);">
+          <strong style="color:var(--blue)">이벤트 수신</strong>
+          객체·행동 파이프라인과 공정 판정 파이프라인의 출력을 실시간 수신
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node fusion-box">
+          <strong>1단계: Rule 기반 등급 분류 (초기)</strong>
+          이벤트 유형·신뢰도·지속 시간 기반 Rule로 즉시 등급 판정. 구조 단순 — 데이터 부족 초기에도 안정적 운영 가능.
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node fusion-box">
+          <strong>2단계: 학습 기반 분류 (데이터 충분 후)</strong>
+          누적 이벤트 데이터로 등급 분류 모델 학습. Rule 기반 폴백은 항상 유지.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 아키텍처 비교 -->
+<section id="compare">
+  <h2><span class="num">5</span> 아키텍처 선택 비교 및 근거</h2>
+  <p>객체 인식 모델은 데이터 효율, 추론 속도, Edge 환경 적합성 4개 기준으로 평가하였다. 공정 판정 모델은 이진 분류 특성상 경량 CNN으로 단독 확정한다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>아키텍처</th><th>데이터 효율</th><th>추론 속도</th><th>Edge 적합성</th><th>구현 복잡도</th><th>채택 여부</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>YOLO 계열 (객체 인식)</strong></td>
+          <td><span class="badge badge-green">높음</span></td>
+          <td><span class="badge badge-green">매우 빠름</span></td>
+          <td><span class="badge badge-green">매우 적합</span></td>
+          <td><span class="badge badge-green">낮음</span></td>
+          <td><span class="badge badge-blue">채택</span></td>
+        </tr>
+        <tr>
+          <td><strong>경량 CNN (공정 판정)</strong></td>
+          <td><span class="badge badge-green">높음</span></td>
+          <td><span class="badge badge-green">빠름</span></td>
+          <td><span class="badge badge-green">적합</span></td>
+          <td><span class="badge badge-green">낮음</span></td>
+          <td><span class="badge badge-blue">채택</span></td>
+        </tr>
+        <tr>
+          <td>Pose Estimation (행동 보조)</td>
+          <td><span class="badge badge-amber">중간</span></td>
+          <td><span class="badge badge-amber">중간</span></td>
+          <td><span class="badge badge-amber">적합</span></td>
+          <td><span class="badge badge-amber">중간</span></td>
+          <td><span class="badge badge-teal">병행 채택</span></td>
+        </tr>
+        <tr>
+          <td>Transformer 기반 행동 인식</td>
+          <td><span class="badge badge-red">낮음</span></td>
+          <td><span class="badge badge-amber">중간</span></td>
+          <td><span class="badge badge-amber">검토 필요</span></td>
+          <td><span class="badge badge-red">높음</span></td>
+          <td><span class="badge badge-purple">3단계 검토</span></td>
+        </tr>
+        <tr>
+          <td>Video Swin Transformer</td>
+          <td><span class="badge badge-red">매우 낮음</span></td>
+          <td><span class="badge badge-red">느림</span></td>
+          <td><span class="badge badge-red">부적합</span></td>
+          <td><span class="badge badge-red">매우 높음</span></td>
+          <td><span class="badge badge-gray">미채택</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="info-box">
+    <div class="info-title">YOLO 채택 근거 — Edge 실시간 추론 요건</div>
+    <div class="info-body">YOLO 계열은 단일 신경망에서 객체 탐지와 클래스 분류를 동시에 처리하는 구조로 추론 속도에서 압도적 우위를 가진다. TensorRT FP16 최적화 적용 시 Edge AI 장치에서 카메라 다수를 동시 처리하면서도 0.5초 이내 응답을 보장할 수 있다. 사전학습 가중치(COCO 등)를 활용한 전이학습으로 초기 데이터 부족 문제도 완화 가능하다.</div>
+  </div>
+</section>
+
+<!-- 6. 학습 전략 -->
+<section id="learning">
+  <h2><span class="num">6</span> 학습 전략 — 단계적 구조 채택</h2>
+  <p>위험 이벤트 데이터의 초기 부족 문제를 해결하기 위해, 사전학습 모델 전이학습으로 시작하여 현장 데이터 누적에 따라 점진적으로 고도화하는 3단계 학습 전략을 채택한다.</p>
+
+  <div style="margin-bottom:16px;">
+    <svg width="100%" viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arr5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="340" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 4. 단계별 학습 전략 로드맵</text>
+
+      <rect x="30" y="32" width="180" height="128" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <rect x="30" y="32" width="180" height="28" rx="10" fill="#185FA5"/>
+      <rect x="30" y="48" width="180" height="12" rx="0" fill="#185FA5"/>
+      <text x="120" y="52" text-anchor="middle" font-size="12" font-weight="500" fill="#ffffff">1단계 — 전이학습</text>
+      <text x="120" y="82" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">사전학습 모델 활용</text>
+      <text x="120" y="98" text-anchor="middle" font-size="10" fill="#185FA5">COCO 사전학습 YOLO</text>
+      <text x="120" y="113" text-anchor="middle" font-size="10" fill="#185FA5">현장 이미지 파인튜닝</text>
+      <text x="120" y="128" text-anchor="middle" font-size="10" fill="#185FA5">라벨: 작업자·지게차</text>
+      <rect x="52" y="142" width="116" height="14" rx="4" fill="#B5D4F4"/>
+      <text x="110" y="153" text-anchor="middle" font-size="10" fill="#042C53">착수~개발 초기</text>
+
+      <line x1="210" y1="96" x2="248" y2="96" stroke="#888780" stroke-width="1.5" marker-end="url(#arr5)"/>
+      <text x="229" y="90" text-anchor="middle" font-size="9" fill="#5F5E5A">가중치 전이</text>
+
+      <rect x="250" y="32" width="180" height="128" rx="10" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <rect x="250" y="32" width="180" height="28" rx="10" fill="#854F0B"/>
+      <rect x="250" y="48" width="180" height="12" rx="0" fill="#854F0B"/>
+      <text x="340" y="52" text-anchor="middle" font-size="12" font-weight="500" fill="#ffffff">2단계 — 현장 특화</text>
+      <text x="340" y="82" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">이벤트 데이터 누적</text>
+      <text x="340" y="98" text-anchor="middle" font-size="10" fill="#854F0B">위험 이벤트 발생 시 라벨 부여</text>
+      <text x="340" y="113" text-anchor="middle" font-size="10" fill="#854F0B">Focal Loss 클래스 불균형 대응</text>
+      <text x="340" y="128" text-anchor="middle" font-size="10" fill="#854F0B">3등급 분류 모델 고도화</text>
+      <rect x="272" y="142" width="136" height="14" rx="4" fill="#FAC775"/>
+      <text x="340" y="153" text-anchor="middle" font-size="10" fill="#412402">개발~실증</text>
+
+      <line x1="430" y1="96" x2="468" y2="96" stroke="#888780" stroke-width="1.5" marker-end="url(#arr5)"/>
+      <text x="449" y="90" text-anchor="middle" font-size="9" fill="#5F5E5A">1만건 이상</text>
+
+      <rect x="470" y="32" width="180" height="128" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <rect x="470" y="32" width="180" height="28" rx="10" fill="#534AB7"/>
+      <rect x="470" y="48" width="180" height="12" rx="0" fill="#534AB7"/>
+      <text x="560" y="52" text-anchor="middle" font-size="12" font-weight="500" fill="#ffffff">3단계 — 고도화</text>
+      <text x="560" y="82" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">멀티모달 융합</text>
+      <text x="560" y="98" text-anchor="middle" font-size="10" fill="#534AB7">복수 카메라 시점 융합</text>
+      <text x="560" y="113" text-anchor="middle" font-size="10" fill="#534AB7">Transformer 행동 인식 검토</text>
+      <text x="560" y="128" text-anchor="middle" font-size="10" fill="#534AB7">MLOps 자동 재학습</text>
+      <rect x="492" y="142" width="136" height="14" rx="4" fill="#CECBF6"/>
+      <text x="560" y="153" text-anchor="middle" font-size="10" fill="#26215C">데이터 1만건 이상</text>
+
+      <text x="340" y="190" text-anchor="middle" font-size="10" fill="#9c9a92">* 학습 단계가 바뀌어도 YOLO 아키텍처 자체는 유지. 헤드 구조와 손실 함수만 변경.</text>
+    </svg>
+  </div>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" style="background: var(--blue)"></div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-blue">1단계</span> 착수~개발 초기</div>
+        <div class="tl-title">전이학습 기반 빠른 적용</div>
+        <div class="tl-desc">COCO 사전학습 YOLO 가중치를 현장 이미지로 파인튜닝. 라벨 수집 부담을 최소화하면서 작업자·지게차 탐지를 빠르게 구현. 위험구역은 Rule 기반 좌표 판정으로 즉시 적용 가능.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" style="background: var(--amber-mid)"></div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-amber">2단계</span> 개발~실증</div>
+        <div class="tl-title">현장 특화 데이터 누적 및 등급 분류 고도화</div>
+        <div class="tl-desc">위험 이벤트 발생 시마다 라벨 부여하여 현장 특화 학습 데이터 축적. Focal Loss 적용으로 정상(다수)·위험(소수) 클래스 불균형 대응. 위험 등급 3-class 분류 모델로 전환.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" style="background: var(--purple)"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-date"><span class="badge badge-purple">3단계</span> 데이터 1만 건 이상</div>
+        <div class="tl-title">멀티모달 융합 및 MLOps 자동화</div>
+        <div class="tl-desc">복수 카메라 시점 융합 및 Transformer 기반 행동 인식 모델 적용 검토. MLOps 파이프라인으로 이벤트 누적 시 자동 재학습·배포. Near-miss 데이터 기반 예방 인사이트 생성.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. Edge-서버-관제 아키텍처 -->
+<section id="infra">
+  <h2><span class="num">7</span> Edge-서버-관제 아키텍처 설계</h2>
+  <p>추론은 현장 Edge 디바이스에서 전담하여 0.5초 이내 경광등·인터락을 보장하고, 서버는 데이터 적재 및 MLOps 재학습에 집중하며, 관리자는 웹 관제 대시보드로 PC·모바일에서 실시간 모니터링한다.</p>
+
+  <div class="info-box">
+    <div class="info-title">Edge AI 장치 — Jetson 계열 (Orin Nano 8G 기준)</div>
+    <div class="info-body">
+      AI 성능: 20 TOPS · GPU: 512 CUDA core (Ampere) · 메모리: 8GB LPDDR5 통합<br>
+      인터페이스: USB 3.0 (카메라), RS-485 (비전센서), GigE LAN (PLC·서버), M.2 NVMe SSD<br>
+      소프트웨어: JetPack 6.x (Ubuntu 22.04) · PyTorch → <strong>TensorRT FP16</strong> 변환 필수
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-infra-overview')">전체 구조</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-infra-edge')">Edge 상세</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-infra-dashboard')">관제 대시보드</button>
+  </div>
+
+  <div id="tab-infra-overview" class="tab-panel active">
+    <svg width="100%" viewBox="0 0 680 460" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+      <defs>
+        <marker id="arri" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <rect x="30" y="20" width="620" height="96" rx="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="50" y="44" font-size="11" font-weight="500" fill="#5F5E5A" letter-spacing="0.05em">현장 감지 레이어</text>
+      <rect x="55" y="54" width="148" height="44" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="129" y="73" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">AI CCTV</text>
+      <text x="129" y="89" text-anchor="middle" font-size="10" fill="#185FA5">현장 전역 영상 수집</text>
+      <rect x="226" y="54" width="148" height="44" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="300" y="73" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">비전센서 (공정)</text>
+      <text x="300" y="89" text-anchor="middle" font-size="10" fill="#534AB7">U-Bolt 삽입 판정</text>
+      <rect x="397" y="54" width="148" height="44" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="471" y="73" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">경광등·부저·신호등</text>
+      <text x="471" y="89" text-anchor="middle" font-size="10" fill="#5F5E5A">인터락 출력 장치</text>
+
+      <line x1="129" y1="116" x2="129" y2="154" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arri)"/>
+      <line x1="300" y1="116" x2="300" y2="154" stroke="#534AB7" stroke-width="1.2" marker-end="url(#arri)"/>
+      <path d="M471 116 L471 140 L420 140 L420 154" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arri)"/>
+
+      <rect x="30" y="154" width="430" height="156" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="50" y="178" font-size="11" font-weight="500" fill="#0C447C" letter-spacing="0.05em">Edge AI 장치 — 현장 제어반 설치</text>
+      <rect x="50" y="188" width="168" height="52" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="134" y="209" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">전처리 모듈</text>
+      <text x="134" y="226" text-anchor="middle" font-size="10" fill="#534AB7">ROI 크롭 · 정규화</text>
+      <text x="134" y="238" text-anchor="middle" font-size="10" fill="#534AB7">프레임 버퍼 관리</text>
+      <line x1="218" y1="214" x2="238" y2="214" stroke="#888780" stroke-width="1" marker-end="url(#arri)"/>
+      <rect x="240" y="188" width="180" height="52" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="330" y="209" text-anchor="middle" font-size="12" font-weight="500" fill="#3C3489">AI 추론 엔진 (TensorRT)</text>
+      <text x="330" y="226" text-anchor="middle" font-size="10" fill="#534AB7">YOLO + 행동분석 + CNN</text>
+      <text x="330" y="238" text-anchor="middle" font-size="10" fill="#534AB7">위험 등급 판단 엔진</text>
+      <rect x="50" y="256" width="168" height="40" rx="6" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+      <text x="134" y="274" text-anchor="middle" font-size="12" font-weight="500" fill="#791F1F">인터락 출력</text>
+      <text x="134" y="289" text-anchor="middle" font-size="10" fill="#A32D2D">경광등·부저·신호등 제어</text>
+      <rect x="240" y="256" width="180" height="40" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="330" y="274" text-anchor="middle" font-size="12" font-weight="500" fill="#444441">로컬 버퍼 / 전송</text>
+      <text x="330" y="289" text-anchor="middle" font-size="10" fill="#5F5E5A">NVMe SSD · MQTT/REST</text>
+      <line x1="134" y1="240" x2="134" y2="254" stroke="#888780" stroke-width="1" marker-end="url(#arri)"/>
+      <line x1="330" y1="240" x2="330" y2="254" stroke="#888780" stroke-width="1" marker-end="url(#arri)"/>
+
+      <rect x="480" y="154" width="170" height="156" rx="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="565" y="178" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">서버 레이어</text>
+      <rect x="498" y="188" width="134" height="50" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="565" y="208" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">MLOps 서버</text>
+      <text x="565" y="225" text-anchor="middle" font-size="10" fill="#185FA5">모델 재학습 · Edge 배포</text>
+      <rect x="498" y="252" width="134" height="48" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="565" y="272" text-anchor="middle" font-size="12" font-weight="500" fill="#0C447C">이벤트 DB</text>
+      <text x="565" y="288" text-anchor="middle" font-size="10" fill="#185FA5">로그·영상·Near-miss</text>
+
+      <line x1="460" y1="214" x2="496" y2="214" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arri)"/>
+      <line x1="496" y1="228" x2="460" y2="228" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arri)"/>
+      <text x="478" y="224" text-anchor="middle" font-size="9" fill="#185FA5">LAN</text>
+
+      <line x1="240" y1="370" x2="240" y2="400" stroke="#185FA5" stroke-width="1.2" marker-end="url(#arri)"/>
+      <path d="M565 310 L565 380 L400 380 L400 400" fill="none" stroke="#185FA5" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arri)"/>
+
+      <rect x="30" y="400" width="620" height="46" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="50" y="420" font-size="11" font-weight="500" fill="#085041">관제 레이어 — 웹 대시보드 (PC · 모바일)</text>
+      <rect x="55" y="426" width="168" height="14" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="139" y="436" text-anchor="middle" font-size="10" fill="#0F6E56">실시간 이벤트 모니터링</text>
+      <rect x="256" y="426" width="168" height="14" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="340" y="436" text-anchor="middle" font-size="10" fill="#0F6E56">이벤트 이력 · 통계</text>
+      <rect x="457" y="426" width="168" height="14" rx="4" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <text x="541" y="436" text-anchor="middle" font-size="10" fill="#854F0B">모바일 푸시 · 팝업 알람</text>
+    </svg>
+    <div class="callout">
+      <p><strong>설계 원칙:</strong> 추론은 반드시 Edge에서만 수행. 서버 레이턴시에 의존할 경우 0.5초 인터락 보장 불가. 서버는 데이터 적재와 모델 재학습·배포 역할만 담당.</p>
+    </div>
+  </div>
+
+  <div id="tab-infra-edge" class="tab-panel">
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-label"><span class="badge badge-blue">하드웨어 사양 (기준)</span></div>
+        <div class="card-title">Jetson Orin Nano 8G</div>
+        <div class="card-body">
+          <strong>AI 성능:</strong> 20 TOPS<br>
+          <strong>GPU:</strong> 512 CUDA core (Ampere)<br>
+          <strong>메모리:</strong> 8GB LPDDR5 통합<br>
+          <strong>카메라 입력:</strong> USB 3.0 / GigE<br>
+          <strong>시리얼:</strong> RS-485 (비전센서·인터락)<br>
+          <strong>네트워크:</strong> GigE LAN × 2 (PLC·서버)
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-purple">소프트웨어 스택</span></div>
+        <div class="card-title">JetPack 6.x 기반</div>
+        <div class="card-body">
+          <strong>OS:</strong> Ubuntu 22.04 (JetPack 6.x)<br>
+          <strong>AI 프레임워크:</strong> PyTorch → TensorRT FP16<br>
+          <strong>영상 처리:</strong> OpenCV (CUDA 가속)<br>
+          <strong>인터락 통신:</strong> Modbus TCP / DO 신호<br>
+          <strong>데이터 전송:</strong> MQTT / REST API<br>
+          <strong>모델 배포:</strong> 서버 OTA 업데이트
+        </div>
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-title">20 TOPS 충분 여부 — 단계별 평가</div>
+      <div class="info-body">
+        <strong>1~2단계 (YOLO 경량 모델):</strong> 카메라 다수 기준 TensorRT FP16 최적화 적용 시 20 TOPS 범위 내 처리 가능. ROI 한정 추론으로 부하 추가 완화.<br><br>
+        <strong>3단계 (Transformer 고도화) 시 재검토 필요:</strong> 해당 시점에 Orin NX 16G (40 TOPS) 업그레이드 또는 경량 모델 유지 중 선택.
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-infra-dashboard" class="tab-panel">
+    <div class="info-box">
+      <div class="info-title">관제 대시보드 기술 스택</div>
+      <div class="info-body">
+        <strong>백엔드 (Edge):</strong> FastAPI — REST API + WebSocket 실시간 Push<br>
+        <strong>프론트엔드:</strong> React + Chart.js — 사내 LAN 브라우저 접속 (PC · 모바일)<br>
+        <strong>DB:</strong> TimescaleDB (시계열 데이터 최적화) — 서버에 적재<br>
+        <strong>알람:</strong> 긴급 등급 발생 시 경광등 릴레이 출력 + 모바일 푸시 동시 발송
+      </div>
+    </div>
+    <h3>화면 구성</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-label"><span class="badge badge-teal">메인 화면</span></div>
+        <div class="card-title">실시간 위험 이벤트 현황</div>
+        <div class="card-body">구역별 위험 등급 배지 · 최근 이벤트 타임라인 · 긴급 등급 발생 시 카메라 영상 전면 팝업 표출.</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-blue">메인 화면</span></div>
+        <div class="card-title">카메라 라이브 뷰</div>
+        <div class="card-body">현장 카메라 실시간 영상 + 탐지 바운딩박스 오버레이. 위험구역 경계선 표시.</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-gray">이력 화면</span></div>
+        <div class="card-title">이벤트 이력 · 통계</div>
+        <div class="card-body">일별·주별 이벤트 건수 추이. 위반 이력 관리 — 반복 위반자·위험 구간 집중 분석. Near-miss 데이터 열람.</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="badge badge-amber">안전 관리</span></div>
+        <div class="card-title">TBM 연계 리포트</div>
+        <div class="card-body">전일 위험 이벤트 요약 자동 생성. 일일 안전 점검(TBM) 시 작업자에게 공유하는 루틴 지원.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 위험 등급 정의 -->
+<section id="output">
+  <h2><span class="num">8</span> 위험 등급 정의</h2>
+  <p>위험 등급은 관심·경고·긴급 3단계로 분류하며, 긴급 등급은 단일 파이프라인 출력만으로도 판정 가능한 폴백 로직을 적용하여 장애 상황에서도 안전을 보장한다.</p>
+  <div class="class-cards">
+    <div class="class-card" style="background: var(--teal-bg); border-color: var(--teal);">
+      <div class="class-num" style="color:var(--teal)">관심</div>
+      <div class="class-name" style="color:var(--teal)">Risk</div>
+      <div class="class-desc" style="color:var(--teal)">위험 접근 단계<br>지게차·작업자 근접 징조<br>위험구역 접근 감지</div>
+      <div class="class-action" style="background:var(--teal);color:#fff;">대시보드 표시</div>
+    </div>
+    <div class="class-card" style="background: var(--amber-bg); border-color: var(--amber);">
+      <div class="class-num" style="color:var(--amber)">경고</div>
+      <div class="class-name" style="color:var(--amber)">Warning</div>
+      <div class="class-desc" style="color:var(--amber)">위험 지속 단계<br>근접 지속 또는 경계 침입<br>이상 행동 확인</div>
+      <div class="class-action" style="background:var(--amber);color:#fff;">경광등·경고음 출력</div>
+    </div>
+    <div class="class-card" style="background: var(--red-bg); border-color: var(--red);">
+      <div class="class-num" style="color:var(--red)">긴급</div>
+      <div class="class-name" style="color:var(--red)">Danger</div>
+      <div class="class-desc" style="color:var(--red)">사고 발생 가능 단계<br>충돌·쓰러짐·이탈 확정<br>공정 NG 판정</div>
+      <div class="class-action" style="background:var(--red);color:#fff;">관리자 즉시 알림·작업 중지</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>등급</th><th>판단 기준</th><th>현장 대응</th><th>관리자 대응</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-teal">관심</span></td>
+          <td>지게차-작업자 근접 / 위험구역 접근 징조 감지</td>
+          <td>대시보드 표시 · 모니터링 강화</td>
+          <td>안전관리 담당자 대시보드 확인</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-amber">경고</span></td>
+          <td>근접 지속 / 경계 침입 / 이상 행동 확인</td>
+          <td>경광등·경고음 발령 → 작업자 즉시 동작 중단</td>
+          <td>현장 관리자 접근·상황 확인</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-red">긴급</span></td>
+          <td>충돌·쓰러짐·무단 이탈 확정 / 공정 NG 확정</td>
+          <td>경광등·부저·인터락 즉시 출력</td>
+          <td>모바일 알림 즉시 수신 · 작업 중지 지시</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 9. 행동 통제 체계 -->
+<section id="control">
+  <h2><span class="num">9</span> 작업자 행동 통제 및 책임 체계</h2>
+  <p>AI 감지 기술에 그치지 않고, 작업자 행동을 구조적으로 제어하는 다층적 운영 방안을 병행 적용하여 현장 실효성을 확보한다.</p>
+
+  <h3>기술 기반 행동 통제</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label"><span class="badge badge-red">인터락</span></div>
+      <div class="card-title">시청각 인터락 신호</div>
+      <div class="card-body">위험구역 침입 또는 규정 위반 행동 감지 시, 경광등·부저 발령과 동시에 작업자의 동작을 중단시키는 시청각 인터락 신호 출력.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-purple">공정 통제</span></div>
+      <div class="card-title">공정 물리적 억제</div>
+      <div class="card-body">U-Bolt 삽입 NG 판정 시 적색 신호등 점등 + 부저로 작업자에게 직접 신호하여 물리적 작업 진행을 억제하는 구조적 통제.</div>
+    </div>
+    <div class="card">
+      <div class="card-label"><span class="badge badge-amber">팝업 알람</span></div>
+      <div class="card-title">긴급 상황 즉시 대응</div>
+      <div class="card-body">긴급 등급 판정 시 관리자 모바일 알림과 동시에 관제 대시보드에 해당 카메라 영상 전면 팝업 즉시 표출.</div>
+    </div>
+  </div>
+
+  <h3>운영자 및 관리자 대응 책임 체계</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>역할</th><th>대응 내용</th><th>기준 등급</th></tr>
+      </thead>
+      <tbody class="risk-row">
+        <tr><td>현장 작업자</td><td>경고 발령 시 즉시 동작 중단 및 안전구역 이동</td><td><span class="badge badge-amber">경고 이상</span></td></tr>
+        <tr><td>현장 관리자</td><td>경광등 발령 확인 후 현장 접근, 작업 중지 지시</td><td><span class="badge badge-red">긴급</span></td></tr>
+        <tr><td>안전관리 담당자</td><td>관제 대시보드 모니터링 및 이벤트 기록 확인, 재발 방지 조치</td><td><span class="badge badge-teal">전 등급</span></td></tr>
+        <tr><td>대표이사·경영진</td><td>중대사고 임박 알람 수신 시 즉시 보고 체계 가동</td><td><span class="badge badge-red">긴급 반복</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>현장 운영 루틴:</strong> 작업 시작 전 일일 안전 점검(TBM)에서 관제 대시보드의 전일 위험 이벤트 요약을 작업자에게 공유하는 루틴을 수립. 위반 이력은 안전 교육 기초 자료로 활용.</p>
+  </div>
+</section>
+
+<!-- 10. 추진 계획 (월별 간트 차트) -->
+<section id="schedule">
+  <h2><span class="num">10</span> 개발 단계별 추진 계획</h2>
+  <p>착수(3~5월), 개발(4~7월), 실증(6~10월)을 병행 진행하는 구조로 수립. 2026년 3월 착수, 10월 실증 완료를 목표로 한다. 현재 사업 4개월차.</p>
+
+  <!-- ── 간트 차트 ── -->
+  <!--
+    3월~10월: 8개월
+    x_start=190, 전체폭=550, 월당폭=68.75px
+    월 구분선 x: 190, 258.8, 327.5, 396.2, 465.0, 533.8, 602.5, 671.2, 740.0
+    월 중심 x:   224.4, 293.1, 361.9, 430.6, 499.4, 568.1, 636.9, 705.6
+    현재(4월 초) x ≈ 258.8
+  -->
+  <div style="margin-bottom:16px; overflow-x:auto;">
+    <svg width="100%" viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+
+      <!-- 제목 -->
+      <text x="380" y="18" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 5. 개발 추진 일정 (2026년 3월 ~ 10월)</text>
+
+      <!-- 월 헤더 배경 -->
+      <rect x="190" y="28" width="550" height="22" rx="0" fill="#F1EFE8"/>
+
+      <!-- 월 라벨 -->
+      <text x="224" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">3월</text>
+      <text x="293" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#A32D2D">4월</text>
+      <text x="362" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">5월</text>
+      <text x="431" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">6월</text>
+      <text x="499" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">7월</text>
+      <text x="568" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">8월</text>
+      <text x="637" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">9월</text>
+      <text x="706" y="43" text-anchor="middle" font-size="11" font-weight="500" fill="#5F5E5A">10월</text>
+
+      <!-- 세로 구분선 (월별) -->
+      <line x1="190" y1="28" x2="190" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="259" y1="50" x2="259" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="328" y1="50" x2="328" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="396" y1="50" x2="396" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="465" y1="50" x2="465" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="534" y1="50" x2="534" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="603" y1="50" x2="603" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="671" y1="50" x2="671" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+      <line x1="740" y1="50" x2="740" y2="310" stroke="#D3D1C7" stroke-width="0.5"/>
+
+      <!-- 현재 시점 표시 (4월 초 = 3월 끝 구분선) -->
+      <line x1="259" y1="28" x2="259" y2="310" stroke="#A32D2D" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="263" y="43" font-size="9" fill="#A32D2D">현재</text>
+
+      <!-- ── 착수 그룹 ── -->
+      <text x="10" y="84" font-size="10" fill="#185FA5" font-weight="500">착수</text>
+
+      <!-- 행 1: 위험구역·동선 조사 (3~4월) -->
+      <text x="185" y="81" text-anchor="end" font-size="9" fill="#5F5E5A">위험구역·동선 조사</text>
+      <rect x="190" y="70" width="138" height="14" rx="4" fill="#185FA5" opacity="0.85"/>
+      <text x="259" y="81" text-anchor="middle" font-size="9" fill="#ffffff">03~04</text>
+
+      <!-- 행 2: 장치 사양 확정·라벨링 규칙 (3~4월) -->
+      <text x="185" y="101" text-anchor="end" font-size="9" fill="#5F5E5A">장치 사양 확정·라벨링 규칙</text>
+      <rect x="190" y="90" width="138" height="14" rx="4" fill="#185FA5" opacity="0.85"/>
+      <text x="259" y="101" text-anchor="middle" font-size="9" fill="#ffffff">03~04</text>
+
+      <!-- 행 3: 아키텍처 설계 완료 (3~5월) -->
+      <text x="185" y="121" text-anchor="end" font-size="9" fill="#5F5E5A">아키텍처 설계 완료</text>
+      <rect x="190" y="110" width="206" height="14" rx="4" fill="#185FA5" opacity="0.85"/>
+      <text x="293" y="121" text-anchor="middle" font-size="9" fill="#ffffff">03~05</text>
+
+      <!-- ── 개발 그룹 ── -->
+      <text x="10" y="156" font-size="10" fill="#0F6E56" font-weight="500">개발</text>
+
+      <!-- 행 4: AI CCTV·비전센서 설치·캘리브 (4~5월) -->
+      <text x="185" y="153" text-anchor="end" font-size="9" fill="#5F5E5A">AI CCTV·비전센서 설치·캘리브</text>
+      <rect x="259" y="142" width="138" height="14" rx="4" fill="#0F6E56" opacity="0.85"/>
+      <text x="328" y="153" text-anchor="middle" font-size="9" fill="#ffffff">04~05</text>
+
+      <!-- 행 5: YOLO 전이학습·CNN 모델 개발 (4~7월) -->
+      <text x="185" y="173" text-anchor="end" font-size="9" fill="#5F5E5A">YOLO 전이학습·CNN 모델 개발</text>
+      <rect x="259" y="162" width="275" height="14" rx="4" fill="#0F6E56" opacity="0.85"/>
+      <text x="397" y="173" text-anchor="middle" font-size="9" fill="#ffffff">04~07</text>
+
+      <!-- 행 6: 위험 판단 엔진·인터락 연동 (4~7월) -->
+      <text x="185" y="193" text-anchor="end" font-size="9" fill="#5F5E5A">위험 판단 엔진·인터락 연동</text>
+      <rect x="259" y="182" width="275" height="14" rx="4" fill="#0F6E56" opacity="0.85"/>
+      <text x="397" y="193" text-anchor="middle" font-size="9" fill="#ffffff">04~07</text>
+
+      <!-- 행 7: 관제 대시보드·모바일 알림 (5~7월) -->
+      <text x="185" y="213" text-anchor="end" font-size="9" fill="#5F5E5A">관제 대시보드·모바일 알림</text>
+      <rect x="328" y="202" width="206" height="14" rx="4" fill="#0F6E56" opacity="0.85"/>
+      <text x="431" y="213" text-anchor="middle" font-size="9" fill="#ffffff">05~07</text>
+
+      <!-- ── 실증 그룹 ── -->
+      <text x="10" y="248" font-size="10" fill="#854F0B" font-weight="500">실증</text>
+
+      <!-- 행 8: 현장 이벤트 수집·라벨 누적 (6~10월) -->
+      <text x="185" y="245" text-anchor="end" font-size="9" fill="#5F5E5A">현장 이벤트 수집·라벨 누적</text>
+      <rect x="396" y="234" width="344" height="14" rx="4" fill="#EF9F27" opacity="0.75"/>
+      <text x="568" y="245" text-anchor="middle" font-size="9" fill="#412402">06~10월 (예정)</text>
+
+      <!-- 행 9: 위험 상황 재현 실험 (6~9월) -->
+      <text x="185" y="265" text-anchor="end" font-size="9" fill="#5F5E5A">위험 상황 재현 실험</text>
+      <rect x="396" y="254" width="275" height="14" rx="4" fill="#EF9F27" opacity="0.75"/>
+      <text x="534" y="265" text-anchor="middle" font-size="9" fill="#412402">06~09월 (예정)</text>
+
+      <!-- 행 10: MLOps 재학습·3-class 모델 전환 (8~10월) -->
+      <text x="185" y="285" text-anchor="end" font-size="9" fill="#5F5E5A">MLOps 재학습·3-class 모델 전환</text>
+      <rect x="534" y="274" width="206" height="14" rx="4" fill="#EF9F27" opacity="0.75"/>
+      <text x="637" y="285" text-anchor="middle" font-size="9" fill="#412402">08~10월 (예정)</text>
+
+      <!-- 행 11: 목표 성능 달성 최종 검증 (9~10월) -->
+      <text x="185" y="305" text-anchor="end" font-size="9" fill="#5F5E5A">목표 성능 달성 최종 검증</text>
+      <rect x="603" y="294" width="137" height="14" rx="4" fill="#EF9F27" opacity="0.75"/>
+      <text x="672" y="305" text-anchor="middle" font-size="9" fill="#412402">09~10월 (예정)</text>
+
+      <!-- 범례 -->
+      <rect x="190" y="318" width="12" height="8" rx="2" fill="#185FA5"/>
+      <text x="206" y="326" font-size="9" fill="#5F5E5A">착수</text>
+      <rect x="244" y="318" width="12" height="8" rx="2" fill="#0F6E56"/>
+      <text x="260" y="326" font-size="9" fill="#5F5E5A">개발</text>
+      <rect x="298" y="318" width="12" height="8" rx="2" fill="#EF9F27" opacity="0.75"/>
+      <text x="314" y="326" font-size="9" fill="#5F5E5A">실증(예정)</text>
+      <rect x="390" y="318" width="12" height="8" rx="2" fill="#A32D2D" opacity="0.5"/>
+      <text x="406" y="326" font-size="9" fill="#A32D2D">현재(3/27)</text>
+    </svg>
+  </div>
+
+  <!-- 추진 계획 테이블 -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>구분</th><th>추진 내용</th><th>일정</th><th>상태</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="badge badge-blue">착수</span></td><td>현장 위험구역·동선 정밀 조사 및 카메라 설치 위치 선정</td><td>'26.03 ~ 04</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-blue">착수</span></td><td>AI CCTV·비전센서 사양 확정 및 데이터 수집 표준 포맷·라벨링 규칙 수립</td><td>'26.03 ~ 04</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-blue">착수</span></td><td>Edge–관제서버–모바일 알림 아키텍처 설계 완료</td><td>'26.03 ~ 05</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-teal">개발</span></td><td>AI CCTV·비전센서 설치 및 캘리브레이션</td><td>'26.04 ~ 05</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-teal">개발</span></td><td>YOLO 전이학습 모델 및 공정 판정 CNN 모델 개발 (1단계)</td><td>'26.04 ~ 07</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-teal">개발</span></td><td>위험 등급 판단 엔진 Rule 설계 및 인터락 연동</td><td>'26.04 ~ 07</td><td><span class="status status-going">진행</span></td></tr>
+        <tr><td><span class="badge badge-teal">개발</span></td><td>관제 대시보드 및 모바일 알림 시스템 구축</td><td>'26.05 ~ 07</td><td><span class="status status-plan">예정</span></td></tr>
+        <tr><td><span class="badge badge-amber">실증</span></td><td>현장 정상·위험 이벤트 데이터 수집 및 라벨 누적</td><td>'26.06 ~ 10</td><td><span class="status status-plan">예정</span></td></tr>
+        <tr><td><span class="badge badge-amber">실증</span></td><td>위험 상황 재현 실험을 통한 이상 데이터 확보</td><td>'26.06 ~ 09</td><td><span class="status status-plan">예정</span></td></tr>
+        <tr><td><span class="badge badge-amber">실증</span></td><td>MLOps 재학습 파이프라인 구축 및 3-class 분류 모델 전환</td><td>'26.08 ~ 10</td><td><span class="status status-plan">예정</span></td></tr>
+        <tr><td><span class="badge badge-amber">실증</span></td><td>목표 탐지 정확도 95% · 오탐률 3% 이하 달성 최종 검증</td><td>'26.09 ~ 10</td><td><span class="status status-plan">예정</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 11. 리스크 -->
+<section id="risk">
+  <h2><span class="num">11</span> 리스크 및 대응 방안</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>리스크</th><th>대응 방안</th></tr>
+      </thead>
+      <tbody class="risk-row">
+        <tr><td>위험 이벤트 데이터 부족</td><td>위험 상황 재현 실험 및 Data Augmentation 병행. 초기에는 COCO 사전학습 전이학습으로 라벨 최소화. 위험구역 침입은 Rule 기반으로 즉시 적용하여 학습 데이터 없이 운영 가능.</td></tr>
+        <tr><td>객체 인식 오탐·미탐</td><td>위험구역 Rule 기반 보정 로직 결합. 등급별 신뢰도 임계값을 현장 조건에 맞게 조정하여 오탐률 최소화. 카메라 앵글·조도 최적화로 미탐 방지.</td></tr>
+        <tr><td>카메라 시야 가림·오염</td><td>설치 전 사각지대 시뮬레이션 필수. 카메라 정기 점검 루틴 수립. 단일 카메라 장애 시 인접 카메라 영역 확장 폴백 로직 설계.</td></tr>
+        <tr><td>Edge AI 처리 지연</td><td>TensorRT FP16 변환 의무화 (메모리 ~50% 절감, 속도 2~3배 향상). ROI 한정 추론으로 피크 부하 분산. 0.5초 이내 응답 지속 모니터링.</td></tr>
+        <tr><td>현장 작업자 행동 통제 실효성</td><td>기술 감지와 병행하여 바닥 마킹·안내 표지판·TBM 루틴으로 다층 운영. 위반 이력 관리 기능으로 반복 위반자 집중 교육. 책임 체계 매뉴얼 명문화.</td></tr>
+        <tr><td>인터락 오작동으로 인한 생산 중단</td><td>긴급 등급 판정 기준을 보수적으로 설정. 단일 프레임이 아닌 N 프레임 연속 판정으로 순간 노이즈 오탐 방지. 관리자 수동 오버라이드 기능 설계.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 12. 기대 성과 -->
+<section id="kpi">
+  <h2><span class="num">12</span> 기대 성과</h2>
+  <p>본 기술 구성을 적용하면 아래 목표치 달성이 가능할 것으로 판단한다.</p>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--blue)">95%+</div>
+      <div class="kpi-label">AI 탐지 정확도</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--green)">3%↓</div>
+      <div class="kpi-label">오탐률</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--amber)">0.5초</div>
+      <div class="kpi-label">감지→대응 시간</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--teal)">50%↓</div>
+      <div class="kpi-label">Near-miss 저감</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--red)">0건</div>
+      <div class="kpi-label">운영 기간 중대사고</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--purple)">1만건+</div>
+      <div class="kpi-label">안전 데이터 구축</div>
+    </div>
+  </div>
+  <div class="info-box">
+    <div class="info-title">향후 확장 방향</div>
+    <div class="info-body">
+      수동 모니터링 중심 사후 대응 체계 → AI 자동 감지 기반 예방 중심 안전관리 체계로 전환<br>
+      Near-miss 데이터 축적 기반 위험 패턴 분석 → 사전 예방 인사이트 생성 자동화<br>
+      현장 검증 완료 후 타 사업장 확산 및 레트로핏 키트 상용화를 통한 중소 제조업 산업재해 예방 기반 마련
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+function setActive(el) {
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+}
+function switchTab(btn, panelId) {
+  btn.closest('section').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.closest('section').querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+}
+document.querySelectorAll('nav a[href^="#"]').forEach(a => {
+  a.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+    }
+  });
+});
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a[href^="#"]');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id);
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
