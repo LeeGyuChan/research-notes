@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grounding DINO 논문 리뷰 — Marrying DINO with Grounded Pre-Training for Open-Set Object Detection</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --bg2: #ffffff; --bg3: #eeecea;
+    --text: #1a1a18; --text2: #5a5955; --text3: #9c9a92;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --blue: #185FA5; --blue-bg: #E6F1FB;
+    --teal: #0F6E56; --teal-bg: #E1F5EE;
+    --amber: #854F0B; --amber-bg: #FAEEDA; --amber-mid: #EF9F27;
+    --coral: #993C1D; --coral-bg: #FAECE7;
+    --green: #3B6D11; --green-bg: #EAF3DE;
+    --purple: #534AB7; --purple-bg: #EEEDFE;
+    --red: #A32D2D; --red-bg: #FCEBEB;
+    --gray: #5F5E5A; --gray-bg: #F1EFE8;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18; --bg2: #242422; --bg3: #2e2e2b;
+      --text: #e8e6de; --text2: #a8a69e; --text3: #6e6c65;
+      --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
+      --blue: #85B7EB; --blue-bg: #042C53;
+      --teal: #5DCAA5; --teal-bg: #04342C;
+      --amber: #FAC775; --amber-bg: #412402; --amber-mid: #EF9F27;
+      --coral: #F0997B; --coral-bg: #4A1B0C;
+      --green: #97C459; --green-bg: #173404;
+      --purple: #AFA9EC; --purple-bg: #26215C;
+      --red: #F09595; --red-bg: #501313;
+      --gray: #B4B2A9; --gray-bg: #2C2C2A;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.7; }
+  .layout { display: flex; min-height: 100vh; }
+  nav { width: 240px; flex-shrink: 0; background: var(--bg2); border-right: 0.5px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 0 40px; }
+  nav .logo { padding: 0 20px 20px; border-bottom: 0.5px solid var(--border); margin-bottom: 16px; }
+  nav .logo .tag { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  nav .logo .title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  nav ul { list-style: none; padding: 0 8px; }
+  nav ul li a { display: block; padding: 7px 12px; border-radius: 6px; font-size: 13px; color: var(--text2); text-decoration: none; transition: background .15s, color .15s; }
+  nav ul li a:hover { background: var(--bg3); color: var(--text); }
+  nav ul li a.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  nav ul li .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; padding: 12px 12px 4px; }
+  main { flex: 1; max-width: 860px; padding: 48px 40px 80px; }
+
+  .doc-header { margin-bottom: 40px; padding-bottom: 32px; border-bottom: 0.5px solid var(--border); }
+  .doc-header .eyebrow { font-size: 12px; font-weight: 500; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .doc-header h1 { font-size: 26px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
+  .doc-header .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 20px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .meta-item { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .meta-item .label { font-size: 11px; color: var(--text3); margin-bottom: 3px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .meta-item .value { font-size: 13px; font-weight: 500; color: var(--text); }
+
+  .case-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--purple-bg); border: 1px solid var(--purple); border-radius: 20px; padding: 4px 14px 4px 10px; font-size: 12px; font-weight: 500; color: var(--purple); margin-bottom: 16px; }
+  .case-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); }
+
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section h2 { font-size: 20px; font-weight: 500; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  section h2 .num { font-size: 12px; font-weight: 500; background: var(--blue-bg); color: var(--blue); border-radius: 20px; padding: 2px 9px; }
+  section h3 { font-size: 16px; font-weight: 500; margin: 28px 0 10px; color: var(--text); }
+  section h4 { font-size: 14px; font-weight: 500; margin: 20px 0 8px; color: var(--text2); }
+  p { color: var(--text2); margin-bottom: 12px; }
+
+  .q-block { border-left: 3px solid var(--blue); background: var(--blue-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .q-block .q-label { font-size: 10px; font-weight: 500; color: var(--blue); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .q-block .q-text { font-size: 14px; color: var(--text); font-weight: 500; line-height: 1.5; }
+
+  .a-block { border-left: 3px solid var(--teal); background: var(--teal-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .a-block .a-label { font-size: 10px; font-weight: 500; color: var(--teal); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .a-block .a-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .a-block .a-text strong { color: var(--text); }
+
+  .insight-block { border-left: 3px solid var(--amber-mid); background: var(--amber-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .insight-block .i-label { font-size: 10px; font-weight: 500; color: var(--amber); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .insight-block .i-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .insight-block .i-text strong { color: var(--text); }
+
+  .wrong-block { border-left: 3px solid var(--red); background: var(--red-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .wrong-block .w-label { font-size: 10px; font-weight: 500; color: var(--red); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .wrong-block .w-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .wrong-block .w-text strong { color: var(--text); }
+
+  .conclusion { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 20px 24px; margin: 20px 0; }
+  .conclusion .c-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px; }
+  .conclusion .c-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 10px; }
+  .conclusion .c-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .conclusion .c-body strong { color: var(--text); }
+
+  .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card-grid .card { margin-bottom: 0; }
+  .card .card-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .card .card-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .card .card-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  .callout { border-left: 3px solid var(--amber-mid); background: var(--amber-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .callout p { margin: 0; font-size: 13px; color: var(--text2); }
+  .callout strong { color: var(--text); }
+
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; border-radius: 20px; padding: 2px 9px; }
+  .badge-blue   { background: var(--blue-bg);   color: var(--blue); }
+  .badge-teal   { background: var(--teal-bg);   color: var(--teal); }
+  .badge-amber  { background: var(--amber-bg);  color: var(--amber); }
+  .badge-red    { background: var(--red-bg);    color: var(--red); }
+  .badge-gray   { background: var(--gray-bg);   color: var(--gray); }
+  .badge-green  { background: var(--green-bg);  color: var(--green); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); }
+
+  .table-wrap { overflow-x: auto; margin-bottom: 16px; border: 0.5px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--bg3); }
+  th { padding: 10px 14px; text-align: left; font-weight: 500; color: var(--text2); font-size: 12px; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+  .cmp-good { color: var(--teal);  font-weight: 500; }
+  .cmp-bad  { color: var(--red);   font-weight: 500; }
+  .cmp-mid  { color: var(--amber); font-weight: 500; }
+
+  .svg-wrap { margin: 16px 0 20px; overflow-x: auto; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 12px; }
+  .svg-wrap svg text { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif; }
+
+  .info-box { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 20px; }
+  .info-box .info-title { font-size: 13px; font-weight: 500; color: var(--text3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; }
+  .info-box .info-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .info-box .info-body strong { color: var(--text); }
+
+  .step-list { list-style: none; padding: 0; counter-reset: step; }
+  .step-list li { display: flex; gap: 14px; padding: 12px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; color: var(--text2); }
+  .step-list li:last-child { border-bottom: none; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--purple-bg); color: var(--purple); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-list li .step-title { font-weight: 500; color: var(--text); display: block; margin-bottom: 2px; }
+  .step-list li .step-desc { font-size: 12px; color: var(--text3); display: block; margin-top: 2px; }
+
+  @media (max-width: 720px) {
+    nav { display: none; }
+    main { padding: 24px 20px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav>
+  <div class="logo">
+    <div class="tag">논문 리뷰 노트</div>
+    <div class="title">Grounding DINO<br>논문 리뷰 v2</div>
+  </div>
+  <ul>
+    <li><div class="section-label">개요</div></li>
+    <li><a href="#overview">논문 기본 정보</a></li>
+    <li><a href="#problem">문제 정의</a></li>
+    <li><div class="section-label">배경 개념</div></li>
+    <li><a href="#dino">DINO 리뷰</a></li>
+    <li><a href="#glip">GLIP과 비교</a></li>
+    <li><div class="section-label">아키텍처</div></li>
+    <li><a href="#architecture">전체 구조</a></li>
+    <li><a href="#feature-enhancer">Feature Enhancer</a></li>
+    <li><a href="#query-selection">Language-Guided Query</a></li>
+    <li><a href="#decoder">Cross-Modality Decoder</a></li>
+    <li><a href="#qkv-deep">Q·K·V 심화 분석</a></li>
+    <li><a href="#subsentence">Sub-Sentence 표현</a></li>
+    <li><div class="section-label">실전 활용</div></li>
+    <li><a href="#label-gen">라벨 자동 생성 활용</a></li>
+    <li><div class="section-label">결과 & 요약</div></li>
+    <li><a href="#results">성능 결과</a></li>
+    <li><a href="#summary">핵심 요약</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<div class="doc-header">
+  <div class="eyebrow">논문 리뷰 노트</div>
+  <div class="case-badge"><span class="dot"></span>ECCV 2024 — Open-Set Object Detection</div>
+  <h1>Grounding DINO 논문 리뷰</h1>
+  <p class="subtitle">언어로 물체를 지정하는 Open-Set 검출기 — DINO와 Grounded Pre-Training의 결합</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">논문 제목</div><div class="value">Grounding DINO: Marrying DINO with Grounded Pre-Training for Open-Set Object Detection</div></div>
+    <div class="meta-item"><div class="label">발표</div><div class="value">ECCV 2024</div></div>
+    <div class="meta-item"><div class="label">저자</div><div class="value">Shilong Liu 외 10인</div></div>
+    <div class="meta-item"><div class="label">소속</div><div class="value">BNRist · IDEA · HKUST · Microsoft Research</div></div>
+    <div class="meta-item"><div class="label">arXiv</div><div class="value">2303.05499 (2023. 03. 09)</div></div>
+    <div class="meta-item"><div class="label">작성일</div><div class="value">2026. 04. 08.</div></div>
+  </div>
+</div>
+
+
+<!-- 1. 논문 기본 정보 -->
+<section id="overview">
+  <h2><span class="num">개요</span> 논문 기본 정보</h2>
+
+  <p>Grounding DINO는 <strong>텍스트로 지정된 임의의 물체를 이미지에서 검출</strong>하는 open-set object detection 모델이다. 핵심 아이디어는 SOTA Transformer 기반 검출기인 DINO와 언어 정보를 결합하는 grounded pre-training을 통해, 학습 시 보지 못한 새로운 카테고리의 물체도 텍스트 프롬프트만으로 검출할 수 있게 한다는 것이다.</p>
+
+  <div class="info-box">
+    <div class="info-title">논문의 한 줄 요약</div>
+    <div class="info-body">
+      "closed-set detector를 language-aware로 확장하되, <strong>세 단계(neck · 쿼리 초기화 · head) 모두에서 이미지-언어 feature를 융합</strong>하면 기존 open-set 방법보다 훨씬 강력한 검출기를 만들 수 있다." COCO zero-shot에서 52.5 AP, COCO fine-tune에서 63.0 AP라는 당시 최고 성능을 달성했다.
+    </div>
+  </div>
+
+  <!-- 전체 파이프라인 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 740 150" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr0" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arr0p" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="370" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1. Grounding DINO 전체 처리 흐름</text>
+
+      <!-- Image Input -->
+      <rect x="20" y="28" width="80" height="56" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="60" y="52" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">이미지</text>
+      <text x="60" y="66" text-anchor="middle" font-size="9" fill="#5F5E5A">입력</text>
+
+      <!-- Text Input -->
+      <rect x="20" y="94" width="80" height="44" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="60" y="113" text-anchor="middle" font-size="10" font-weight="500" fill="#444441">텍스트</text>
+      <text x="60" y="127" text-anchor="middle" font-size="9" fill="#5F5E5A">프롬프트</text>
+
+      <line x1="100" y1="56" x2="118" y2="56" stroke="#888780" stroke-width="1" marker-end="url(#arr0)"/>
+      <line x1="100" y1="116" x2="118" y2="116" stroke="#888780" stroke-width="1" marker-end="url(#arr0)"/>
+
+      <!-- Backbone -->
+      <rect x="120" y="28" width="100" height="112" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="170" y="72" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">Backbone</text>
+      <text x="170" y="86" text-anchor="middle" font-size="9" fill="#534AB7">Swin-T/L</text>
+      <text x="170" y="100" text-anchor="middle" font-size="8" fill="#AFA9EC">+</text>
+      <text x="170" y="112" text-anchor="middle" font-size="9" fill="#534AB7">BERT-base</text>
+      <line x1="220" y1="84" x2="238" y2="84" stroke="#534AB7" stroke-width="1" marker-end="url(#arr0p)"/>
+
+      <!-- Feature Enhancer -->
+      <rect x="240" y="36" width="110" height="96" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="295" y="60" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">Feature</text>
+      <text x="295" y="74" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">Enhancer</text>
+      <text x="295" y="90" text-anchor="middle" font-size="8" fill="#185FA5">Self-Attn</text>
+      <text x="295" y="103" text-anchor="middle" font-size="8" fill="#185FA5">Text→Image</text>
+      <text x="295" y="116" text-anchor="middle" font-size="8" fill="#185FA5">Image→Text</text>
+      <line x1="350" y1="84" x2="368" y2="84" stroke="#185FA5" stroke-width="1" marker-end="url(#arr0)"/>
+
+      <!-- Query Selection -->
+      <rect x="370" y="36" width="110" height="96" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.5"/>
+      <text x="425" y="60" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">Language-</text>
+      <text x="425" y="74" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">Guided</text>
+      <text x="425" y="88" text-anchor="middle" font-size="9" fill="#854F0B">Query Selection</text>
+      <text x="425" y="104" text-anchor="middle" font-size="8" fill="#B4B2A9">900개 쿼리 초기화</text>
+      <line x1="480" y1="84" x2="498" y2="84" stroke="#EF9F27" stroke-width="1" marker-end="url(#arr0)"/>
+
+      <!-- Cross-Modality Decoder -->
+      <rect x="500" y="36" width="110" height="96" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="555" y="58" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">Cross-</text>
+      <text x="555" y="72" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">Modality</text>
+      <text x="555" y="86" text-anchor="middle" font-size="9" fill="#0F6E56">Decoder</text>
+      <text x="555" y="102" text-anchor="middle" font-size="8" fill="#5DCAA5">Self+Img+Text</text>
+      <text x="555" y="115" text-anchor="middle" font-size="8" fill="#5DCAA5">Cross-Attn</text>
+      <line x1="610" y1="84" x2="628" y2="84" stroke="#888780" stroke-width="1" marker-end="url(#arr0)"/>
+
+      <!-- Output -->
+      <rect x="630" y="46" width="90" height="76" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+      <text x="675" y="70" text-anchor="middle" font-size="10" font-weight="500" fill="#27500A">bbox +</text>
+      <text x="675" y="84" text-anchor="middle" font-size="9" fill="#3B6D11">텍스트 구문</text>
+      <text x="675" y="98" text-anchor="middle" font-size="8" fill="#97C459">Open-Set</text>
+      <text x="675" y="110" text-anchor="middle" font-size="8" fill="#97C459">검출 결과</text>
+    </svg>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--purple)">기반 검출기</div>
+      <div class="card-title">DINO (Transformer 기반)</div>
+      <div class="card-body">DETR 계열의 SOTA closed-set detector. NMS 없이 end-to-end 최적화 가능. 언어 모듈과 구조적으로 친화적인 Transformer 아키텍처를 갖는다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">핵심 기여</div>
+      <div class="card-title">3단계 Cross-Modality Fusion</div>
+      <div class="card-body">neck(Feature Enhancer), 쿼리 초기화(Language-Guided Query Selection), head(Cross-Modality Decoder) 세 단계 모두에서 이미지-언어 feature를 융합한다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--green)">성능 (COCO)</div>
+      <div class="card-title">52.5 AP (zero-shot) · 63.0 AP (fine-tune)</div>
+      <div class="card-body">COCO zero-shot 52.5 AP로 당시 1위. fine-tune 시 63.0 AP. ODinW, LVIS 등 다양한 벤치마크에서 GLIP 등 기존 방법을 상회.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 2. 문제 정의 -->
+<section id="problem">
+  <h2><span class="num">배경</span> 문제 정의 — Open-Set Detection이란 무엇인가</h2>
+
+  <div class="q-block">
+    <div class="q-label">핵심 질문</div>
+    <div class="q-text">기존 object detector는 왜 학습 시 보지 못한 카테고리의 물체를 검출하지 못하는가?</div>
+  </div>
+
+  <p>기존 Closed-Set detector(Faster-RCNN, YOLO 등)는 학습 데이터에 포함된 카테고리만 검출할 수 있다. 80개 COCO 카테고리로 학습하면 81번째 카테고리의 물체는 전혀 검출하지 못한다. 이는 classifier head가 고정된 카테고리 수를 출력하도록 설계되어 있기 때문이다.</p>
+
+  <div class="wrong-block">
+    <div class="w-label">Closed-Set Detection의 한계</div>
+    <div class="w-text">새로운 카테고리를 검출하려면 <strong>해당 카테고리의 labeled 데이터를 수집하고 재학습해야</strong> 한다. 산업 현장·의료·자율주행 등 새로운 객체가 지속적으로 등장하는 환경에서는 이 비용이 감당하기 어려운 수준이다.</div>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">Open-Set Detection의 핵심 아이디어</div>
+    <div class="i-text">카테고리 이름 대신 <strong>자연어(텍스트)를 검출 기준으로 사용</strong>하면, 학습 시 보지 못한 물체도 텍스트 설명만으로 검출할 수 있다. "a yellow dog wearing a red collar"처럼 속성까지 지정하는 Reference Expression Comprehension(REC)도 동일한 프레임워크로 처리 가능하다.</div>
+  </div>
+
+  <!-- Closed vs Open-Set 비교 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 2. Closed-Set vs Open-Set Detection 비교</text>
+
+      <!-- Closed-Set -->
+      <rect x="30" y="28" width="300" height="148" rx="10" fill="#FCEBEB" stroke="#F09595" stroke-width="1"/>
+      <text x="180" y="50" text-anchor="middle" font-size="12" font-weight="500" fill="#A32D2D">Closed-Set Detection</text>
+      <rect x="50" y="62" width="260" height="36" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="180" y="85" text-anchor="middle" font-size="10" fill="#5F5E5A">입력: 이미지만</text>
+      <rect x="50" y="106" width="260" height="36" rx="6" fill="#FCEBEB" stroke="#E24B4A" stroke-width="0.5"/>
+      <text x="180" y="129" text-anchor="middle" font-size="10" fill="#A32D2D">출력: 학습된 카테고리 N개만 검출</text>
+      <text x="180" y="163" text-anchor="middle" font-size="10" fill="#A32D2D">새로운 카테고리 → 검출 불가</text>
+
+      <!-- Open-Set -->
+      <rect x="370" y="28" width="300" height="148" rx="10" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="1"/>
+      <text x="520" y="50" text-anchor="middle" font-size="12" font-weight="500" fill="#085041">Open-Set Detection</text>
+      <rect x="390" y="62" width="260" height="36" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="520" y="80" text-anchor="middle" font-size="10" fill="#5F5E5A">입력: 이미지 + 텍스트 프롬프트</text>
+      <text x="520" y="94" text-anchor="middle" font-size="9" fill="#9c9a92">"a cat" / "a dog with red collar" / ...</text>
+      <rect x="390" y="106" width="260" height="36" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="520" y="129" text-anchor="middle" font-size="10" fill="#0F6E56">출력: 텍스트로 지정된 임의 물체 검출</text>
+      <text x="520" y="163" text-anchor="middle" font-size="10" fill="#0F6E56">새로운 카테고리 → 텍스트로 즉시 검출 ✓</text>
+    </svg>
+  </div>
+
+  <p>기존 open-set 방법인 GLIP은 1단계 검출기 Dynamic Head 위에 언어 정보를 추가했다. 하지만 closed-set detector의 성능이 곧 open-set 성능의 상한이므로, SOTA Transformer 검출기 DINO를 베이스로 삼으면 더 강력한 open-set 검출기를 만들 수 있다는 것이 본 논문의 출발점이다.</p>
+</section>
+
+
+<!-- 3. DINO 리뷰 -->
+<section id="dino">
+  <h2><span class="num">배경 개념 1</span> DINO — Grounding DINO의 기반 검출기</h2>
+
+  <p>DINO(DETR with Improved deNoising anchor boxes)는 DETR 계열 Transformer 검출기 중 당시 SOTA 성능을 보인 모델이다. Grounding DINO는 DINO의 구조를 직접 확장하므로, DINO의 핵심 개념을 이해하는 것이 중요하다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--purple)">DETR 계열의 특징</div>
+      <div class="card-title">NMS 없는 End-to-End 검출</div>
+      <div class="card-body">기존 anchor-based 검출기는 수천 개의 proposal을 생성 후 NMS로 중복 제거한다. DINO는 이분 매칭(Hungarian algorithm)으로 NMS 없이 end-to-end 최적화. 언어 모듈과 결합하기 훨씬 단순하다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">Encoder-Decoder 구조</div>
+      <div class="card-title">이미지 Feature → 쿼리 → 박스</div>
+      <div class="card-body">Swin Transformer로 멀티스케일 feature 추출 → Encoder에서 feature 강화 → Decoder 쿼리가 feature를 조사해 bbox 예측. 이 layer-by-layer 구조가 언어 정보와 자연스럽게 통합된다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">Mixed Query Selection</div>
+      <div class="card-title">콘텐츠 + 위치 쿼리 분리</div>
+      <div class="card-body">각 디코더 쿼리는 "어디를 볼 것인가(위치)"와 "무엇을 볼 것인가(콘텐츠)" 두 파트로 구성. 위치는 encoder 출력으로 동적 초기화. Grounding DINO는 여기에 언어 정보를 추가 주입한다.</div>
+    </div>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">왜 DINO를 선택했는가</div>
+    <div class="i-text">Transformer 기반 검출기는 <strong>언어 인코더(BERT)와 동일한 self-attention 구조</strong>를 공유한다. 따라서 이미지 feature와 텍스트 feature를 같은 메커니즘(cross-attention)으로 융합하기 자연스럽다. 반면 CNN 기반 검출기는 구조적으로 이질적이어서 언어와의 결합이 어렵다.</div>
+  </div>
+</section>
+
+
+<!-- 4. GLIP과 비교 -->
+<section id="glip">
+  <h2><span class="num">배경 개념 2</span> GLIP과 비교 — 무엇이 달라졌는가</h2>
+
+  <p>GLIP은 Grounding DINO의 직접적인 선행 연구다. object detection을 구문 grounding 문제로 재정의하고 contrastive training을 도입했으나, 1단계 CNN 검출기(Dynamic Head) 위에 언어 정보를 부분적으로만 융합했다는 한계가 있다.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>비교 항목</th>
+          <th>GLIP</th>
+          <th>Grounding DINO</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>기반 검출기</strong></td>
+          <td>Dynamic Head (CNN 1-stage)</td>
+          <td><span class="cmp-good">DINO (Transformer SOTA)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Fusion 위치</strong></td>
+          <td>neck 일부만</td>
+          <td><span class="cmp-good">neck + 쿼리 초기화 + head (3단계)</span></td>
+        </tr>
+        <tr>
+          <td><strong>NMS 필요 여부</strong></td>
+          <td>필요</td>
+          <td><span class="cmp-good">불필요 (end-to-end)</span></td>
+        </tr>
+        <tr>
+          <td><strong>COCO zero-shot AP</strong></td>
+          <td>49.8</td>
+          <td><span class="cmp-good">52.5 (+2.7)</span></td>
+        </tr>
+        <tr>
+          <td><strong>REC 지원</strong></td>
+          <td>제한적</td>
+          <td><span class="cmp-good">명시적 지원</span></td>
+        </tr>
+        <tr>
+          <td><strong>대규모 데이터 활용</strong></td>
+          <td>보통</td>
+          <td><span class="cmp-good">우수 (Transformer 특성)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>핵심 차이:</strong> 저자들은 이미지-언어 feature 융합이 많을수록 성능이 높아진다고 주장한다. GLIP이 neck 단계에서만 융합했다면, Grounding DINO는 neck(Feature Enhancer), 쿼리 초기화(Language-Guided Query Selection), head(Cross-Modality Decoder) 세 단계 모두에서 융합을 수행한다. 이 tight fusion이 성능 차이의 핵심 원인이다.</p>
+  </div>
+</section>
+
+
+<!-- 5. 전체 아키텍처 -->
+<section id="architecture">
+  <h2><span class="num">아키텍처</span> 전체 구조 — 이중 인코더 · 단일 디코더</h2>
+
+  <p>Grounding DINO는 <strong>이중 인코더(Dual-Encoder) · 단일 디코더(Single-Decoder)</strong> 구조를 갖는다. 이미지 인코더와 텍스트 인코더가 각각 feature를 추출하고, 이를 세 단계에 걸쳐 교차 융합한 뒤 단일 디코더가 최종 bbox와 구문을 예측한다.</p>
+
+  <!-- 아키텍처 상세 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 360" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrAp" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrAb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrAo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#EF9F27" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrAt" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#0F6E56" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 3. Grounding DINO 아키텍처 상세 — 3단계 Cross-Modality Fusion</text>
+
+      <!-- IMAGE PATH -->
+      <rect x="20" y="36" width="80" height="44" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="60" y="55" text-anchor="middle" font-size="10" font-weight="500" fill="#444441">이미지</text>
+      <text x="60" y="70" text-anchor="middle" font-size="9" fill="#5F5E5A">H×W×3</text>
+      <line x1="100" y1="58" x2="118" y2="58" stroke="#888780" stroke-width="1" marker-end="url(#arrA)"/>
+
+      <rect x="120" y="30" width="100" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.2"/>
+      <text x="170" y="52" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">이미지 Backbone</text>
+      <text x="170" y="66" text-anchor="middle" font-size="9" fill="#534AB7">Swin-T / Swin-L</text>
+      <text x="170" y="78" text-anchor="middle" font-size="8" fill="#AFA9EC">멀티스케일 feature</text>
+      <line x1="220" y1="58" x2="238" y2="58" stroke="#534AB7" stroke-width="1" marker-end="url(#arrAp)"/>
+
+      <!-- TEXT PATH -->
+      <rect x="20" y="106" width="80" height="44" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="60" y="124" text-anchor="middle" font-size="10" font-weight="500" fill="#444441">텍스트</text>
+      <text x="60" y="138" text-anchor="middle" font-size="9" fill="#5F5E5A">카테고리 목록</text>
+      <line x1="100" y1="128" x2="118" y2="128" stroke="#888780" stroke-width="1" marker-end="url(#arrA)"/>
+
+      <rect x="120" y="100" width="100" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.2"/>
+      <text x="170" y="122" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">텍스트 Backbone</text>
+      <text x="170" y="136" text-anchor="middle" font-size="9" fill="#534AB7">BERT-base</text>
+      <text x="170" y="150" text-anchor="middle" font-size="8" fill="#AFA9EC">토큰 feature</text>
+      <line x1="220" y1="128" x2="238" y2="93" stroke="#534AB7" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#arrAp)"/>
+
+      <!-- ① Feature Enhancer -->
+      <rect x="240" y="30" width="130" height="100" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="2"/>
+      <text x="253" y="47" font-size="9" font-weight="500" fill="#185FA5">① Feature Enhancer</text>
+      <rect x="252" y="54" width="106" height="16" rx="3" fill="#C8DFF5" stroke="none"/>
+      <text x="305" y="65" text-anchor="middle" font-size="8" fill="#0C447C">Img Deformable Self-Attn</text>
+      <rect x="252" y="74" width="106" height="16" rx="3" fill="#C8DFF5" stroke="none"/>
+      <text x="305" y="85" text-anchor="middle" font-size="8" fill="#0C447C">Text Self-Attn</text>
+      <rect x="252" y="94" width="106" height="16" rx="3" fill="#C8DFF5" stroke="none"/>
+      <text x="305" y="105" text-anchor="middle" font-size="8" fill="#0C447C">Image↔Text Cross-Attn</text>
+      <text x="305" y="125" text-anchor="middle" font-size="8" fill="#9c9a92">이미지 · 텍스트 feature 동시 강화</text>
+      <line x1="370" y1="80" x2="390" y2="80" stroke="#185FA5" stroke-width="1" marker-end="url(#arrAb)"/>
+
+      <!-- ② Language-Guided Query Selection -->
+      <rect x="392" y="30" width="130" height="100" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="2"/>
+      <text x="404" y="47" font-size="9" font-weight="500" fill="#854F0B">② Language Query Sel.</text>
+      <text x="457" y="62" text-anchor="middle" font-size="9" fill="#633806">텍스트와 유사한</text>
+      <text x="457" y="76" text-anchor="middle" font-size="9" fill="#633806">이미지 feature</text>
+      <text x="457" y="90" text-anchor="middle" font-size="9" fill="#633806">900개 선택</text>
+      <text x="457" y="106" text-anchor="middle" font-size="8" fill="#9c9a92">→ 디코더 쿼리 초기화</text>
+      <text x="457" y="125" text-anchor="middle" font-size="8" fill="#9c9a92">위치=동적, 콘텐츠=학습가능</text>
+      <line x1="522" y1="80" x2="542" y2="80" stroke="#EF9F27" stroke-width="1" marker-end="url(#arrAo)"/>
+
+      <!-- ③ Cross-Modality Decoder -->
+      <rect x="544" y="30" width="136" height="100" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="2"/>
+      <text x="557" y="47" font-size="9" font-weight="500" fill="#0F6E56">③ Cross-Modality Dec.</text>
+      <rect x="556" y="54" width="112" height="14" rx="3" fill="#B5E9D5" stroke="none"/>
+      <text x="612" y="64" text-anchor="middle" font-size="8" fill="#085041">Self-Attention</text>
+      <rect x="556" y="72" width="112" height="14" rx="3" fill="#B5E9D5" stroke="none"/>
+      <text x="612" y="82" text-anchor="middle" font-size="8" fill="#085041">Image Cross-Attention</text>
+      <rect x="556" y="90" width="112" height="14" rx="3" fill="#B5E9D5" stroke="none"/>
+      <text x="612" y="100" text-anchor="middle" font-size="8" fill="#085041">Text Cross-Attention ← 추가!</text>
+      <rect x="556" y="108" width="112" height="14" rx="3" fill="#B5E9D5" stroke="none"/>
+      <text x="612" y="118" text-anchor="middle" font-size="8" fill="#085041">FFN</text>
+
+      <!-- Output -->
+      <rect x="240" y="166" width="440" height="56" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+      <text x="460" y="190" text-anchor="middle" font-size="11" font-weight="500" fill="#27500A">출력: Bounding Box + 텍스트 구문(Phrase)</text>
+      <text x="460" y="208" text-anchor="middle" font-size="9" fill="#3B6D11">L1 Loss + GIoU Loss (box) · Contrastive Loss (classification) · 보조 Loss (각 디코더 레이어)</text>
+      <line x1="612" y1="130" x2="612" y2="160" stroke="#0F6E56" stroke-width="1" marker-end="url(#arrA)"/>
+      <line x1="457" y1="130" x2="457" y2="160" stroke="#EF9F27" stroke-width="1" marker-end="url(#arrA)"/>
+
+      <!-- Fusion Flow Labels -->
+      <text x="350" y="250" text-anchor="middle" font-size="11" fill="#185FA5" font-weight="500">세 단계 Fusion의 핵심 의미</text>
+      <rect x="40" y="266" width="188" height="68" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="134" y="284" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">① Feature Enhancer</text>
+      <text x="134" y="300" text-anchor="middle" font-size="9" fill="#185FA5">이미지·텍스트 feature를</text>
+      <text x="134" y="314" text-anchor="middle" font-size="9" fill="#185FA5">동시에 서로 강화</text>
+      <text x="134" y="328" text-anchor="middle" font-size="8" fill="#9c9a92">(neck 단계)</text>
+
+      <rect x="256" y="266" width="188" height="68" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="0.5"/>
+      <text x="350" y="284" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">② Language Query</text>
+      <text x="350" y="300" text-anchor="middle" font-size="9" fill="#854F0B">텍스트와 관련 높은</text>
+      <text x="350" y="314" text-anchor="middle" font-size="9" fill="#854F0B">이미지 영역으로 쿼리 초기화</text>
+      <text x="350" y="328" text-anchor="middle" font-size="8" fill="#9c9a92">(쿼리 초기화 단계)</text>
+
+      <rect x="472" y="266" width="188" height="68" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="566" y="284" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">③ Cross-Modality Dec.</text>
+      <text x="566" y="300" text-anchor="middle" font-size="9" fill="#0F6E56">각 디코더 레이어에서</text>
+      <text x="566" y="314" text-anchor="middle" font-size="9" fill="#0F6E56">이미지+텍스트 동시 참조</text>
+      <text x="566" y="328" text-anchor="middle" font-size="8" fill="#9c9a92">(head 단계)</text>
+    </svg>
+  </div>
+</section>
+
+
+<!-- 6. Feature Enhancer -->
+<section id="feature-enhancer">
+  <h2><span class="num">모듈 ①</span> Feature Enhancer — Neck의 Cross-Modality Fusion</h2>
+
+  <p>Feature Enhancer는 이미지 feature와 텍스트 feature를 동시에 강화하는 neck 모듈이다. 단순히 한쪽이 다른 쪽을 참조하는 것이 아니라, <strong>이미지→텍스트, 텍스트→이미지 양방향 cross-attention이 모두 포함</strong>되어 상호 강화가 이루어진다.</p>
+
+  <!-- Feature Enhancer 상세 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrF" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrFb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrFt" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#993C1D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 4. Feature Enhancer 내부 구조 — 한 레이어 기준</text>
+
+      <!-- Image Feature -->
+      <rect x="30" y="36" width="140" height="40" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+      <text x="100" y="61" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">이미지 Feature (멀티스케일)</text>
+
+      <!-- Text Feature -->
+      <rect x="530" y="36" width="140" height="40" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+      <text x="600" y="61" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">텍스트 Feature (토큰)</text>
+
+      <!-- Img Self-Attn -->
+      <rect x="30" y="96" width="140" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+      <text x="100" y="119" text-anchor="middle" font-size="10" fill="#0C447C">Deformable Self-Attn</text>
+      <line x1="100" y1="76" x2="100" y2="96" stroke="#534AB7" stroke-width="1" marker-end="url(#arrF)"/>
+
+      <!-- Text Self-Attn -->
+      <rect x="530" y="96" width="140" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+      <text x="600" y="119" text-anchor="middle" font-size="10" fill="#0C447C">Self-Attn</text>
+      <line x1="600" y1="76" x2="600" y2="96" stroke="#534AB7" stroke-width="1" marker-end="url(#arrF)"/>
+
+      <!-- Cross Attention: Text→Image -->
+      <rect x="180" y="152" width="150" height="36" rx="6" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+      <text x="255" y="170" text-anchor="middle" font-size="10" font-weight="500" fill="#712B13">Text→Image</text>
+      <text x="255" y="182" text-anchor="middle" font-size="9" fill="#993C1D">Cross-Attention</text>
+      <line x1="170" y1="114" x2="250" y2="152" stroke="#993C1D" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrFt)"/>
+      <line x1="530" y1="114" x2="290" y2="152" stroke="#993C1D" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrFt)"/>
+
+      <!-- Cross Attention: Image→Text -->
+      <rect x="370" y="152" width="150" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="445" y="170" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">Image→Text</text>
+      <text x="445" y="182" text-anchor="middle" font-size="9" fill="#185FA5">Cross-Attention</text>
+      <line x1="170" y1="114" x2="410" y2="152" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrFb)"/>
+      <line x1="530" y1="114" x2="450" y2="152" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrFb)"/>
+
+      <!-- Output -->
+      <rect x="100" y="212" width="180" height="24" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="190" y="228" text-anchor="middle" font-size="9" fill="#0F6E56">강화된 이미지 Feature</text>
+      <rect x="420" y="212" width="180" height="24" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="510" y="228" text-anchor="middle" font-size="9" fill="#0F6E56">강화된 텍스트 Feature</text>
+      <line x1="255" y1="188" x2="190" y2="212" stroke="#888780" stroke-width="1" marker-end="url(#arrF)"/>
+      <line x1="445" y1="188" x2="510" y2="212" stroke="#888780" stroke-width="1" marker-end="url(#arrF)"/>
+    </svg>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">이미지 Self-Attention</div>
+      <div class="card-title">Deformable Self-Attention</div>
+      <div class="card-body">멀티스케일 이미지 feature를 처리하는 Deformable Attention 사용. 전체 픽셀이 아닌 특정 포인트만 참조하여 계산 효율을 높인다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--coral)">Text→Image Cross-Attention</div>
+      <div class="card-title">텍스트가 이미지를 강화</div>
+      <div class="card-body">텍스트 feature가 query, 이미지 feature가 key/value. 이미지의 각 위치가 텍스트 토큰 중 어느 것과 관련 있는지 학습한다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">Image→Text Cross-Attention</div>
+      <div class="card-title">이미지가 텍스트를 강화</div>
+      <div class="card-body">이미지 feature가 query, 텍스트 feature가 key/value. 각 텍스트 토큰이 이미지의 어느 영역과 연결되는지 학습한다. GLIP에 없던 방향이다.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 7. Language-Guided Query Selection -->
+<section id="query-selection">
+  <h2><span class="num">모듈 ②</span> Language-Guided Query Selection — 텍스트 기반 쿼리 초기화</h2>
+
+  <p>기존 DETR 계열 모델은 인코더 출력에서 상위 N개(900개)의 feature를 디코더 쿼리로 선택한다. Grounding DINO는 여기에 <strong>텍스트 정보를 결합</strong>하여, 입력 텍스트와 관련성이 높은 이미지 영역의 feature를 쿼리로 우선 선택한다.</p>
+
+  <!-- Query Selection SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrQ" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 5. Language-Guided Query Selection — 텍스트 관련 영역 우선 선택</text>
+
+      <!-- Image features grid -->
+      <rect x="30" y="32" width="200" height="130" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="130" y="50" text-anchor="middle" font-size="10" fill="#5F5E5A">이미지 Feature Map (N개 위치)</text>
+      <!-- Grid cells -->
+      <rect x="42" y="58" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="76" y="58" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="110" y="58" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="144" y="58" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="178" y="58" width="40" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="42" y="86" width="30" height="24" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="57" y="101" text-anchor="middle" font-size="8" fill="#0C447C">↑</text>
+      <rect x="76" y="86" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="110" y="86" width="30" height="24" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="125" y="101" text-anchor="middle" font-size="8" fill="#0C447C">↑</text>
+      <rect x="144" y="86" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="178" y="86" width="40" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="42" y="114" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="76" y="114" width="30" height="24" rx="3" fill="#B5D4F4" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="91" y="129" text-anchor="middle" font-size="8" fill="#0C447C">↑</text>
+      <rect x="110" y="114" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="144" y="114" width="30" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <rect x="178" y="114" width="40" height="24" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+      <text x="130" y="156" text-anchor="middle" font-size="9" fill="#185FA5">↑ 텍스트와 유사도 높은 위치 선택</text>
+
+      <!-- Text Feature -->
+      <rect x="270" y="62" width="120" height="60" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1"/>
+      <text x="330" y="86" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">텍스트 Feature</text>
+      <text x="330" y="102" text-anchor="middle" font-size="9" fill="#854F0B">BERT 인코딩 결과</text>
+      <text x="330" y="116" text-anchor="middle" font-size="8" fill="#9c9a92">각 토큰 벡터</text>
+
+      <!-- Similarity -->
+      <rect x="430" y="62" width="120" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+      <text x="490" y="84" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">유사도 계산</text>
+      <text x="490" y="100" text-anchor="middle" font-size="9" fill="#0F6E56">이미지 feature</text>
+      <text x="490" y="113" text-anchor="middle" font-size="9" fill="#0F6E56">× 텍스트 feature</text>
+      <line x1="230" y1="92" x2="268" y2="92" stroke="#185FA5" stroke-width="1" marker-end="url(#arrQ)"/>
+      <line x1="390" y1="92" x2="428" y2="92" stroke="#EF9F27" stroke-width="1" marker-end="url(#arrQ)"/>
+
+      <!-- Output -->
+      <rect x="590" y="62" width="90" height="60" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+      <text x="635" y="84" text-anchor="middle" font-size="10" font-weight="500" fill="#27500A">900개</text>
+      <text x="635" y="100" text-anchor="middle" font-size="9" fill="#3B6D11">쿼리 선택</text>
+      <text x="635" y="114" text-anchor="middle" font-size="8" fill="#9c9a92">디코더 입력</text>
+      <line x1="550" y1="92" x2="588" y2="92" stroke="#888780" stroke-width="1" marker-end="url(#arrQ)"/>
+
+      <text x="350" y="180" text-anchor="middle" font-size="10" fill="#9c9a92">텍스트 없이 이미지 점수만으로 선택하면 텍스트와 무관한 배경 영역이 쿼리로 선택될 수 있다</text>
+    </svg>
+  </div>
+
+  <div class="a-block">
+    <div class="a-label">Mixed Query Selection 상세</div>
+    <div class="a-text">각 선택된 쿼리는 두 파트로 구성된다. <strong>위치(Position) 파트</strong>는 인코더 출력의 해당 위치를 동적 앵커 박스로 초기화한다. <strong>콘텐츠(Content) 파트</strong>는 학습 가능한 임베딩으로 설정된다. 이 구조는 DINO의 Mixed Query Selection을 그대로 따르되, 선택 기준에 텍스트 유사도를 추가한 것이다.</div>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">선택된 900개 쿼리 = Decoder의 Q</div>
+    <div class="i-text">이 단계에서 선택된 900개의 이미지 feature가 곧 <strong>Cross-Modality Decoder의 Query(Q)</strong>가 된다. Attention 메커니즘에서 Q는 "내가 무엇을 알고 싶은가"를 나타내는 질문자다. 즉 각 쿼리는 "나는 이 이미지 영역이 텍스트의 어느 단어와 대응하고, bbox는 어디인가?"를 묻는 존재가 된다. 이후 디코더에서 이미지(K/V)와 텍스트(K/V)를 참조하며 그 질문에 스스로 답하는 과정이 반복된다.</div>
+  </div>
+</section>
+
+
+<!-- 8. Cross-Modality Decoder -->
+<section id="decoder">
+  <h2><span class="num">모듈 ③</span> Cross-Modality Decoder — Head에서의 Fusion</h2>
+
+  <p>Cross-Modality Decoder는 Grounding DINO에서 가장 핵심적인 구조적 변경점이다. 기존 DINO의 디코더 레이어는 Self-Attention → Image Cross-Attention → FFN 순서였다. Grounding DINO는 여기에 <strong>Text Cross-Attention을 추가</strong>하여 각 디코더 레이어가 이미지와 텍스트 양쪽을 모두 참조하며 쿼리를 정제한다.</p>
+
+  <!-- Decoder 비교 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 6. DINO vs Grounding DINO 디코더 레이어 비교</text>
+
+      <!-- DINO Decoder -->
+      <rect x="30" y="28" width="280" height="200" rx="10" fill="#FCEBEB" stroke="#F09595" stroke-width="1"/>
+      <text x="170" y="48" text-anchor="middle" font-size="11" font-weight="500" fill="#A32D2D">DINO Decoder Layer</text>
+      <rect x="60" y="60" width="220" height="32" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="170" y="80" text-anchor="middle" font-size="10" fill="#5F5E5A">Self-Attention</text>
+      <line x1="170" y1="92" x2="170" y2="108" stroke="#888780" stroke-width="1" marker-end="url(#arrD)"/>
+      <rect x="60" y="108" width="220" height="32" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="170" y="128" text-anchor="middle" font-size="10" fill="#0C447C">Image Cross-Attention</text>
+      <line x1="170" y1="140" x2="170" y2="156" stroke="#888780" stroke-width="1" marker-end="url(#arrD)"/>
+      <rect x="60" y="156" width="220" height="32" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="170" y="176" text-anchor="middle" font-size="10" fill="#5F5E5A">FFN</text>
+      <text x="170" y="220" text-anchor="middle" font-size="9" fill="#A32D2D">텍스트 정보 없음</text>
+
+      <!-- Grounding DINO Decoder -->
+      <rect x="390" y="28" width="280" height="200" rx="10" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="1"/>
+      <text x="530" y="48" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">Grounding DINO Decoder Layer</text>
+      <rect x="420" y="60" width="220" height="28" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="530" y="78" text-anchor="middle" font-size="10" fill="#5F5E5A">Self-Attention</text>
+      <line x1="530" y1="88" x2="530" y2="100" stroke="#888780" stroke-width="1" marker-end="url(#arrD)"/>
+      <rect x="420" y="100" width="220" height="28" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+      <text x="530" y="118" text-anchor="middle" font-size="10" fill="#0C447C">Image Cross-Attention</text>
+      <line x1="530" y1="128" x2="530" y2="140" stroke="#888780" stroke-width="1" marker-end="url(#arrD)"/>
+      <rect x="420" y="140" width="220" height="28" rx="6" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1.5"/>
+      <text x="530" y="155" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">Text Cross-Attention</text>
+      <text x="530" y="169" text-anchor="middle" font-size="8" fill="#854F0B">← Grounding DINO 추가!</text>
+      <line x1="530" y1="172" x2="530" y2="184" stroke="#888780" stroke-width="1" marker-end="url(#arrD)"/>
+      <rect x="420" y="184" width="220" height="28" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="530" y="202" text-anchor="middle" font-size="10" fill="#5F5E5A">FFN</text>
+      <text x="530" y="220" text-anchor="middle" font-size="9" fill="#0F6E56">이미지 + 텍스트 동시 참조</text>
+    </svg>
+  </div>
+
+  <div class="callout">
+    <p><strong>Text Cross-Attention이 중요한 이유:</strong> 디코더 쿼리가 이미지를 참조할 때(Image Cross-Attention)는 "어디에 물체가 있는가"를 학습한다. 텍스트를 참조할 때(Text Cross-Attention)는 "이 물체가 입력 텍스트 중 어느 구문과 대응하는가"를 학습한다. 두 정보를 레이어마다 통합하므로 더 정밀한 language-aware localization이 가능하다.</p>
+  </div>
+</section>
+
+
+<!-- 8-1. Q·K·V 심화 분석 -->
+<section id="qkv-deep">
+  <h2><span class="num">심화</span> Q · K · V 심화 분석 — 단계별 역할 완전 정리</h2>
+
+  <p>Attention 메커니즘의 세 요소 Q(Query), K(Key), V(Value)가 Grounding DINO의 각 단계에서 구체적으로 무엇을 가리키는지 정리한다. 같은 Cross-Attention이라는 이름이 Feature Enhancer와 Decoder 양쪽에 등장해 혼란스러울 수 있으므로, 핵심 차이인 <strong>"누가 Q인가"</strong>에 집중한다.</p>
+
+  <h3>Cross-Modality Decoder의 각 Attention에서 Q · K · V</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Attention 종류</th>
+          <th>Q (질문자)</th>
+          <th>K / V (참조 대상)</th>
+          <th>이 단계에서 학습하는 것</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Self-Attention</strong></td>
+          <td>쿼리 900개</td>
+          <td>쿼리 900개 (자기 자신)</td>
+          <td>쿼리끼리 서로 참조 — "내가 보는 영역이 다른 쿼리와 겹치는가"</td>
+        </tr>
+        <tr>
+          <td><strong>Image Cross-Attention</strong></td>
+          <td>쿼리 900개</td>
+          <td>이미지 feature (Feature Enhancer 출력)</td>
+          <td>"내 쿼리가 담당할 bbox 위치가 이미지 어디인가" → 위치 정보 획득</td>
+        </tr>
+        <tr>
+          <td><strong>Text Cross-Attention</strong> <span class="badge badge-amber">추가</span></td>
+          <td>쿼리 900개</td>
+          <td>텍스트 feature (BERT 출력)</td>
+          <td>"내 쿼리가 찾는 물체가 텍스트의 어느 단어(cat? dog?)와 대응하는가"</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Q/K/V 시각화 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 310" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrQKV" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrQKVb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrQKVo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#EF9F27" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 8. 디코더 한 레이어의 Q·K·V 흐름 — 쿼리가 이미지와 텍스트를 동시에 참조</text>
+
+      <!-- 쿼리 박스 (중앙) -->
+      <rect x="270" y="36" width="160" height="52" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="2"/>
+      <text x="350" y="58" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">쿼리 (Q)</text>
+      <text x="350" y="74" text-anchor="middle" font-size="9" fill="#854F0B">Language-Guided로 선택된 900개</text>
+      <text x="350" y="86" text-anchor="middle" font-size="8" fill="#9c9a92">"이 이미지 영역이 무엇인지 알고 싶다"</text>
+
+      <!-- Self-Attention -->
+      <rect x="270" y="114" width="160" height="44" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="1"/>
+      <text x="350" y="132" text-anchor="middle" font-size="10" font-weight="500" fill="#5F5E5A">① Self-Attention</text>
+      <text x="350" y="148" text-anchor="middle" font-size="9" fill="#888780">Q=K=V=쿼리 자기 자신</text>
+      <line x1="350" y1="88" x2="350" y2="114" stroke="#888780" stroke-width="1" marker-end="url(#arrQKV)"/>
+
+      <!-- Image Cross-Attention -->
+      <rect x="270" y="176" width="160" height="54" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="350" y="196" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">② Image Cross-Attention</text>
+      <text x="350" y="210" text-anchor="middle" font-size="9" fill="#185FA5">Q = 쿼리</text>
+      <text x="350" y="222" text-anchor="middle" font-size="9" fill="#185FA5">K = V = 이미지 feature</text>
+      <line x1="350" y1="158" x2="350" y2="176" stroke="#888780" stroke-width="1" marker-end="url(#arrQKV)"/>
+
+      <!-- Image Feature (왼쪽) -->
+      <rect x="50" y="176" width="160" height="54" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+      <text x="130" y="196" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">이미지 Feature</text>
+      <text x="130" y="210" text-anchor="middle" font-size="9" fill="#534AB7">Feature Enhancer 출력</text>
+      <text x="130" y="222" text-anchor="middle" font-size="8" fill="#9c9a92">(강화된 시각 정보)</text>
+      <line x1="210" y1="203" x2="268" y2="203" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrQKVb)"/>
+      <text x="240" y="196" text-anchor="middle" font-size="8" fill="#185FA5">K/V 제공</text>
+
+      <!-- Text Cross-Attention -->
+      <rect x="270" y="248" width="160" height="54" rx="6" fill="#FAEEDA" stroke="#EF9F27" stroke-width="2"/>
+      <text x="350" y="266" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">③ Text Cross-Attention</text>
+      <text x="350" y="280" text-anchor="middle" font-size="9" fill="#854F0B">Q = 쿼리</text>
+      <text x="350" y="294" text-anchor="middle" font-size="9" fill="#854F0B">K = V = 텍스트 feature</text>
+      <line x1="350" y1="230" x2="350" y2="248" stroke="#888780" stroke-width="1" marker-end="url(#arrQKV)"/>
+
+      <!-- Text Feature (오른쪽) -->
+      <rect x="490" y="248" width="160" height="54" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+      <text x="570" y="268" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">텍스트 Feature</text>
+      <text x="570" y="282" text-anchor="middle" font-size="9" fill="#534AB7">BERT 출력 토큰</text>
+      <text x="570" y="296" text-anchor="middle" font-size="8" fill="#9c9a92">(강화된 언어 정보)</text>
+      <line x1="490" y1="275" x2="432" y2="275" stroke="#EF9F27" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrQKVo)"/>
+      <text x="462" y="268" text-anchor="middle" font-size="8" fill="#854F0B">K/V 제공</text>
+    </svg>
+  </div>
+
+  <h3>Feature Enhancer와 Decoder의 Cross-Attention — 왜 두 번 하는가</h3>
+
+  <p>Feature Enhancer에도 Image↔Text Cross-Attention이 있는데, Decoder에서 또 Cross-Attention을 하는 것이 중복처럼 보일 수 있다. 하지만 <strong>Q가 누구인지가 완전히 다르다.</strong></p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>단계</th>
+          <th>Q (질문자)</th>
+          <th>목적</th>
+          <th>결과물</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Feature Enhancer<br>Image→Text Cross-Attn</strong></td>
+          <td>이미지 feature 전체<br><span style="font-size:11px;color:var(--text3)">(모든 공간 위치)</span></td>
+          <td>이미지 feature 자체를 언어 정보로 강화</td>
+          <td><span class="cmp-good">강화된 이미지 feature</span> (이미지 feature가 업데이트됨)</td>
+        </tr>
+        <tr>
+          <td><strong>Feature Enhancer<br>Text→Image Cross-Attn</strong></td>
+          <td>텍스트 feature 전체<br><span style="font-size:11px;color:var(--text3)">(모든 토큰)</span></td>
+          <td>텍스트 feature 자체를 이미지 정보로 강화</td>
+          <td><span class="cmp-good">강화된 텍스트 feature</span> (텍스트 feature가 업데이트됨)</td>
+        </tr>
+        <tr>
+          <td><strong>Decoder<br>Image Cross-Attn</strong></td>
+          <td>쿼리 900개<br><span style="font-size:11px;color:var(--text3)">(제3의 존재)</span></td>
+          <td>쿼리가 이미지에서 자신의 bbox 위치 파악</td>
+          <td><span class="cmp-good">쿼리가 업데이트됨</span> → 이미지 정보 흡수</td>
+        </tr>
+        <tr>
+          <td><strong>Decoder<br>Text Cross-Attn</strong></td>
+          <td>쿼리 900개<br><span style="font-size:11px;color:var(--text3)">(제3의 존재)</span></td>
+          <td>쿼리가 텍스트에서 대응 언어 구문 파악</td>
+          <td><span class="cmp-good">쿼리가 업데이트됨</span> → 언어 정보 흡수</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="conclusion">
+    <div class="c-label">비유로 이해하기</div>
+    <div class="c-title">Feature Enhancer = 시험 전 공부 / Decoder = 실제 시험</div>
+    <div class="c-body">
+      <strong>Feature Enhancer:</strong> 이미지 feature와 텍스트 feature가 서로를 참고해 자신을 업데이트한다. "이미지야, 텍스트를 읽고 네 표현을 더 언어 친화적으로 다듬어라." "텍스트야, 이미지를 보고 네 표현을 더 시각 친화적으로 다듬어라." 이 단계가 끝나도 이미지 feature와 텍스트 feature는 여전히 <strong>분리된 두 개의 feature</strong>다. 서로를 참고해 풍부해졌을 뿐, "이미지의 이 영역 = 텍스트의 이 단어"라는 매핑은 아직 확정되지 않았다.<br><br>
+      <strong>Cross-Modality Decoder:</strong> 쿼리라는 <strong>제3의 존재</strong>가 등장해 이미지와 텍스트를 동시에 참조하며 "나는 이미지의 이 위치를 봐야 하고, 그것은 텍스트의 'cat'이라는 단어에 해당한다"는 매핑을 레이어마다 반복해서 확정한다. Feature Enhancer 없이 Decoder만 있으면 품질 낮은 재료로 요리하는 것이고, Decoder 없이 Feature Enhancer만 있으면 재료를 잘 다듬었지만 요리를 안 한 것이다.
+    </div>
+  </div>
+</section>
+
+
+<!-- 9. Sub-Sentence Level -->
+<section id="subsentence">
+  <h2><span class="num">기법</span> Sub-Sentence Level 텍스트 표현</h2>
+
+  <p>여러 카테고리를 한 번에 검출할 때 텍스트 표현 방법이 성능에 큰 영향을 준다. 기존에는 문장 수준(sentence-level)과 단어 수준(word-level) 두 가지 방식이 있었는데, 각각 단점이 있다.</p>
+
+  <!-- 텍스트 표현 비교 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 7. 세 가지 텍스트 표현 방식 비교</text>
+
+      <!-- Sentence Level -->
+      <rect x="20" y="28" width="200" height="162" rx="8" fill="#FCEBEB" stroke="#F09595" stroke-width="1"/>
+      <text x="120" y="48" text-anchor="middle" font-size="10" font-weight="500" fill="#A32D2D">문장 수준 (Sentence)</text>
+      <rect x="32" y="58" width="176" height="32" rx="5" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="120" y="79" text-anchor="middle" font-size="9" fill="#5F5E5A">"cat . dog . person"</text>
+      <text x="120" y="108" text-anchor="middle" font-size="9" fill="#A32D2D">전체 문장 → 하나의 벡터</text>
+      <text x="120" y="124" text-anchor="middle" font-size="9" fill="#A32D2D">카테고리 간 세밀한</text>
+      <text x="120" y="138" text-anchor="middle" font-size="9" fill="#A32D2D">정보 손실</text>
+      <rect x="32" y="152" width="176" height="28" rx="5" fill="#FCEBEB" stroke="#E24B4A" stroke-width="0.5"/>
+      <text x="120" y="170" text-anchor="middle" font-size="9" fill="#A32D2D">단어별 구분 불가</text>
+
+      <!-- Word Level -->
+      <rect x="250" y="28" width="200" height="162" rx="8" fill="#FAEEDA" stroke="#EF9F27" stroke-width="1"/>
+      <text x="350" y="48" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">단어 수준 (Word)</text>
+      <rect x="262" y="58" width="176" height="32" rx="5" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="350" y="79" text-anchor="middle" font-size="9" fill="#5F5E5A">각 단어별 토큰 feature</text>
+      <text x="350" y="108" text-anchor="middle" font-size="9" fill="#854F0B">단어별 feature 유지 ✓</text>
+      <text x="350" y="124" text-anchor="middle" font-size="9" fill="#854F0B">but 서로 다른 카테고리</text>
+      <text x="350" y="138" text-anchor="middle" font-size="9" fill="#854F0B">단어끼리도 attention</text>
+      <rect x="262" y="152" width="176" height="28" rx="5" fill="#FAEEDA" stroke="#EF9F27" stroke-width="0.5"/>
+      <text x="350" y="170" text-anchor="middle" font-size="9" fill="#854F0B">관련 없는 단어 간 간섭</text>
+
+      <!-- Sub-Sentence Level -->
+      <rect x="480" y="28" width="200" height="162" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="1"/>
+      <text x="580" y="48" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">Sub-Sentence 수준 ← 채택</text>
+      <rect x="492" y="58" width="176" height="32" rx="5" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="580" y="74" text-anchor="middle" font-size="9" fill="#5F5E5A">같은 카테고리 내 단어끼리만</text>
+      <text x="580" y="88" text-anchor="middle" font-size="9" fill="#5F5E5A">attention 허용 (Attention Mask)</text>
+      <text x="580" y="112" text-anchor="middle" font-size="9" fill="#0F6E56">단어별 feature 유지 ✓</text>
+      <text x="580" y="128" text-anchor="middle" font-size="9" fill="#0F6E56">카테고리 간 간섭 차단 ✓</text>
+      <rect x="492" y="152" width="176" height="28" rx="5" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="580" y="170" text-anchor="middle" font-size="9" fill="#0F6E56">두 방식의 장점만 취함</text>
+    </svg>
+  </div>
+
+  <div class="a-block">
+    <div class="a-label">Sub-Sentence Attention Mask</div>
+    <div class="a-text">입력 텍스트 "cat . dog . person"에서 "cat" 토큰은 "cat"과 관련된 토큰끼리만 attention이 가능하고, "dog" 토큰은 차단된다. 이 attention mask는 카테고리 구분자(".")를 기준으로 자동 생성된다. <strong>단어 수준의 세밀함을 유지하면서 카테고리 간 노이즈를 제거</strong>하는 절충안이다.</div>
+  </div>
+</section>
+
+
+<!-- 실전 활용: 라벨 자동 생성 -->
+<section id="label-gen">
+  <h2><span class="num">실전 활용</span> 라벨 자동 생성기로 사용하기 — 디코더에 대한 오해 정리</h2>
+
+  <p>Grounding DINO는 파인튜닝 대상 모델이 아니라 <strong>라벨 자동 생성기(Auto-Labeler)</strong>로 활용되는 경우가 많다. 이 맥락에서 자주 생기는 오해 두 가지를 짚는다.</p>
+
+  <h3>오해 1 — "디코더는 이미지를 생성할 때 쓰는 것 아닌가?"</h3>
+
+  <div class="wrong-block">
+    <div class="w-label">혼동의 원인</div>
+    <div class="w-text">"인코더-디코더"라는 단어가 생성 모델(VAE, Stable Diffusion)과 검출 모델(DETR, DINO) 양쪽에서 쓰이지만, <strong>역할이 완전히 다르다.</strong></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>맥락</th>
+          <th>인코더 역할</th>
+          <th>디코더 역할</th>
+          <th>출력</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>생성 모델</strong><br><span style="font-size:11px;color:var(--text3)">VAE · Diffusion</span></td>
+          <td>이미지 → 잠재 벡터로 압축</td>
+          <td>잠재 벡터 → 이미지 복원/생성</td>
+          <td><span class="cmp-mid">새로운 이미지</span></td>
+        </tr>
+        <tr>
+          <td><strong>DETR 계열 검출기</strong><br><span style="font-size:11px;color:var(--text3)">DINO · Grounding DINO</span></td>
+          <td>이미지 → feature 추출·강화</td>
+          <td>쿼리 → bbox 좌표 + 클래스 예측</td>
+          <td><span class="cmp-good">bbox + 텍스트 구문</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Grounding DINO의 디코더는 이미지를 생성하지 않는다. 쿼리 900개를 받아 "이 쿼리가 담당하는 영역의 bbox 좌표와 대응 텍스트 구문"을 출력하는 것이 전부다.</p>
+
+  <h3>오해 2 — "파인튜닝 안 하면 디코더가 필요 없지 않나?"</h3>
+
+  <div class="wrong-block">
+    <div class="w-label">혼동의 원인</div>
+    <div class="w-text">파인튜닝(Fine-tuning)은 <strong>가중치를 업데이트하는 학습 과정</strong>이고, 디코더 사용은 <strong>추론(inference) 시 모델을 실행하는 것</strong>이다. 이 두 개념이 혼동된 경우다.</div>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">정확한 이해</div>
+    <div class="i-text">파인튜닝을 하지 않는다는 것은 <strong>Grounding DINO의 가중치를 업데이트하지 않는다</strong>는 뜻이지, 디코더를 사용하지 않는다는 뜻이 아니다. 추론 시에는 인코더와 디코더가 <strong>모두 동작</strong>해야 bbox가 출력된다. bbox 자체가 디코더의 출력이기 때문이다.</div>
+  </div>
+
+  <!-- 라벨 자동 생성 파이프라인 SVG -->
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrL" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arrLg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="350" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 9. 라벨 자동 생성 파이프라인 — 인코더 + 디코더 모두 실행됨</text>
+
+      <!-- 입력 -->
+      <rect x="20" y="36" width="100" height="120" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="70" y="62" text-anchor="middle" font-size="10" font-weight="500" fill="#444441">입력</text>
+      <text x="70" y="80" text-anchor="middle" font-size="9" fill="#5F5E5A">이미지</text>
+      <text x="70" y="96" text-anchor="middle" font-size="9" fill="#5F5E5A">+</text>
+      <text x="70" y="112" text-anchor="middle" font-size="9" fill="#5F5E5A">텍스트</text>
+      <text x="70" y="128" text-anchor="middle" font-size="8" fill="#9c9a92">프롬프트</text>
+      <line x1="120" y1="96" x2="138" y2="96" stroke="#888780" stroke-width="1" marker-end="url(#arrL)"/>
+
+      <!-- Grounding DINO 전체 -->
+      <rect x="140" y="28" width="360" height="136" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="320" y="48" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">Grounding DINO (가중치 고정 — 추론만 실행)</text>
+
+      <!-- 인코더 박스 -->
+      <rect x="160" y="60" width="140" height="84" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+      <text x="230" y="80" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">인코더</text>
+      <text x="230" y="96" text-anchor="middle" font-size="9" fill="#534AB7">Backbone</text>
+      <text x="230" y="110" text-anchor="middle" font-size="9" fill="#534AB7">Feature Enhancer</text>
+      <text x="230" y="124" text-anchor="middle" font-size="9" fill="#534AB7">Query Selection</text>
+      <line x1="300" y1="102" x2="318" y2="102" stroke="#534AB7" stroke-width="1" marker-end="url(#arrL)"/>
+
+      <!-- 디코더 박스 -->
+      <rect x="320" y="60" width="160" height="84" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+      <text x="400" y="80" text-anchor="middle" font-size="10" font-weight="500" fill="#085041">디코더</text>
+      <text x="400" y="96" text-anchor="middle" font-size="9" fill="#0F6E56">Cross-Modality Decoder</text>
+      <text x="400" y="112" text-anchor="middle" font-size="9" fill="#0F6E56">Self · Image · Text</text>
+      <text x="400" y="126" text-anchor="middle" font-size="9" fill="#0F6E56">Cross-Attention × N layers</text>
+      <line x1="500" y1="102" x2="518" y2="102" stroke="#888780" stroke-width="1" marker-end="url(#arrL)"/>
+
+      <!-- bbox 출력 -->
+      <rect x="520" y="52" width="110" height="88" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+      <text x="575" y="76" text-anchor="middle" font-size="10" font-weight="500" fill="#27500A">bbox 출력</text>
+      <text x="575" y="94" text-anchor="middle" font-size="9" fill="#3B6D11">좌표 + score</text>
+      <text x="575" y="110" text-anchor="middle" font-size="9" fill="#3B6D11">+ 구문</text>
+      <line x1="575" y1="140" x2="575" y2="158" stroke="#3B6D11" stroke-width="1" marker-end="url(#arrLg)"/>
+
+      <!-- threshold 필터 -->
+      <rect x="490" y="160" width="170" height="32" rx="6" fill="#FAEEDA" stroke="#EF9F27" stroke-width="0.5"/>
+      <text x="575" y="180" text-anchor="middle" font-size="10" fill="#633806">score ≥ threshold → 라벨로 저장</text>
+    </svg>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">파인튜닝과 추론의 차이</div>
+      <div class="card-title">가중치 업데이트 ≠ 모델 실행</div>
+      <div class="card-body">파인튜닝: 학습 데이터로 역전파를 실행해 가중치를 수정하는 과정. 추론: 입력을 넣고 출력을 얻는 forward pass만 실행. 라벨 자동 생성은 추론만 하므로 인코더·디코더가 모두 동작한다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">라벨 자동 생성의 장점</div>
+      <div class="card-title">수동 라벨링 비용 절감</div>
+      <div class="card-body">텍스트 프롬프트("helmet", "safety vest" 등)만 정의하면 수천 장 이미지의 bbox를 자동 생성 가능. 생성된 라벨은 더 가벼운 모델(YOLO 등)의 학습 데이터로 활용한다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">주의사항</div>
+      <div class="card-title">자동 생성 라벨의 품질 검수</div>
+      <div class="card-body">Grounding DINO가 출력한 bbox가 항상 정확하지는 않다. confidence threshold 조정, 일부 샘플 수동 검수, 데이터 정제 과정이 함께 필요하다.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 10. 성능 결과 -->
+<section id="results">
+  <h2><span class="num">결과</span> 성능 결과 — 벤치마크 비교</h2>
+
+  <p>Grounding DINO는 COCO, LVIS, ODinW, RefCOCO 등 다양한 벤치마크에서 당시 SOTA를 달성했다. 특히 학습 시 COCO 데이터를 전혀 사용하지 않은 zero-shot 설정에서도 이전 최고 성능을 크게 상회했다.</p>
+
+  <h3>COCO Zero-Shot Transfer</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>모델</th>
+          <th>COCO val AP</th>
+          <th>COCO test-dev AP</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>GLIP-L</td>
+          <td>49.8</td>
+          <td>—</td>
+          <td>CNN 기반, 1단계 검출기</td>
+        </tr>
+        <tr>
+          <td>GLIPv2-H</td>
+          <td>—</td>
+          <td>—</td>
+          <td>GLIP 개선판</td>
+        </tr>
+        <tr>
+          <td><strong>Grounding DINO-T</strong></td>
+          <td><span class="cmp-good">48.4</span></td>
+          <td><span class="cmp-good">—</span></td>
+          <td>Swin-T 백본</td>
+        </tr>
+        <tr>
+          <td><strong>Grounding DINO-L</strong></td>
+          <td><span class="cmp-good">52.5</span></td>
+          <td><span class="cmp-good">—</span></td>
+          <td>Swin-L 백본, <span class="badge badge-teal">SOTA</span></td>
+        </tr>
+        <tr>
+          <td><strong>Grounding DINO-L (fine-tune)</strong></td>
+          <td><span class="cmp-good">63.0</span></td>
+          <td>—</td>
+          <td>COCO 데이터 추가 학습</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>REC (Reference Expression Comprehension) 성능</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>모델</th>
+          <th>RefCOCO val</th>
+          <th>RefCOCO+ val</th>
+          <th>RefCOCOg val</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>MDETR</td>
+          <td>86.75</td>
+          <td>79.52</td>
+          <td>81.64</td>
+        </tr>
+        <tr>
+          <td>OFA-L</td>
+          <td>90.05</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><strong>Grounding DINO-L</strong></td>
+          <td><span class="cmp-good">90.56</span></td>
+          <td><span class="cmp-good">81.91</span></td>
+          <td><span class="cmp-good">86.13</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>3단계 Fusion Ablation 결과</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature Enhancer</th>
+          <th>Language Query Sel.</th>
+          <th>Cross-Mod. Decoder</th>
+          <th>COCO zero-shot AP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>✗</td><td>✗</td><td>✗</td>
+          <td>47.8</td>
+        </tr>
+        <tr>
+          <td>✓</td><td>✗</td><td>✗</td>
+          <td>49.3 <span class="cmp-good">(+1.5)</span></td>
+        </tr>
+        <tr>
+          <td>✓</td><td>✓</td><td>✗</td>
+          <td>50.1 <span class="cmp-good">(+0.8)</span></td>
+        </tr>
+        <tr>
+          <td>✓</td><td>✓</td><td>✓</td>
+          <td><strong>52.5</strong> <span class="cmp-good">(+2.4)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <p><strong>Ablation의 핵심 메시지:</strong> 세 단계 각각이 독립적으로 성능을 끌어올리며, 모두 결합했을 때 가장 높은 성능을 보인다. 특히 Cross-Modality Decoder의 Text Cross-Attention 추가가 가장 큰 기여(+2.4)를 한다. "더 많은 융합 = 더 좋은 성능"이라는 저자들의 주장이 실험으로 뒷받침된다.</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">COCO zero-shot</div>
+      <div class="card-title">52.5 AP (Swin-L)</div>
+      <div class="card-body">COCO 데이터를 학습에 사용하지 않고도 52.5 AP. 이전 SOTA GLIP-L(49.8) 대비 +2.7 AP. 학습 데이터 없이도 실용적 수준의 검출이 가능하다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">ODinW 벤치마크</div>
+      <div class="card-title">13개 도메인 평균 최고</div>
+      <div class="card-body">드론·위성·현미경 등 다양한 도메인의 13개 데이터셋. 도메인별로 학습 없이 zero-shot만으로도 GLIP 계열을 전반적으로 상회.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--purple)">DINO 사전학습 전이</div>
+      <div class="card-title">처음부터 학습 대비 수렴 빠름</div>
+      <div class="card-body">사전학습된 DINO 가중치로 초기화하면 처음부터 학습하는 것보다 COCO AP가 높고 수렴이 빠름을 실험으로 확인. 기존 검출기 자산을 활용 가능.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 11. 핵심 요약 -->
+<section id="summary">
+  <h2><span class="num">요약</span> 핵심 요약 — 기여와 한계</h2>
+
+  <h3>기여</h3>
+  <div class="info-box">
+    <div class="info-title">Grounding DINO의 세 가지 핵심 기여</div>
+    <div class="info-body">
+      <strong>① 구조적 원칙 수립:</strong> "이미지-언어 feature 융합은 neck · 쿼리 초기화 · head 세 단계 모두에서 수행해야 최고 성능"임을 ablation으로 증명. 단편적 융합에서 전면적 융합으로의 패러다임 전환.<br><br>
+      <strong>② Transformer의 자연스러운 확장:</strong> DINO의 self-attention 구조가 BERT의 그것과 동일함을 활용. 언어 모듈을 구조 변경 없이 cross-attention으로 자연스럽게 통합하는 설계 원칙 제시.<br><br>
+      <strong>③ REC까지 통합된 단일 프레임워크:</strong> Open-set detection과 Reference Expression Comprehension을 동일한 모델로 처리. 텍스트 입력의 형태(카테고리 목록 vs. 속성 설명)에 무관하게 동작.
+    </div>
+  </div>
+
+  <h3>한계 및 후속 연구</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--red)">한계</div>
+      <div class="card-title">추론 속도</div>
+      <div class="card-body">이미지 + 텍스트 두 인코더를 동시에 실행하고 세 단계 fusion을 거치므로, 순수 이미지 기반 검출기보다 추론 속도가 느리다. 실시간 응용에는 최적화 필요.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">한계</div>
+      <div class="card-title">텍스트 길이 제한</div>
+      <div class="card-body">BERT의 최대 토큰 수(512) 제한으로 매우 긴 카테고리 목록이나 복잡한 표현을 한 번에 처리하기 어렵다. 분할 처리 시 성능 저하 가능.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">후속 연구</div>
+      <div class="card-title">SAM + Grounding DINO</div>
+      <div class="card-body">Segment Anything Model(SAM)과 결합하면 텍스트 프롬프트로 임의 물체를 검출하고 픽셀 수준 세그멘테이션까지 수행하는 강력한 파이프라인 구성 가능.</div>
+    </div>
+  </div>
+
+  <h3>핵심 스펙 요약</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>항목</th><th>내용</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>발표</strong></td><td>ECCV 2024 (arXiv 2023.03)</td></tr>
+        <tr><td><strong>Task</strong></td><td>Open-Set Object Detection, Reference Expression Comprehension (REC)</td></tr>
+        <tr><td><strong>이미지 Backbone</strong></td><td>Swin-T (경량) / Swin-L (고성능)</td></tr>
+        <tr><td><strong>텍스트 Backbone</strong></td><td>BERT-base</td></tr>
+        <tr><td><strong>기반 검출기</strong></td><td>DINO (DETR 계열, NMS 없는 end-to-end)</td></tr>
+        <tr><td><strong>Fusion 단계</strong></td><td>① Feature Enhancer (neck) · ② Language Query Sel. · ③ Cross-Modality Decoder</td></tr>
+        <tr><td><strong>COCO zero-shot AP</strong></td><td>52.5 (Swin-L, 당시 SOTA)</td></tr>
+        <tr><td><strong>COCO fine-tune AP</strong></td><td>63.0 (Swin-L)</td></tr>
+        <tr><td><strong>Loss</strong></td><td>L1 + GIoU (box) · Contrastive Focal Loss (classification)</td></tr>
+        <tr><td><strong>코드 공개</strong></td><td>github.com/IDEA-Research/GroundingDINO</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="conclusion">
+    <div class="c-label">세 단계 Fusion의 연결 고리</div>
+    <div class="c-title">Feature Enhancer가 feature를 정렬하고, Language Query가 관련 영역을 선택하며, Cross-Modality Decoder가 매 레이어에서 언어와 이미지를 통합한다</div>
+    <div class="c-body">
+      기존 방법이 <strong>언어 정보를 neck 한 곳에서만 융합</strong>했다면, Grounding DINO는 <strong>처음(backbone 출력) 부터 끝(decoder head)까지 일관되게 이미지와 언어를 서로 참조</strong>하게 한다. 이 일관된 tight fusion이 zero-shot 성능의 핵심이며, DINO의 Transformer 구조가 이를 자연스럽게 가능하게 한다.
+    </div>
+  </div>
+
+  <div class="a-block">
+    <div class="a-label">이 논문에서 얻어야 할 한 가지</div>
+    <div class="a-text">Grounding DINO의 진짜 기여는 새로운 attention 메커니즘이나 대규모 데이터셋에 있지 않다. <strong>"얼마나 자주, 얼마나 많이 이미지와 언어를 서로 참조하게 하는가"가 open-set 검출 성능을 결정한다</strong>는 원칙의 실증이다. Transformer 기반 검출기라면 이 원칙을 적용하는 비용이 낮고 효과가 크다는 것도 함께 보여줬다.</div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav ul li a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
