@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>논문 리뷰 — NeuFlow v2</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --bg2: #ffffff; --bg3: #eeecea;
+    --text: #1a1a18; --text2: #5a5955; --text3: #9c9a92;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --blue: #185FA5; --blue-bg: #E6F1FB;
+    --teal: #0F6E56; --teal-bg: #E1F5EE;
+    --amber: #854F0B; --amber-bg: #FAEEDA; --amber-mid: #EF9F27;
+    --coral: #993C1D; --coral-bg: #FAECE7;
+    --green: #3B6D11; --green-bg: #EAF3DE;
+    --purple: #534AB7; --purple-bg: #EEEDFE;
+    --red: #A32D2D; --red-bg: #FCEBEB;
+    --gray: #5F5E5A; --gray-bg: #F1EFE8;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18; --bg2: #242422; --bg3: #2e2e2b;
+      --text: #e8e6de; --text2: #a8a69e; --text3: #6e6c65;
+      --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
+      --blue: #85B7EB; --blue-bg: #042C53;
+      --teal: #5DCAA5; --teal-bg: #04342C;
+      --amber: #FAC775; --amber-bg: #412402; --amber-mid: #EF9F27;
+      --coral: #F0997B; --coral-bg: #4A1B0C;
+      --green: #97C459; --green-bg: #173404;
+      --purple: #AFA9EC; --purple-bg: #26215C;
+      --red: #F09595; --red-bg: #501313;
+      --gray: #B4B2A9; --gray-bg: #2C2C2A;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.7; }
+  .layout { display: flex; min-height: 100vh; }
+  nav { width: 240px; flex-shrink: 0; background: var(--bg2); border-right: 0.5px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 0 40px; }
+  nav .logo { padding: 0 20px 20px; border-bottom: 0.5px solid var(--border); margin-bottom: 16px; }
+  nav .logo .tag { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  nav .logo .title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  nav ul { list-style: none; padding: 0 8px; }
+  nav ul li a { display: block; padding: 7px 12px; border-radius: 6px; font-size: 13px; color: var(--text2); text-decoration: none; transition: background .15s, color .15s; }
+  nav ul li a:hover { background: var(--bg3); color: var(--text); }
+  nav ul li a.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  nav ul li .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; padding: 12px 12px 4px; }
+  main { flex: 1; max-width: 860px; padding: 48px 40px 80px; }
+  .doc-header { margin-bottom: 40px; padding-bottom: 32px; border-bottom: 0.5px solid var(--border); }
+  .doc-header .eyebrow { font-size: 12px; font-weight: 500; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .doc-header h1 { font-size: 26px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
+  .doc-header .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 20px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .meta-item { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .meta-item .label { font-size: 11px; color: var(--text3); margin-bottom: 3px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .meta-item .value { font-size: 13px; font-weight: 500; color: var(--text); }
+  .case-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--blue-bg); border: 1px solid var(--blue); border-radius: 20px; padding: 4px 14px 4px 10px; font-size: 12px; font-weight: 500; color: var(--blue); margin-bottom: 16px; }
+  .case-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  section h2 { font-size: 20px; font-weight: 500; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  section h2 .num { font-size: 12px; font-weight: 500; background: var(--blue-bg); color: var(--blue); border-radius: 20px; padding: 2px 9px; }
+  section h3 { font-size: 16px; font-weight: 500; margin: 28px 0 10px; }
+  p { color: var(--text2); margin-bottom: 12px; }
+  .q-block { border-left: 3px solid var(--blue); background: var(--blue-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 8px; }
+  .q-block .q-label { font-size: 10px; font-weight: 500; color: var(--blue); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .q-block .q-text { font-size: 14px; color: var(--text); font-weight: 500; line-height: 1.5; }
+  .a-block { border-left: 3px solid var(--teal); background: var(--teal-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .a-block .a-label { font-size: 10px; font-weight: 500; color: var(--teal); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .a-block .a-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .a-block .a-text strong { color: var(--text); }
+  .insight-block { border-left: 3px solid var(--amber-mid); background: var(--amber-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .insight-block .i-label { font-size: 10px; font-weight: 500; color: var(--amber); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .insight-block .i-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .insight-block .i-text strong { color: var(--text); }
+  .wrong-block { border-left: 3px solid var(--red); background: var(--red-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .wrong-block .w-label { font-size: 10px; font-weight: 500; color: var(--red); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .wrong-block .w-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .wrong-block .w-text strong { color: var(--text); }
+  .conclusion { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 20px 24px; margin: 20px 0; }
+  .conclusion .c-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px; }
+  .conclusion .c-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 10px; }
+  .conclusion .c-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .conclusion .c-body strong { color: var(--text); }
+  .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card-grid .card { margin-bottom: 0; }
+  .card .card-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .card .card-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .card .card-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .callout { border-left: 3px solid var(--amber-mid); background: var(--amber-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 14px 18px; margin-bottom: 16px; }
+  .callout p { margin: 0; font-size: 13px; color: var(--text2); }
+  .callout strong { color: var(--text); }
+  .badge { display: inline-block; font-size: 11px; font-weight: 500; border-radius: 20px; padding: 2px 9px; }
+  .badge-blue   { background: var(--blue-bg);   color: var(--blue); }
+  .badge-teal   { background: var(--teal-bg);   color: var(--teal); }
+  .badge-amber  { background: var(--amber-bg);  color: var(--amber); }
+  .badge-red    { background: var(--red-bg);    color: var(--red); }
+  .badge-gray   { background: var(--gray-bg);   color: var(--gray); }
+  .badge-green  { background: var(--green-bg);  color: var(--green); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); }
+  .table-wrap { overflow-x: auto; margin-bottom: 16px; border: 0.5px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--bg3); }
+  th { padding: 10px 14px; text-align: left; font-weight: 500; color: var(--text2); font-size: 12px; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+  .cmp-good { color: var(--teal); font-weight: 500; }
+  .cmp-bad  { color: var(--red);  font-weight: 500; }
+  .cmp-mid  { color: var(--amber);font-weight: 500; }
+  .svg-wrap { margin: 16px 0 20px; overflow-x: auto; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 12px; }
+  .info-box { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 20px; }
+  .info-box .info-title { font-size: 13px; font-weight: 500; color: var(--text3); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; }
+  .info-box .info-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .info-box .info-body strong { color: var(--text); }
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--bg3); border-radius: var(--radius-sm); padding: 4px; }
+  .tab-btn { flex: 1; padding: 7px 12px; border: none; border-radius: 6px; background: transparent; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s, color .15s; font-family: inherit; }
+  .tab-btn.active { background: var(--bg2); color: var(--text); box-shadow: 0 0.5px 2px rgba(0,0,0,0.1); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .kpi .kpi-val { font-size: 24px; font-weight: 500; margin-bottom: 4px; }
+  .kpi .kpi-label { font-size: 12px; color: var(--text3); }
+  @media (max-width: 720px) { nav { display: none; } main { padding: 24px 20px 60px; } }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav>
+  <div class="logo">
+    <div class="tag">논문 리뷰 노트</div>
+    <div class="title">NeuFlow v2<br>Edge Optical Flow</div>
+  </div>
+  <ul>
+    <li><div class="section-label">개요</div></li>
+    <li><a href="#overview">논문 개요</a></li>
+    <li><a href="#problem">문제 정의</a></li>
+    <li><div class="section-label">아키텍처</div></li>
+    <li><a href="#arch">전체 구조</a></li>
+    <li><a href="#backbone">Simple Backbone</a></li>
+    <li><a href="#attention">Cross-Attention & Global Matching</a></li>
+    <li><a href="#rnn">Simple RNN Refinement</a></li>
+    <li><a href="#merge">Multi-Scale Merge</a></li>
+    <li><div class="section-label">실험 & 평가</div></li>
+    <li><a href="#results">성능 결과</a></li>
+    <li><a href="#ablation">Ablation Study</a></li>
+    <li><div class="section-label">정리</div></li>
+    <li><a href="#project">프로젝트 적용 관점</a></li>
+    <li><a href="#summary">총평 & 결론</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<div class="doc-header">
+  <div class="eyebrow">논문 리뷰 노트 — Optical Flow</div>
+  <div class="case-badge"><span class="dot"></span>Edge Computing · Real-Time Inference</div>
+  <h1>NeuFlow v2: High-Efficiency Optical Flow Estimation on Edge Devices</h1>
+  <p class="subtitle">경량 백본 + GRU 없는 RNN으로 Jetson Orin Nano에서 20 FPS 실시간 Optical Flow를 달성한 방법</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">저자</div><div class="value">Zhiyong Zhang, Aniket Gupta, Huaizu Jiang, Hanumant Singh</div></div>
+    <div class="meta-item"><div class="label">소속</div><div class="value">Northeastern University (Boston)</div></div>
+    <div class="meta-item"><div class="label">발표 연도</div><div class="value">2024 (arXiv 2408.10161)</div></div>
+    <div class="meta-item"><div class="label">HF 모델</div><div class="value">Study-is-happy/neuflow-v2</div></div>
+    <div class="meta-item"><div class="label">GitHub</div><div class="value">neufieldrobotics/NeuFlow_v2</div></div>
+    <div class="meta-item"><div class="label">라이선스</div><div class="value">Apache 2.0</div></div>
+  </div>
+</div>
+
+
+<section id="overview">
+  <h2><span class="num">1</span> 논문 개요</h2>
+  <p>NeuFlow v2는 딥러닝 기반 Optical Flow 추정의 정확도-속도 트레이드오프 문제를 Edge 디바이스 관점에서 정면으로 다루는 논문이다. RAFT, FlowFormer 등 고정밀 모델은 Jetson Orin Nano 같은 임베디드 환경에서 초당 1프레임도 안 나오는 반면, 빠른 모델들은 실제 환경 데이터에 대한 일반화 성능이 낮다는 문제가 있었다. v1의 가장 큰 약점(KITTI EPE 12.4)을 v2에서 대폭 개선(EPE 4.33)하면서도 실시간성을 유지한 것이 핵심 기여다.</p>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--teal)">20+ FPS</div>
+      <div class="kpi-label">Jetson Orin Nano<br>512×384 기준</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--blue)">10~70×</div>
+      <div class="kpi-label">SOTA 대비 속도 향상</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--purple)">9 iters</div>
+      <div class="kpi-label">정제 반복 횟수<br>(1/16×1 + 1/8×8)</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--amber)">65%</div>
+      <div class="kpi-label">v1 대비<br>KITTI EPE 개선</div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">NeuFlow v1 대비 v2의 핵심 변화</div>
+    <div class="info-body">
+      <strong>v1의 한계:</strong> 빠르지만 실제 환경(real-world) 데이터에서 일반화 성능 부족. KITTI EPE 12.4, F1 32.5로 실용 불가 수준.<br><br>
+      <strong>v2의 해법 3가지:</strong> ① 불필요한 고수준 피처(1/1 스케일)를 제거한 더 경량화된 Simple Backbone ② GRU/LSTM 대신 단순 8층 CNN 기반 Simple RNN Refinement 도입 ③ 1/16 글로벌 + 1/8 로컬을 결합하는 Multi-Scale Feature Merge<br><br>
+      <strong>결과:</strong> RTX 2080 기준 0.015초/프레임 유지하면서 KITTI EPE를 12.4 → 4.33으로 대폭 개선. FlowFormer(4.09), SEA-RAFT-L(3.62) 수준에 근접.
+    </div>
+  </div>
+</section>
+
+
+<section id="problem">
+  <h2><span class="num">2</span> 문제 정의 — 왜 기존 방법이 안 되는가</h2>
+
+  <div class="q-block">
+    <div class="q-label">핵심 질문</div>
+    <div class="q-text">RAFT 계열 고정밀 모델을 Jetson Orin Nano에 올리면 안 되는가? 왜 새로운 아키텍처가 필요한가?</div>
+  </div>
+  <div class="a-block">
+    <div class="a-label">답변</div>
+    <div class="a-text">RAFT(32 iterations)는 Jetson Orin Nano에서 <strong>1.060초/프레임 (≈1 FPS)</strong>, FlowFormer는 <strong>11.196초/프레임 (≈0.09 FPS)</strong>이 소요된다. 실시간 처리(≥10 FPS)는 불가능하다. 반면 빠른 방법들(NeuFlow v1, GMFlow)은 실제 환경 데이터에서 정확도가 급격히 떨어진다. 이 딜레마를 해결하는 것이 논문의 출발점이다.</div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--red)">한계 ① 고정밀 모델</div>
+      <div class="card-title">속도 문제 — Edge 배포 불가</div>
+      <div class="card-body">RAFT, FlowFormer, SKFlow 등은 30+ iterations 반복 정제로 높은 정확도를 달성하지만, Jetson Orin Nano에서 1~11초/프레임으로 실시간 처리 불가. 산업 현장 인터락(0.5초) 기준 충족 불가.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">한계 ② 고속 모델</div>
+      <div class="card-title">일반화 문제 — 실환경 성능 저하</div>
+      <div class="card-body">NeuFlow v1, GMFlow 등 빠른 모델은 합성 데이터(FlyingThings) 기반 학습 후 실제 환경(KITTI)에서 성능 급락. 조명 변화·반사·단조로운 씬에서 과적합. KITTI EPE 10~12 수준으로 실용 불가.</div>
+    </div>
+  </div>
+
+  <div class="wrong-block">
+    <div class="w-label">기존 접근법의 한계</div>
+    <div class="w-text">단순히 반복 횟수를 줄이거나 기존 정제 모듈(GRU, CRAFT)을 적용하면 연산량이 증가하여 Edge 실시간성을 달성하기 어렵다. <strong>아키텍처 자체를 근본적으로 재설계해야 한다</strong>는 것이 저자들의 핵심 주장이다.</div>
+  </div>
+</section>
+
+
+<section id="arch">
+  <h2><span class="num">3</span> 전체 아키텍처 — Global to Local</h2>
+  <p>NeuFlow v2는 "전역 주의 → 국소 정제"라는 단일 설계 원칙을 따른다. 1/16 스케일에서 Cross-Attention + Global Matching으로 초기 Flow를 추정하고, 1/8 스케일에서 경량 RNN으로 정제한 뒤 원본 해상도로 Convex Upsampling한다.</p>
+
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arr1b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#0F6E56" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="360" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 1. NeuFlow v2 전체 파이프라인 — Global-to-Local 원칙</text>
+
+      <rect x="20" y="36" width="76" height="56" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="58" y="59" text-anchor="middle" font-size="11" font-weight="500" fill="#444441">이미지</text>
+      <text x="58" y="74" text-anchor="middle" font-size="10" fill="#5F5E5A">I₁, I₂</text>
+      <text x="58" y="86" text-anchor="middle" font-size="9" fill="#9c9a92">H×W×3</text>
+      <line x1="96" y1="64" x2="114" y2="64" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+      <rect x="116" y="28" width="116" height="72" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+      <text x="174" y="52" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">Simple</text>
+      <text x="174" y="66" text-anchor="middle" font-size="11" font-weight="500" fill="#0C447C">Backbone</text>
+      <text x="174" y="80" text-anchor="middle" font-size="10" fill="#185FA5">CNN 다중 스케일</text>
+      <text x="174" y="92" text-anchor="middle" font-size="9" fill="#9c9a92">1/2,1/4,1/8→1/16</text>
+      <line x1="232" y1="64" x2="250" y2="64" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+      <rect x="252" y="28" width="126" height="72" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="315" y="50" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">Cross-Attention</text>
+      <text x="315" y="64" text-anchor="middle" font-size="11" font-weight="500" fill="#3C3489">+Global Match</text>
+      <text x="315" y="78" text-anchor="middle" font-size="10" fill="#534AB7">1/16 스케일</text>
+      <text x="315" y="90" text-anchor="middle" font-size="9" fill="#9c9a92">초기 Flow 추정</text>
+      <line x1="378" y1="64" x2="396" y2="64" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+      <rect x="398" y="28" width="116" height="72" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="1.5"/>
+      <text x="456" y="50" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">Simple RNN</text>
+      <text x="456" y="64" text-anchor="middle" font-size="11" font-weight="500" fill="#633806">1/16 × 1iter</text>
+      <text x="456" y="78" text-anchor="middle" font-size="10" fill="#854F0B">GRU 없음</text>
+      <text x="456" y="90" text-anchor="middle" font-size="9" fill="#9c9a92">CNN 8층으로 대체</text>
+      <line x1="514" y1="64" x2="532" y2="64" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+      <rect x="534" y="28" width="116" height="72" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="592" y="50" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">Multi-Scale</text>
+      <text x="592" y="64" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">Merge</text>
+      <text x="592" y="78" text-anchor="middle" font-size="10" fill="#0F6E56">1/16 글로벌</text>
+      <text x="592" y="90" text-anchor="middle" font-size="9" fill="#9c9a92">+ 1/8 로컬 통합</text>
+
+      <line x1="592" y1="100" x2="592" y2="124" stroke="#0F6E56" stroke-width="1" marker-end="url(#arr1b)"/>
+
+      <rect x="360" y="126" width="464" height="52" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="1.5"/>
+      <text x="592" y="148" text-anchor="middle" font-size="12" font-weight="500" fill="#633806">Simple RNN Refinement @ 1/8 — 8 iterations</text>
+      <text x="592" y="164" text-anchor="middle" font-size="10" fill="#854F0B">9×9 Correlation + Warp + Context + Hidden State → Conv×8 → refined flow</text>
+
+      <line x1="360" y1="152" x2="342" y2="152" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+      <rect x="214" y="126" width="126" height="52" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="1"/>
+      <text x="277" y="148" text-anchor="middle" font-size="11" font-weight="500" fill="#2A5008">Convex</text>
+      <text x="277" y="163" text-anchor="middle" font-size="11" font-weight="500" fill="#2A5008">Upsampling</text>
+      <line x1="214" y1="152" x2="196" y2="152" stroke="#888780" stroke-width="1" marker-end="url(#arr1)"/>
+
+      <rect x="80" y="126" width="114" height="52" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1"/>
+      <text x="137" y="148" text-anchor="middle" font-size="11" font-weight="500" fill="#791F1F">Flow 출력</text>
+      <text x="137" y="162" text-anchor="middle" font-size="10" fill="#A32D2D">H×W×2 (원본 해상도)</text>
+
+      <rect x="116" y="200" width="488" height="28" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="360" y="215" text-anchor="middle" font-size="11" fill="#3C3489" font-weight="500">핵심 설계 원칙: GRU/LSTM 완전 제거 → 단순 CNN 8층으로 대체 + HardTanh(-4,4)로 수치 안정성 보장</text>
+    </svg>
+  </div>
+
+  <div class="callout">
+    <p><strong>설계 철학:</strong> "복잡한 모듈(GRU, ResNet, FPN)을 제거하고, 단순한 CNN 레이어를 깊게 쌓아서 충분한 표현력을 확보한다." 모듈 복잡성이 아니라 레이어 깊이로 성능을 확보하는 전략이다.</p>
+  </div>
+</section>
+
+
+<section id="backbone">
+  <h2><span class="num">4</span> Simple Backbone — 저수준 특징이 핵심이다</h2>
+
+  <div class="q-block">
+    <div class="q-label">설계 의문</div>
+    <div class="q-text">왜 ResNet이나 FPN 같은 표준 백본 대신 단순 CNN을 사용하는가? 그리고 왜 1/1 스케일(원본 해상도) 피처는 제외하는가?</div>
+  </div>
+  <div class="a-block">
+    <div class="a-label">저자의 답변</div>
+    <div class="a-text"><strong>Optical Flow 태스크에서는 저수준(low-level) 특징이 고수준(high-level) 특징보다 더 중요하다.</strong> ResNet의 깊은 레이어가 추출하는 시맨틱 특징은 Flow 추정에 불필요하다. 1/1 스케일 피처는 Ablation에서 <strong>학습 데이터(FlyingThings)에 과적합</strong>을 유발하여 실제 환경 일반화 성능을 오히려 낮추는 것이 확인되었다. 따라서 1/1 스케일은 최종 Convex Upsampling 용도로만 제한 사용한다.</div>
+  </div>
+
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 660 160" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="330" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 2. Simple Backbone — 다중 스케일 저수준 특징 추출 구조</text>
+
+      <rect x="20" y="34" width="66" height="100" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="53" y="56" text-anchor="middle" font-size="10" font-weight="500" fill="#444441">1/1</text>
+      <text x="53" y="70" text-anchor="middle" font-size="9" fill="#5F5E5A">원본</text>
+      <text x="53" y="110" text-anchor="middle" font-size="8" fill="#9c9a92">Convex</text>
+      <text x="53" y="122" text-anchor="middle" font-size="8" fill="#9c9a92">Upsamp</text>
+      <text x="53" y="134" text-anchor="middle" font-size="8" fill="#9c9a92">전용</text>
+
+      <line x1="86" y1="72" x2="104" y2="72" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+      <rect x="106" y="46" width="80" height="40" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+      <text x="146" y="62" text-anchor="middle" font-size="9" font-weight="500" fill="#0C447C">CNN Block</text>
+      <text x="146" y="75" text-anchor="middle" font-size="8" fill="#185FA5">1/2 스케일</text>
+      <line x1="186" y1="66" x2="204" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+      <rect x="206" y="46" width="80" height="40" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+      <text x="246" y="62" text-anchor="middle" font-size="9" font-weight="500" fill="#0C447C">CNN Block</text>
+      <text x="246" y="75" text-anchor="middle" font-size="8" fill="#185FA5">1/4 스케일</text>
+      <line x1="286" y1="66" x2="304" y2="66" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+      <rect x="306" y="46" width="80" height="40" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+      <text x="346" y="62" text-anchor="middle" font-size="9" font-weight="500" fill="#0C447C">CNN Block</text>
+      <text x="346" y="75" text-anchor="middle" font-size="8" fill="#185FA5">1/8 스케일</text>
+
+      <path d="M346 86 L346 108 L476 108" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#arr2)"/>
+      <path d="M246 86 L246 108 L476 108" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="3 2"/>
+      <path d="M146 86 L146 108 L476 108" fill="none" stroke="#888780" stroke-width="1" stroke-dasharray="3 2"/>
+
+      <rect x="478" y="34" width="100" height="60" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+      <text x="528" y="53" text-anchor="middle" font-size="9" font-weight="500" fill="#085041">Concat+Resize</text>
+      <text x="528" y="66" text-anchor="middle" font-size="8" fill="#0F6E56">→ 1/8 features</text>
+      <text x="528" y="79" text-anchor="middle" font-size="8" fill="#0F6E56">→ 1/16 features</text>
+      <line x1="578" y1="64" x2="596" y2="64" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+      <rect x="598" y="44" width="54" height="40" rx="6" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+      <text x="625" y="61" text-anchor="middle" font-size="9" font-weight="500" fill="#444441">출력</text>
+      <text x="625" y="74" text-anchor="middle" font-size="8" fill="#5F5E5A">1/8, 1/16</text>
+
+      <rect x="106" y="130" width="500" height="22" rx="4" fill="#FAEEDA" stroke="#EF9F27" stroke-width="0.5"/>
+      <text x="356" y="144" text-anchor="middle" font-size="10" fill="#633806" font-weight="500">Ablation: 1/1 스케일 포함 시 FlyingThings 과적합 발생 → 실제 환경 일반화 저하 확인</text>
+    </svg>
+  </div>
+</section>
+
+
+<section id="attention">
+  <h2><span class="num">5</span> Cross-Attention & Global Matching — 대변위 처리</h2>
+  <p>CNN 기반 방법은 수용 영역(Receptive Field) 제한으로 대변위(large displacement) 처리에 취약하다. NeuFlow v2는 1/16 스케일에서 Transformer 기반 Cross-Attention과 Global Matching을 적용하여 이를 구조적으로 해결한다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--purple)">Cross-Attention</div>
+      <div class="card-title">이미지 간 글로벌 정보 교환</div>
+      <div class="card-body">I₁과 I₂의 피처를 교차 주의(Cross-Attention)하여 매칭 가능한 피처의 변별력을 높이고, 매칭 불가능한 피처 간 유사도를 낮춘다. <strong>1/16 스케일에서만 수행</strong>하여 연산량을 1/8 대비 4배 절감.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">Global Matching</div>
+      <div class="card-title">수용 영역 제한 없는 매칭</div>
+      <div class="card-body">GMFlow 방식으로 전역 피처 매칭으로 초기 Flow 추정. 픽셀 변위 크기에 관계없이 모든 위치 쌍 고려 → 대변위 문제 구조적 해결. <strong>이후 Self-Attention 대신 Simple RNN으로 정제</strong>하여 속도 확보.</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <p><strong>설계 선택:</strong> 기존 GMFlow는 Global Matching 후 Flow Self-Attention으로 전파했다. NeuFlow v2는 이를 Simple RNN Refinement로 대체하여 연산량을 줄이면서 동일한 정제 효과를 달성한다고 주장하며, Ablation으로 실증한다.</p>
+  </div>
+</section>
+
+
+<section id="rnn">
+  <h2><span class="num">6</span> Simple RNN Refinement — GRU 없이 더 정확하게</h2>
+  <p>이 논문의 가장 독창적인 기여는 GRU/LSTM을 완전히 제거하고 단순 CNN 레이어만으로 반복 정제 모듈을 구성한 것이다. 직관에 반하지만 Ablation에서 GRU 대비 정확도가 오히려 높음이 확인되었다.</p>
+
+  <div class="q-block">
+    <div class="q-label">핵심 질문</div>
+    <div class="q-text">GRU가 없으면 Vanishing/Exploding Gradient 문제가 생기지 않는가? Hidden State를 어떻게 안정적으로 유지하는가?</div>
+  </div>
+  <div class="a-block">
+    <div class="a-label">저자의 해법</div>
+    <div class="a-text"><strong>GRU/LSTM은 Gradient 문제를 해결하지만 레이어 수가 너무 적어 현재 입력과 Hidden State를 충분히 융합하지 못한다.</strong> NeuFlow v2는 대신 <strong>8층 3×3 Conv(+ReLU)로 입력과 Hidden State를 충분히 융합</strong>하고, <strong>HardTanh(-4, 4)를 Hidden State에 적용</strong>하여 수치 안정성을 보장한다. 전통적 Tanh는 -1, 1 근처에서 극단적 값을 출력할 수 있어 Overflow 위험이 있는데, HardTanh은 이를 구간 [-4, 4]로 클리핑하여 방지한다.</div>
+  </div>
+
+  <div class="svg-wrap">
+    <svg width="100%" viewBox="0 0 660 190" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arr3b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <text x="330" y="16" text-anchor="middle" font-size="11" fill="#9c9a92" font-weight="500">그림 3. Simple RNN Refinement — GRU 없는 반복 정제 흐름</text>
+
+      <rect x="20" y="34" width="106" height="26" rx="5" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <text x="73" y="51" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">Warped Correlation</text>
+      <rect x="20" y="66" width="106" height="26" rx="5" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <text x="73" y="83" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">Current Flow</text>
+      <rect x="20" y="98" width="106" height="26" rx="5" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+      <text x="73" y="115" text-anchor="middle" font-size="10" font-weight="500" fill="#633806">Context Features</text>
+      <rect x="20" y="130" width="106" height="26" rx="5" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+      <text x="73" y="147" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">Hidden State (t-1)</text>
+
+      <path d="M126 47 L152 96" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+      <path d="M126 79 L152 97" fill="none" stroke="#888780" stroke-width="1"/>
+      <path d="M126 111 L152 98" fill="none" stroke="#888780" stroke-width="1"/>
+      <path d="M126 143 L152 99" fill="none" stroke="#888780" stroke-width="1"/>
+
+      <rect x="154" y="48" width="138" height="80" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="223" y="70" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">3×3 Conv × 8</text>
+      <text x="223" y="84" text-anchor="middle" font-size="10" fill="#0F6E56">+ ReLU 활성화</text>
+      <text x="223" y="98" text-anchor="middle" font-size="10" fill="#0F6E56">GRU / LSTM 없음</text>
+      <text x="223" y="112" text-anchor="middle" font-size="9" fill="#9c9a92">깊은 CNN으로 충분히 융합</text>
+      <text x="223" y="124" text-anchor="middle" font-size="9" fill="#9c9a92">Gradient 안정성 실험 검증</text>
+      <line x1="292" y1="88" x2="310" y2="88" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+      <rect x="312" y="48" width="120" height="36" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1"/>
+      <text x="372" y="63" text-anchor="middle" font-size="10" font-weight="500" fill="#791F1F">Refined Flow Δ</text>
+      <text x="372" y="76" text-anchor="middle" font-size="9" fill="#A32D2D">→ Current Flow 업데이트</text>
+
+      <rect x="312" y="92" width="120" height="36" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+      <text x="372" y="107" text-anchor="middle" font-size="10" font-weight="500" fill="#3C3489">Hidden State (t)</text>
+      <text x="372" y="120" text-anchor="middle" font-size="9" fill="#534AB7">HardTanh(−4, 4) 적용</text>
+
+      <path d="M312 110 L154 143" fill="none" stroke="#534AB7" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#arr3b)"/>
+      <text x="232" y="138" text-anchor="middle" font-size="9" fill="#534AB7">다음 iteration으로</text>
+
+      <path d="M432 66 L490 66 L490 28 L223 28 L223 46" fill="none" stroke="#0F6E56" stroke-width="1" stroke-dasharray="4 2" marker-end="url(#arr3)"/>
+      <text x="488" y="50" text-anchor="middle" font-size="9" fill="#0F6E56">반복 ×8</text>
+
+      <rect x="460" y="58" width="90" height="52" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+      <text x="505" y="78" text-anchor="middle" font-size="11" font-weight="500" fill="#085041">최종 Flow</text>
+      <text x="505" y="92" text-anchor="middle" font-size="9" fill="#0F6E56">1/8 스케일</text>
+      <text x="505" y="104" text-anchor="middle" font-size="9" fill="#0F6E56">→ Convex Upsamp</text>
+      <line x1="432" y1="66" x2="458" y2="76" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+    </svg>
+  </div>
+
+  <div class="insight-block">
+    <div class="i-label">Ablation 핵심 발견</div>
+    <div class="i-text">ConvGRU 기반 정제 모듈을 Simple CNN RNN으로 교체했을 때 <strong>정확도가 오히려 향상</strong>되었다. 저자 분석: GRU의 게이팅 메커니즘은 1~2레이어에 불과해 현재 입력과 이전 Hidden State를 충분히 융합하지 못하지만, <strong>8층 CNN은 이 융합을 더 효과적으로 수행</strong>한다. 이 발견이 논문의 가장 반직관적인 핵심 기여다.</div>
+  </div>
+</section>
+
+
+<section id="merge">
+  <h2><span class="num">7</span> Multi-Scale Feature/Context Merge</h2>
+  <p>Simple Backbone의 수용 영역이 좁아 1/8 스케일 피처가 글로벌 정보를 갖지 못하는 구조적 한계를 보완한다. 1/16 스케일에서 Cross-Attention으로 획득한 글로벌 피처와 1/8 스케일 로컬 피처를 CNN Block으로 합산하여 1/8 정제 모듈에 공급한다. 피처(Feature)와 컨텍스트(Context)를 각각 독립적으로 처리한다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--purple)">1/16 글로벌 피처</div>
+      <div class="card-title">Cross-Attention 후 보간</div>
+      <div class="card-body">Cross-Attention을 거친 1/16 피처를 1/8 크기로 보간(Interpolate). 전역 수용 영역의 글로벌 정보를 담고 있다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">1/8 로컬 피처</div>
+      <div class="card-title">Backbone 직접 출력</div>
+      <div class="card-body">Simple Backbone의 1/8 출력. 로컬 세부 정보는 풍부하지만 수용 영역이 좁아 글로벌 컨텍스트가 부족하다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">Merge 결과</div>
+      <div class="card-title">글로벌 + 로컬 통합 피처</div>
+      <div class="card-body">두 피처를 Concat 후 CNN Block(Conv-ReLU-Norm ×2)으로 융합. 이 통합 피처가 1/8 RNN Refinement의 Context로 입력된다.</div>
+    </div>
+  </div>
+</section>
+
+
+<section id="results">
+  <h2><span class="num">8</span> 성능 결과 — 정확도 vs 속도</h2>
+  <p>모든 모델은 FlyingThings + FlyingChairs(C+T) 데이터셋만으로 학습 후 Sintel 및 KITTI 학습셋에서 평가. 추론 시간은 RTX 2080 및 Jetson Orin Nano에서 FP16(반정밀도) 기준 측정.</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-sintel')">Sintel 결과</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-kitti')">KITTI 결과</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-edge')">Edge 배포 비교</button>
+  </div>
+
+  <div id="tab-sintel" class="tab-panel active">
+    <h3>Sintel — EPE (낮을수록 좋음)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>모델</th><th>Clean EPE↓</th><th>Final EPE↓</th><th>RTX 2080(초)</th><th>Orin Nano(초)</th><th>실용성</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>FlowFormer</td><td><span class="cmp-good">1.01</span></td><td><span class="cmp-good">2.40</span></td><td>1.007</td><td>11.196</td><td><span class="badge badge-red">배포 불가</span></td></tr>
+          <tr><td>SEA-RAFT (L)</td><td>1.19</td><td>4.11</td><td>0.096</td><td>0.910</td><td><span class="badge badge-amber">실시간 미달</span></td></tr>
+          <tr><td>GMFlowNet</td><td>1.14</td><td>2.71</td><td>0.227</td><td>2.626</td><td><span class="badge badge-red">배포 불가</span></td></tr>
+          <tr><td>RAFT (32 iters)</td><td>1.43</td><td>2.71</td><td>0.125</td><td>1.060</td><td><span class="badge badge-red">배포 불가</span></td></tr>
+          <tr><td>RAPIDFlow</td><td>1.58</td><td>2.94</td><td>0.038</td><td>0.252</td><td><span class="badge badge-amber">4 FPS</span></td></tr>
+          <tr><td>NeuFlow v1</td><td>1.66</td><td>3.13</td><td>0.009</td><td>0.064</td><td><span class="badge badge-teal">초고속</span></td></tr>
+          <tr style="background:rgba(14,110,86,0.05)"><td><strong>NeuFlow v2 ★</strong></td><td><span class="cmp-good">1.24</span></td><td><span class="cmp-good">2.67</span></td><td><span class="cmp-good">0.015</span></td><td><span class="cmp-good">0.106</span></td><td><span class="badge badge-teal">고속+정확</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <p><strong>해석:</strong> Sintel Final EPE 2.67은 RAFT(2.71)보다 낮아 일반화 성능이 우수하다. Jetson 기준 FlowFormer 대비 <strong>약 106배 빠르다</strong>.</p>
+    </div>
+  </div>
+
+  <div id="tab-kitti" class="tab-panel">
+    <h3>KITTI — EPE & F1 (낮을수록 좋음)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>모델</th><th>KITTI EPE↓</th><th>KITTI F1↓</th><th>RTX 2080(초)</th><th>Orin Nano(초)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>FlowFormer</td><td><span class="cmp-good">4.09</span></td><td><span class="cmp-good">14.7</span></td><td>1.002</td><td>11.172</td></tr>
+          <tr><td>SEA-RAFT (L)</td><td><span class="cmp-good">3.62</span></td><td><span class="cmp-good">12.9</span></td><td>0.101</td><td>0.953</td></tr>
+          <tr><td>RAFT (32 iters)</td><td>5.04</td><td>17.4</td><td>0.125</td><td>1.126</td></tr>
+          <tr><td>GMFlow (1 iter)</td><td><span class="cmp-bad">10.3</span></td><td><span class="cmp-bad">33.6</span></td><td>0.055</td><td>0.426</td></tr>
+          <tr><td>NeuFlow v1</td><td><span class="cmp-bad">12.4</span></td><td><span class="cmp-bad">32.5</span></td><td>0.010</td><td>0.070</td></tr>
+          <tr style="background:rgba(14,110,86,0.05)"><td><strong>NeuFlow v2 ★</strong></td><td><span class="cmp-good">4.33</span></td><td><span class="cmp-good">15.3</span></td><td><span class="cmp-good">0.015</span></td><td><span class="cmp-good">0.114</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <p><strong>핵심 개선:</strong> v1 대비 KITTI EPE가 12.4 → 4.33으로 <strong>65% 개선</strong>. v1의 최대 약점이었던 실제 환경 일반화 문제를 대폭 해소. FlowFormer(4.09) 수준에 근접하면서 Jetson 기준 <strong>100배 이상 빠르다</strong>.</p>
+    </div>
+  </div>
+
+  <div id="tab-edge" class="tab-panel">
+    <h3>Jetson Orin Nano 실용성 비교 (FP16)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>모델</th><th>Orin Nano (초)</th><th>FPS 환산</th><th>8GB Batch</th><th>실용성</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>FlowFormer</td><td>11.196</td><td><span class="cmp-bad">0.09</span></td><td>4</td><td><span class="badge badge-red">배포 불가</span></td></tr>
+          <tr><td>RAFT</td><td>1.060</td><td><span class="cmp-bad">0.94</span></td><td>24</td><td><span class="badge badge-red">배포 불가</span></td></tr>
+          <tr><td>SEA-RAFT (M)</td><td>0.524</td><td><span class="cmp-mid">1.9</span></td><td>23</td><td><span class="badge badge-amber">실시간 미달</span></td></tr>
+          <tr><td>RAPIDFlow</td><td>0.252</td><td><span class="cmp-mid">4.0</span></td><td>103</td><td><span class="badge badge-amber">실시간 미달</span></td></tr>
+          <tr><td>NeuFlow v1</td><td>0.064</td><td><span class="cmp-good">15.6</span></td><td>115</td><td><span class="badge badge-teal">실시간 가능</span></td></tr>
+          <tr style="background:rgba(14,110,86,0.05)"><td><strong>NeuFlow v2 ★</strong></td><td><strong>0.106</strong></td><td><span class="cmp-good"><strong>9.4</strong></span></td><td>21</td><td><span class="badge badge-teal">실시간+정확</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="insight-block">
+      <div class="i-label">배치 크기 주의사항</div>
+      <div class="i-text">NeuFlow v2의 8GB 기준 배치 크기는 21로, v1(115)에 비해 크게 낮다. <strong>Global Matching과 Cross-Attention의 메모리 사용량이 높기 때문이다.</strong> 단일 프레임 순차 처리 환경(카메라 1~3대 직렬 처리)에서는 문제없지만, 대규모 병렬 처리가 필요한 경우 메모리 최적화 설계가 필요하다.</div>
+    </div>
+  </div>
+</section>
+
+
+<section id="ablation">
+  <h2><span class="num">9</span> Ablation Study — 각 컴포넌트의 기여</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>실험 조건</th><th>Sintel Clean</th><th>KITTI EPE</th><th>판단</th></tr>
+      </thead>
+      <tbody>
+        <tr style="background:rgba(14,110,86,0.05)"><td><strong>NeuFlow v2 기본</strong></td><td><strong>1.24</strong></td><td><strong>4.33</strong></td><td><span class="badge badge-teal">기준점</span></td></tr>
+        <tr><td>1/1 스케일 피처 포함</td><td>낮음 (과적합)</td><td>높음</td><td><span class="badge badge-red">일반화 저하</span></td></tr>
+        <tr><td>ConvGRU 사용 (Simple RNN 대신)</td><td>악화</td><td>악화</td><td><span class="badge badge-red">정확도 저하</span></td></tr>
+        <tr><td>Cross-Attention 제거</td><td>악화</td><td>악화</td><td><span class="badge badge-red">대변위 처리 저하</span></td></tr>
+        <tr><td>Global Matching 제거</td><td>악화</td><td>악화</td><td><span class="badge badge-red">초기 Flow 품질 저하</span></td></tr>
+        <tr><td>1/16 정제 제거 (1/8만)</td><td>악화</td><td>악화</td><td><span class="badge badge-amber">다중 스케일 정제 필요</span></td></tr>
+        <tr><td>정제 반복 8 → 4</td><td>소폭 악화</td><td>소폭 악화</td><td><span class="badge badge-amber">속도-정확도 트레이드오프</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="conclusion">
+    <div class="c-label">Ablation 핵심 결론</div>
+    <div class="c-title">각 모듈이 모두 필수적이며, GRU 제거가 오히려 성능을 높인다</div>
+    <div class="c-body">NeuFlow v2의 네 가지 주요 구성 요소는 모두 최종 성능에 유의미한 기여를 한다. 특히 <strong>GRU → Simple CNN RNN 교체가 속도뿐 아니라 정확도도 향상</strong>시킨다는 결과는 직관에 반하는 이 논문의 가장 흥미로운 발견이다. 또한 1/1 스케일 피처 포함이 과적합을 유발한다는 사실도 Optical Flow 아키텍처 설계에 중요한 시사점을 준다.</div>
+  </div>
+</section>
+
+
+<section id="project">
+  <h2><span class="num">10</span> 분체 도장라인 프로젝트 적용 관점</h2>
+  <p>현재 프로젝트(자동 분체 도장라인 멀티모달 AI 불량예방 시스템)의 비전 파이프라인에서 NeuFlow v2를 어떻게 활용할 수 있는지 검토한다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label" style="color:var(--teal)">장점</div>
+      <div class="card-title">Jetson Orin Nano 실측값 존재</div>
+      <div class="card-body">논문에서 <strong>Jetson Orin Nano 동일 디바이스</strong> 실측값 제공. 512×384 기준 20 FPS 이상으로 0.5초 인터락 기준 충족 가능성 높음. HF Hub에서 즉시 로드 가능(Apache 2.0).</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--blue)">적용 방향</div>
+      <div class="card-title">Case B 전환 시 Farneback 대체 후보</div>
+      <div class="card-body">YOLO 동적 ROI 도입 시 대변위 처리와 실제 환경 일반화가 중요해진다. 분진·조명 변화 환경에서 학습 기반 Flow의 강건성이 Farneback 대비 유리할 수 있다.</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--amber)">주의사항</div>
+      <div class="card-title">도메인 적응 및 메모리</div>
+      <div class="card-body">합성 데이터(FlyingThings) 학습 기반 — 산업 분진 환경 도메인 적응 미검증. 배치 크기 21로 낮음. 카메라 3대 동시 처리 시 파이프라인 설계 주의 필요.</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>항목</th><th>Farneback (현재)</th><th>NeuFlow v2 (후보)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>구현 복잡도</strong></td><td><span class="cmp-good">낮음 (OpenCV 1줄)</span></td><td><span class="cmp-mid">중간 (HF Hub 로드)</span></td></tr>
+        <tr><td><strong>학습 데이터</strong></td><td><span class="cmp-good">불필요</span></td><td><span class="cmp-mid">사전학습 완료, Fine-tune 선택</span></td></tr>
+        <tr><td><strong>대변위 처리</strong></td><td><span class="cmp-bad">취약 (다항식 근사 한계)</span></td><td><span class="cmp-good">Global Matching으로 강건</span></td></tr>
+        <tr><td><strong>Jetson Orin Nano</strong></td><td><span class="cmp-good">매우 빠름 (CPU 연산)</span></td><td><span class="cmp-good">20+ FPS @ 512×384</span></td></tr>
+        <tr><td><strong>메모리</strong></td><td><span class="cmp-good">낮음</span></td><td><span class="cmp-mid">배치 21 (8GB 기준)</span></td></tr>
+        <tr><td><strong>TensorRT 변환</strong></td><td>해당 없음</td><td><span class="cmp-good">ONNX→TensorRT FP16 가능</span></td></tr>
+        <tr><td><strong>권장 적용 시점</strong></td><td><span class="cmp-good">1단계 (즉시)</span></td><td><span class="cmp-mid">Case B 전환 시 비교 실험</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<section id="summary">
+  <h2><span class="num">11</span> 총평 & 결론</h2>
+
+  <div class="conclusion">
+    <div class="c-label">리뷰 총평</div>
+    <div class="c-title">Edge 실시간 배포를 위한 실용적 Optical Flow 아키텍처 재설계</div>
+    <div class="c-body">
+      NeuFlow v2는 "고정밀 vs 고속"이라는 Optical Flow의 오래된 딜레마를 <strong>아키텍처 근본 재설계</strong>로 접근한다. GRU/LSTM을 제거하고 단순 CNN으로 대체한 결정이 직관에 반하지만 실험적으로 유효함을 보였다는 점이 논문의 핵심 기여다. 동일 Edge 디바이스(Jetson Orin Nano)에서 실측 벤치마크를 명시한 것도 산업 적용 관점에서 높이 평가할 수 있다.<br><br>
+      <strong>강점:</strong> ① Jetson Orin Nano 실측 데이터 제공 ② v1 대비 KITTI 65% 개선 ③ Apache 2.0, HF Hub 즉시 로드 ④ GRU 제거가 성능 향상을 가져온다는 반직관적 실증<br><br>
+      <strong>한계:</strong> ① 합성 데이터 학습 — 산업 특화 도메인 적응 미검증 ② 배치 크기 21로 병렬 처리 제한 ③ FlowFormer, SEA-RAFT-L 대비 정확도 차이 존재 ④ 분진·반사 환경 강건성 실험 없음<br><br>
+      <strong>본 프로젝트 권고:</strong> 1단계는 Farneback 유지. Case B(YOLO 동적 ROI) 전환 검토 시점에 NeuFlow v2를 Farneback 대체 후보로 현장 비교 실험 진행 권장.
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--teal)">65%</div>
+      <div class="kpi-label">v1 대비 KITTI EPE 개선</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--blue)">106×</div>
+      <div class="kpi-label">FlowFormer 대비<br>Jetson 속도</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--purple)">20+ FPS</div>
+      <div class="kpi-label">Orin Nano<br>512×384</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--amber)">9 iters</div>
+      <div class="kpi-label">전체 반복 횟수<br>(1/16×1 + 1/8×8)</div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">빠른 참고 정보</div>
+    <div class="info-body">
+      <strong>arXiv:</strong> 2408.10161 &nbsp;|&nbsp;
+      <strong>HF 모델:</strong> Study-is-happy/neuflow-v2 &nbsp;|&nbsp;
+      <strong>GitHub:</strong> neufieldrobotics/NeuFlow_v2<br>
+      <strong>HF Papers:</strong> huggingface.co/papers/2408.10161 &nbsp;|&nbsp;
+      <strong>라이선스:</strong> Apache 2.0<br>
+      <strong>학습 데이터:</strong> FlyingChairs + FlyingThings3D (C+T) &nbsp;|&nbsp;
+      <strong>평가:</strong> Sintel, KITTI (파인튜닝 없이)
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+  function switchTab(btn, panelId) {
+    btn.closest('section').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    btn.closest('section').querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(panelId).classList.add('active');
+  }
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav ul li a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
